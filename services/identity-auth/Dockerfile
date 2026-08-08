@@ -16,8 +16,7 @@ RUN pnpm --filter @tradeiq/identity-auth run build
 
 FROM base AS runtime
 ENV NODE_ENV=production
-COPY --from=build /app/services/identity-auth/dist ./dist
-COPY --from=build /app/services/identity-auth/node_modules ./node_modules
-COPY --from=build /app/node_modules ./root_node_modules
+COPY --from=build /app /app
+WORKDIR /app/services/identity-auth
 EXPOSE 3002
 CMD ["node", "dist/main.js"]

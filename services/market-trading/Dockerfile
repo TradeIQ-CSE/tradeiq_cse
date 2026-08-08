@@ -16,8 +16,7 @@ RUN pnpm --filter @tradeiq/market-trading run build
 
 FROM base AS runtime
 ENV NODE_ENV=production
-COPY --from=build /app/services/market-trading/dist ./dist
-COPY --from=build /app/services/market-trading/node_modules ./node_modules
-COPY --from=build /app/node_modules ./root_node_modules
+COPY --from=build /app /app
+WORKDIR /app/services/market-trading
 EXPOSE 3001
 CMD ["node", "dist/main.js"]

@@ -16,8 +16,7 @@ RUN pnpm --filter @tradeiq/web run build
 
 FROM node:20-slim AS runtime
 WORKDIR /app
-RUN corepack enable
+RUN npm install -g serve
 COPY --from=build /app/apps/web/dist ./dist
-RUN pnpm add -g serve
 EXPOSE 5173
 CMD ["serve", "-s", "dist", "-l", "5173"]
