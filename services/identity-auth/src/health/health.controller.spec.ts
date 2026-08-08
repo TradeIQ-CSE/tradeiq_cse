@@ -13,6 +13,9 @@ describe('HealthController', () => {
   });
 
   it('returns a static ok status', () => {
-    expect(controller.check()).toEqual({ status: 'ok', service: 'identity-auth' });
+    expect(controller.check()).toEqual({
+      status: 'ok',
+      service: 'identity-auth',
+    });
   });
 });
