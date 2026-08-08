@@ -1,0 +1,8 @@
+{
+  "extends": "@tradeiq/tsconfig/nestjs.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "declaration": true
+  }
+}

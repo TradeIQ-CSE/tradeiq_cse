@@ -1,0 +1,132 @@
+name: tradeiq-cse
+
+services:
+  market-data-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${MARKET_DATA_DB_NAME:-market_data}
+      POSTGRES_USER: ${MARKET_DATA_DB_USER:-market_data}
+      POSTGRES_PASSWORD: ${MARKET_DATA_DB_PASSWORD:-changeme}
+    ports:
+      - "${MARKET_DATA_DB_PORT:-5433}:5432"
+    volumes:
+      - market-data-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${MARKET_DATA_DB_USER:-market_data}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  auth-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${AUTH_DB_NAME:-auth}
+      POSTGRES_USER: ${AUTH_DB_USER:-auth}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-changeme}
+    ports:
+      - "${AUTH_DB_PORT:-5434}:5432"
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER:-auth}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ml-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${ML_DB_NAME:-ml}
+      POSTGRES_USER: ${ML_DB_USER:-ml}
+      POSTGRES_PASSWORD: ${ML_DB_PASSWORD:-changeme}
+    ports:
+      - "${ML_DB_PORT:-5435}:5432"
+    volumes:
+      - ml-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${ML_DB_USER:-ml}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+  market-trading:
+    build:
+      context: .
+      dockerfile: services/market-trading/Dockerfile
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      MARKET_TRADING_PORT: ${MARKET_TRADING_PORT:-3001}
+      MARKET_DATA_DATABASE_URL: postgresql://${MARKET_DATA_DB_USER:-market_data}:${MARKET_DATA_DB_PASSWORD:-changeme}@market-data-db:5432/${MARKET_DATA_DB_NAME:-market_data}
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "${MARKET_TRADING_PORT:-3001}:3001"
+    depends_on:
+      market-data-db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  identity-auth:
+    build:
+      context: .
+      dockerfile: services/identity-auth/Dockerfile
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      IDENTITY_AUTH_PORT: ${IDENTITY_AUTH_PORT:-3002}
+      AUTH_DATABASE_URL: postgresql://${AUTH_DB_USER:-auth}:${AUTH_DB_PASSWORD:-changeme}@auth-db:5432/${AUTH_DB_NAME:-auth}
+      JWT_SECRET: ${JWT_SECRET:-changeme}
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "${IDENTITY_AUTH_PORT:-3002}:3002"
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  ml-prediction:
+    build:
+      context: .
+      dockerfile: services/ml-prediction/Dockerfile
+    environment:
+      ML_PREDICTION_PORT: ${ML_PREDICTION_PORT:-8001}
+      ML_DATABASE_URL: postgresql://${ML_DB_USER:-ml}:${ML_DB_PASSWORD:-changeme}@ml-db:5432/${ML_DB_NAME:-ml}
+    ports:
+      - "${ML_PREDICTION_PORT:-8001}:8001"
+    depends_on:
+      ml-db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      VITE_MARKET_TRADING_API_URL: ${VITE_MARKET_TRADING_API_URL:-http://localhost:3001}
+      VITE_IDENTITY_AUTH_API_URL: ${VITE_IDENTITY_AUTH_API_URL:-http://localhost:3002}
+    ports:
+      - "5173:5173"
+    depends_on:
+      - market-trading
+      - identity-auth
+
+  data-pipeline:
+    build:
+      context: .
+      dockerfile: pipeline/data-pipeline/Dockerfile
+    profiles: ["pipeline"]
+    environment:
+      DATA_PIPELINE_MARKET_DATA_DATABASE_URL: postgresql://${MARKET_DATA_DB_USER:-market_data}:${MARKET_DATA_DB_PASSWORD:-changeme}@market-data-db:5432/${MARKET_DATA_DB_NAME:-market_data}
+      CSE_DATA_SOURCE_URL: ${CSE_DATA_SOURCE_URL:-}
+    depends_on:
+      - market-data-db
+
+volumes:
+  market-data-db-data:
+  auth-db-data:
+  ml-db-data:

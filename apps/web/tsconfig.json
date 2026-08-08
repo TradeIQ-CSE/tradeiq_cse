@@ -1,0 +1,8 @@
+{
+  "extends": "@tradeiq/tsconfig/react.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "types": ["vite/client"]
+  },
+  "include": ["src", "vite.config.ts"]
+}

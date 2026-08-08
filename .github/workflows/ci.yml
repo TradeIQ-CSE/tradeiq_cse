@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  node:
+    name: node (${{ matrix.workspace }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace:
+          - "@tradeiq/market-trading"
+          - "@tradeiq/identity-auth"
+          - "@tradeiq/web"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm --filter ${{ matrix.workspace }} run lint
+      - run: pnpm --filter ${{ matrix.workspace }} run typecheck
+      - run: pnpm --filter ${{ matrix.workspace }} run build
+      - run: pnpm --filter ${{ matrix.workspace }} run test
+
+  python:
+    name: python (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - services/ml-prediction
+          - pipeline/data-pipeline
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.service }}
+        run: uv sync --all-groups
+
+      - name: Lint (ruff)
+        working-directory: ${{ matrix.service }}
+        run: uv run ruff check .
+
+      - name: Test
+        working-directory: ${{ matrix.service }}
+        run: uv run pytest
