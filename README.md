@@ -96,7 +96,7 @@ Each service has its own `migrations/` directory and migration tooling wired up,
 migrations have been written yet** — schemas will be added in a later pass. Databases come up
 empty.
 
-- `market-trading` / `identity-auth`: TypeORM migrations (`typeorm-ts-node-commonjs`), config in
+- `market-trading` / `identity-auth`: TypeORM migrations (`typeorm-ts-node-commonjs`), config in.
   `services/<service>/src/db/data-source.ts`.
 - `ml-prediction`: Alembic migrations, config in `services/ml-prediction/alembic.ini`.
 
