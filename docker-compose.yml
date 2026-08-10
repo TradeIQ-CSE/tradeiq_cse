@@ -19,7 +19,23 @@ services:
       timeout: 5s
       retries: 10
 
+  # One-shot schema migration jobs. Each API service starts only after its own
+  # migrations have completed successfully.
+  market-trading-migrate:
+    image: tradeiq/market-trading
+    build:
+      context: .
+      dockerfile: services/market-trading/Dockerfile
+    command: ["pnpm", "run", "migration:run"]
+    environment:
+      MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@db:5432/market_data
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
   market-trading:
+    image: tradeiq/market-trading
     build:
       context: .
       dockerfile: services/market-trading/Dockerfile
@@ -30,10 +46,24 @@ services:
     ports:
       - "${MARKET_TRADING_PORT:-3001}:3001"
     depends_on:
+      market-trading-migrate:
+        condition: service_completed_successfully
+
+  identity-auth-migrate:
+    image: tradeiq/identity-auth
+    build:
+      context: .
+      dockerfile: services/identity-auth/Dockerfile
+    command: ["pnpm", "run", "migration:run"]
+    environment:
+      AUTH_DATABASE_URL: postgresql://auth:changeme@db:5432/auth
+    depends_on:
       db:
         condition: service_healthy
+    restart: "no"
 
   identity-auth:
+    image: tradeiq/identity-auth
     build:
       context: .
       dockerfile: services/identity-auth/Dockerfile
@@ -45,10 +75,24 @@ services:
     ports:
       - "${IDENTITY_AUTH_PORT:-3002}:3002"
     depends_on:
+      identity-auth-migrate:
+        condition: service_completed_successfully
+
+  ml-prediction-migrate:
+    image: tradeiq/ml-prediction
+    build:
+      context: .
+      dockerfile: services/ml-prediction/Dockerfile
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      ML_DATABASE_URL: postgresql://ml:changeme@db:5432/ml
+    depends_on:
       db:
         condition: service_healthy
+    restart: "no"
 
   ml-prediction:
+    image: tradeiq/ml-prediction
     build:
       context: .
       dockerfile: services/ml-prediction/Dockerfile
@@ -58,8 +102,8 @@ services:
     ports:
       - "${ML_PREDICTION_PORT:-8001}:8001"
     depends_on:
-      db:
-        condition: service_healthy
+      ml-prediction-migrate:
+        condition: service_completed_successfully
 
   frontend:
     build:
@@ -83,7 +127,8 @@ services:
       DATA_INGESTION_MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@db:5432/market_data
       CSE_DATA_SOURCE_URL: ${CSE_DATA_SOURCE_URL:-}
     depends_on:
-      - db
+      market-trading-migrate:
+        condition: service_completed_successfully
 
 volumes:
   db-data:

@@ -6,5 +6,9 @@ export default new DataSource({
   url: process.env.AUTH_DATABASE_URL,
   entities: [],
   migrations: ['migrations/*.ts'],
+  // pin tracking table to public: once the auth schema exists, the auth
+  // user's default search_path ("$user", public) would otherwise resolve an
+  // unqualified "migrations" to the auth schema.
+  migrationsTableName: 'public.migrations',
   synchronize: false,
 });
