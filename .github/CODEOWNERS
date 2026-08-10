@@ -1,0 +1,7 @@
+# Code owners for TradeIQ-CSE/tradeiq_cse
+#
+# Every pull request requires review by the project mentor before merge.
+# Combined with branch protection ("require review from Code Owners"),
+# this makes mentor sign-off mandatory on all changes.
+
+* @Meelan-98
