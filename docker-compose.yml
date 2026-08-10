@@ -34,6 +34,20 @@ services:
         condition: service_healthy
     restart: "no"
 
+  market-data-seed:
+    build:
+      context: .
+      dockerfile: pipeline/data-ingestion/Dockerfile
+    command: ["python", "-m", "data_ingestion.seed"]
+    environment:
+      DATA_INGESTION_MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@db:5432/market_data
+      CSE_SEED_DATA_DIR: ${CSE_SEED_DATA_DIR:-}
+      CSE_DATA_SOURCE_URL: ${CSE_DATA_SOURCE_URL:-}
+    depends_on:
+      market-trading-migrate:
+        condition: service_completed_successfully
+    restart: "no"
+
   market-trading:
     image: tradeiq/market-trading
     build:
@@ -46,7 +60,7 @@ services:
     ports:
       - "${MARKET_TRADING_PORT:-3001}:3001"
     depends_on:
-      market-trading-migrate:
+      market-data-seed:
         condition: service_completed_successfully
 
   identity-auth-migrate:
