@@ -1,5 +1,5 @@
 [project]
-name = "data-pipeline"
+name = "data-ingestion"
 version = "0.0.0"
 description = "Scheduled job: fetches, normalises, and validates CSE end-of-day data"
 requires-python = ">=3.11,<3.13"
@@ -25,4 +25,4 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/data_pipeline"]
+packages = ["src/data_ingestion"]

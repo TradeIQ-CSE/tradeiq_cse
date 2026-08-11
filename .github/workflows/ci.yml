@@ -15,7 +15,7 @@ jobs:
         workspace:
           - "@tradeiq/market-trading"
           - "@tradeiq/identity-auth"
-          - "@tradeiq/web"
+          - "@tradeiq/frontend"
     steps:
       - uses: actions/checkout@v4
 
@@ -41,7 +41,7 @@ jobs:
       matrix:
         service:
           - services/ml-prediction
-          - pipeline/data-pipeline
+          - pipeline/data-ingestion
     steps:
       - uses: actions/checkout@v4
 

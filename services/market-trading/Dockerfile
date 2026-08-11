@@ -5,13 +5,11 @@ RUN corepack enable
 FROM base AS deps
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY services/market-trading/package.json ./services/market-trading/package.json
-COPY packages/tsconfig/package.json ./packages/tsconfig/package.json
 RUN pnpm install --frozen-lockfile --filter @tradeiq/market-trading...
 
 FROM base AS build
 COPY --from=deps /app /app
 COPY services/market-trading ./services/market-trading
-COPY packages/tsconfig ./packages/tsconfig
 RUN pnpm --filter @tradeiq/market-trading run build
 
 FROM base AS runtime

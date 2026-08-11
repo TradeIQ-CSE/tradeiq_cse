@@ -3,13 +3,13 @@ WORKDIR /app
 RUN pip install --no-cache-dir uv
 
 FROM base AS deps
-COPY pipeline/data-pipeline/pyproject.toml ./
+COPY pipeline/data-ingestion/pyproject.toml ./
 RUN uv sync --no-install-project
 
 FROM base AS runtime
 ENV PYTHONUNBUFFERED=1
 COPY --from=deps /app/.venv ./.venv
-COPY pipeline/data-pipeline .
+COPY pipeline/data-ingestion .
 RUN uv sync --no-dev
 ENV PATH="/app/.venv/bin:$PATH"
-CMD ["python", "-m", "data_pipeline.main"]
+CMD ["python", "-m", "data_ingestion.main"]
