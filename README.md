@@ -24,6 +24,9 @@ CSE (Colombo Stock Exchange) strategy backtesting, paper-trading, and portfolio-
 ├── docker/
 │   └── db/init.sql          Creates one database + dedicated user per service inside the
 │                            single shared Postgres instance (first boot only).
+├── docs/
+│   ├── api/                 API contracts: endpoint catalogue + structured error envelope.
+│   └── adr/                 Architecture Decision Records (D1–D7 resolutions).
 ├── docker-compose.yml       Brings up the shared Postgres instance, the 3 services, and the frontend.
 └── .github/workflows/       CI: install, lint, typecheck, build, test on every PR.
 ```
