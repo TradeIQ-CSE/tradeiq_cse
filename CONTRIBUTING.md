@@ -124,10 +124,10 @@ https://linear.app/nimeshk-personal/issue/TIQ-40
 - Feature-branch workflow under PR review (SRS 3.5.1). No direct pushes to main.
 - CI must be green before merge: install, lint, typecheck, build, test.
 - TypeScript/Node changes: use `pnpm` from the repo root (workspace-managed).
-- Python changes (`services/ml-prediction`, `pipeline/data-pipeline`): use `uv`.
+- Python changes (`services/ml-prediction`, `pipeline/data-ingestion`): use `uv`.
 - The full stack must stay runnable via a single `docker compose up` — if your
   change adds a service, env var, or migration, update `docker-compose.yml`,
-  `.env.example`, and the README accordingly.
+  the owning service's `.env.example`, and the README accordingly.
 - Each service owns its database exclusively — no cross-service SQL, ever.
   Cross-service data goes through REST APIs only (SRS 3.6.2).
 - Database schema changes come as new migration files; never edit an applied

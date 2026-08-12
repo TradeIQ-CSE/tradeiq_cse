@@ -34,7 +34,7 @@ wheels = [
 ]
 
 [[package]]
-name = "data-pipeline"
+name = "data-ingestion"
 version = "0.0.0"
 source = { editable = "." }
 dependencies = [

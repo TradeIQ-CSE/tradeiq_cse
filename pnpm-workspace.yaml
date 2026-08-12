@@ -1,5 +1,4 @@
 packages:
-  - "apps/*"
+  - "frontend"
   - "services/market-trading"
   - "services/identity-auth"
-  - "packages/*"

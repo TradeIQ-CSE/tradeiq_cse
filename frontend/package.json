@@ -1,5 +1,5 @@
 {
-  "name": "@tradeiq/web",
+  "name": "@tradeiq/frontend",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -17,7 +17,6 @@
     "react-router-dom": "^6.28.0"
   },
   "devDependencies": {
-    "@tradeiq/tsconfig": "workspace:*",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
