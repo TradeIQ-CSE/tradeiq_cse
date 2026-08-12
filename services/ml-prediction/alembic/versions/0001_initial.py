@@ -61,6 +61,11 @@ def upgrade() -> None:
             CONSTRAINT predictions_uq UNIQUE (run_id, security_id),
             CONSTRAINT predictions_direction_chk
                 CHECK (predicted_direction IN ('up','flat','down')),
+            CONSTRAINT predictions_prob_range_chk CHECK (
+                prob_up BETWEEN 0 AND 1
+                AND prob_flat BETWEEN 0 AND 1
+                AND prob_down BETWEEN 0 AND 1
+            ),
             CONSTRAINT predictions_prob_sum_chk
                 CHECK (abs(prob_up + prob_flat + prob_down - 1) < 0.001)
         )

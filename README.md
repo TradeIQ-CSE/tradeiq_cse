@@ -103,9 +103,9 @@ uv run pytest
 
 ## Databases & migrations
 
-Each service has its own `migrations/` directory and migration tooling wired up, but **no
-migrations have been written yet** — schemas will be added in a later pass. Databases come up
-empty.
+Each service owns its schema via an initial migration. On `docker compose up`, one-shot
+`*-migrate` jobs apply pending migrations and each API service starts only after its own
+migrations complete successfully. The same migrations run in CI against a fresh database.
 
 - `market-trading` / `identity-auth`: TypeORM migrations (`typeorm-ts-node-commonjs`), config in
   `services/<service>/src/db/data-source.ts`.
