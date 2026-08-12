@@ -1,0 +1,7 @@
+symbol,company_name,sector,board,delisted,delisting_date,listing_date,isin,market_cap,shares_outstanding,par_value,base_ticker,share_type,yahoo_ticker
+COMB.N0000,Commercial Bank of Ceylon PLC,Banks,Main,False,,1999-03-04,,,1467151555,,COMB,Voting,COMB.CM
+HNB.N0000,Hatton National Bank PLC,Banks,Main,False,,1999-05-17,,,565107403,,HNB,Voting,HNB.CM
+SAMP.N0000,Sampath Bank PLC,Banks,Main,False,,1997-01-02,,,1174509862,,SAMP,Voting,SAMP.CM
+JKH.N0000,John Keells Holdings PLC,Capital Goods,Main,False,,1995-01-02,,,1513637385,,JKH,Voting,JKH.CM
+DIAL.N0000,Dialog Axiata PLC,Telecommunication Services,Main,False,,2005-07-28,,,9855064420,,DIAL,Voting,DIAL.CM
+CTC.N0000,Ceylon Tobacco Company PLC,"Food, Beverage & Tobacco",Main,False,,1996-01-02,,,187323751,,CTC,Voting,CTC.CM

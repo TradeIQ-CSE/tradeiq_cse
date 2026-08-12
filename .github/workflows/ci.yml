@@ -128,3 +128,68 @@ jobs:
           TOTAL=$((MD + AU + ML))
           echo "total=$TOTAL"
           test "$TOTAL" -ge 28
+
+  seed:
+    name: market-data seed loads and is idempotent
+    runs-on: ubuntu-latest
+    services:
+      # Single Postgres instance, same as docker-compose; per-service
+      # databases and users are created from docker/db/init.sql below.
+      db:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: changeme
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@localhost:5432/market_data
+      DATA_INGESTION_MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@localhost:5432/market_data
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Create per-service databases and users
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y postgresql-client
+          psql "postgresql://postgres:changeme@localhost:5432/postgres" -v ON_ERROR_STOP=1 -f docker/db/init.sql
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: TypeORM migrations (market-trading)
+        working-directory: services/market-trading
+        run: pnpm run migration:run
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Seed twice with the bundled sample fixture
+        working-directory: pipeline/data-ingestion
+        run: |
+          uv sync --all-groups
+          uv run python -m data_ingestion.seed
+          uv run python -m data_ingestion.seed
+
+      - name: Assert seed data present and identical across runs
+        run: |
+          Q="SELECT (SELECT count(*) FROM market_data.securities) || ',' ||
+                    (SELECT count(*) FROM market_data.daily_prices) || ',' ||
+                    (SELECT count(*) FROM market_data.trading_calendar) || ',' ||
+                    (SELECT count(*) FROM market_data.index_values) || ',' ||
+                    (SELECT count(*) FROM market_data.ingestion_runs)"
+          COUNTS=$(psql "$DATA_INGESTION_MARKET_DATA_DATABASE_URL" -tAc "$Q")
+          echo "counts=$COUNTS"
+          # single ingestion_runs row after two runs => idempotent, no dupes
+          test "$COUNTS" = "6,42,7,14,1"

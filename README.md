@@ -65,10 +65,17 @@ This starts:
 - `*-migrate` — one-shot jobs that apply each service's schema migrations
   (TypeORM for the Nest services, Alembic for `ml-prediction`); API services
   only start after their migrations complete
+- `market-data-seed` — one-shot job that seeds `market_data` from a cse-dataset
+  bundle (sectors → securities → trading calendar → daily prices → indices),
+  right after the market_data migrations. With no bundle configured it loads a
+  small bundled sample so markets data is always queryable on a fresh `up`.
+  The seed is idempotent — see [`pipeline/data-ingestion/README.md`](./pipeline/data-ingestion/README.md)
+  for the bundle contract and how to load the full 2017–2025 dataset
 - `market-trading`, `identity-auth`, `ml-prediction` — the three API services
 - `frontend` — the React SPA
 
-The `data-ingestion` job is **not** part of the default `up` — it's a one-off/scheduled job, run with:
+The `data-ingestion` job itself is **not** part of the default `up` — it's a
+one-off/scheduled job, run with:
 
 ```sh
 docker compose run --rm data-ingestion
