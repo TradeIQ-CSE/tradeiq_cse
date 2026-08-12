@@ -130,8 +130,13 @@ https://linear.app/nimeshk-personal/issue/TIQ-40
   the owning service's `.env.example`, and the README accordingly.
 - Each service owns its database exclusively — no cross-service SQL, ever.
   Cross-service data goes through REST APIs only (SRS 3.6.2).
-- Database schema changes come as new migration files; never edit an applied
-  migration.
+- Database schema changes come as new migration files in the service's
+  `src/db/migrations/`; never edit an applied migration. Nest services apply
+  pending migrations automatically at startup — no separate migrate step.
+- Never read `process.env` in Nest application code. Add the variable to the
+  service's `src/config/env.validation.ts` and a `registerAs` factory under
+  `src/config/`, then inject `ConfigService`. (`src/db/data-source.ts` is the
+  sanctioned exception: it's TypeORM CLI tooling, not app code.)
 
 ## Definition of Done
 

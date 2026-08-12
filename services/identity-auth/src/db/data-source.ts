@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 
@@ -5,7 +6,7 @@ export default new DataSource({
   type: 'postgres',
   url: process.env.AUTH_DATABASE_URL,
   entities: [],
-  migrations: ['migrations/*.ts'],
+  migrations: ['src/db/migrations/*.ts'],
   // pin tracking table to public: once the auth schema exists, the auth
   // user's default search_path ("$user", public) would otherwise resolve an
   // unqualified "migrations" to the auth schema.

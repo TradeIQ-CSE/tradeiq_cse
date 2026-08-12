@@ -212,19 +212,29 @@ export class InitialSchema1786358400000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP TABLE IF EXISTS market_data.backtest_results`);
+    await queryRunner.query(
+      `DROP TABLE IF EXISTS market_data.backtest_results`,
+    );
     await queryRunner.query(`DROP TABLE IF EXISTS market_data.backtest_runs`);
     await queryRunner.query(`DROP TABLE IF EXISTS market_data.api_keys`);
-    await queryRunner.query(`DROP TABLE IF EXISTS market_data.quarantined_records`);
+    await queryRunner.query(
+      `DROP TABLE IF EXISTS market_data.quarantined_records`,
+    );
     await queryRunner.query(`DROP TABLE IF EXISTS market_data.listing_events`);
-    await queryRunner.query(`DROP TABLE IF EXISTS market_data.corporate_actions`);
+    await queryRunner.query(
+      `DROP TABLE IF EXISTS market_data.corporate_actions`,
+    );
     await queryRunner.query(`DROP TABLE IF EXISTS market_data.market_ratios`);
     await queryRunner.query(`DROP TABLE IF EXISTS market_data.index_values`);
     await queryRunner.query(`DROP TABLE IF EXISTS market_data.indices`);
-    await queryRunner.query(`DROP TABLE IF EXISTS market_data.price_aggregates`);
+    await queryRunner.query(
+      `DROP TABLE IF EXISTS market_data.price_aggregates`,
+    );
     await queryRunner.query(`DROP TABLE IF EXISTS market_data.daily_prices`);
     await queryRunner.query(`DROP TABLE IF EXISTS market_data.ingestion_runs`);
-    await queryRunner.query(`DROP TABLE IF EXISTS market_data.trading_calendar`);
+    await queryRunner.query(
+      `DROP TABLE IF EXISTS market_data.trading_calendar`,
+    );
     await queryRunner.query(`DROP TABLE IF EXISTS market_data.securities`);
     await queryRunner.query(`DROP TABLE IF EXISTS market_data.sectors`);
     await queryRunner.query(`DROP SCHEMA IF EXISTS market_data`);
