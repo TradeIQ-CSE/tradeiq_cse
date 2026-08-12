@@ -24,6 +24,10 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        # pin version table to public: once the ml schema exists, the ml
+        # user's default search_path ("$user", public) would otherwise
+        # resolve an unqualified "alembic_version" to the ml schema.
+        version_table_schema="public",
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -36,7 +40,11 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            version_table_schema="public",
+        )
         with context.begin_transaction():
             context.run_migrations()
 

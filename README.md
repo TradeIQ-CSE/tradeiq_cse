@@ -2,8 +2,9 @@
 
 CSE (Colombo Stock Exchange) strategy backtesting, paper-trading, and portfolio-analytics platform.
 
-> **Status:** skeleton only. No business logic, endpoints, or database schemas are implemented yet.
-> Every service exposes a static `/health` stub and every database comes up empty.
+> **Status:** skeleton only. No business logic or endpoints are implemented yet.
+> Every service exposes a static `/health` stub; databases start empty but are
+> migrated to the schema-v2 layout automatically on `docker compose up`.
 
 ## Layout
 
@@ -61,6 +62,9 @@ This starts:
 
 - `db` — a single Postgres instance hosting one database per service
   (`market_data`, `auth`, `ml`), created by `docker/db/init.sql` on first boot
+- `*-migrate` — one-shot jobs that apply each service's schema migrations
+  (TypeORM for the Nest services, Alembic for `ml-prediction`); API services
+  only start after their migrations complete
 - `market-trading`, `identity-auth`, `ml-prediction` — the three API services
 - `frontend` — the React SPA
 
@@ -99,9 +103,9 @@ uv run pytest
 
 ## Databases & migrations
 
-Each service has its own `migrations/` directory and migration tooling wired up, but **no
-migrations have been written yet** — schemas will be added in a later pass. Databases come up
-empty.
+Each service owns its schema via an initial migration. On `docker compose up`, one-shot
+`*-migrate` jobs apply pending migrations and each API service starts only after its own
+migrations complete successfully. The same migrations run in CI against a fresh database.
 
 - `market-trading` / `identity-auth`: TypeORM migrations (`typeorm-ts-node-commonjs`), config in
   `services/<service>/src/db/data-source.ts`.

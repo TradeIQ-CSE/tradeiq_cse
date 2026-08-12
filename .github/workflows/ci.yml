@@ -61,3 +61,70 @@ jobs:
       - name: Test
         working-directory: ${{ matrix.service }}
         run: uv run pytest
+
+  migrations:
+    name: migrations apply cleanly
+    runs-on: ubuntu-latest
+    services:
+      # Single Postgres instance, same as docker-compose; per-service
+      # databases and users are created from docker/db/init.sql below.
+      db:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: changeme
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@localhost:5432/market_data
+      AUTH_DATABASE_URL: postgresql://auth:changeme@localhost:5432/auth
+      ML_DATABASE_URL: postgresql://ml:changeme@localhost:5432/ml
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Create per-service databases and users
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y postgresql-client
+          psql "postgresql://postgres:changeme@localhost:5432/postgres" -v ON_ERROR_STOP=1 -f docker/db/init.sql
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: TypeORM migrations (market-trading)
+        working-directory: services/market-trading
+        run: pnpm run migration:run
+
+      - name: TypeORM migrations (identity-auth)
+        working-directory: services/identity-auth
+        run: pnpm run migration:run
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Alembic migrations (ml-prediction)
+        working-directory: services/ml-prediction
+        run: |
+          uv sync --all-groups
+          uv run alembic upgrade head
+
+      - name: Assert 28 tables across the three schemas
+        run: |
+          MD=$(psql "$MARKET_DATA_DATABASE_URL" -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema='market_data'")
+          AU=$(psql "$AUTH_DATABASE_URL" -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema='auth'")
+          ML=$(psql "$ML_DATABASE_URL" -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema='ml'")
+          echo "market_data=$MD auth=$AU ml=$ML"
+          TOTAL=$((MD + AU + ML))
+          echo "total=$TOTAL"
+          test "$TOTAL" -ge 28
