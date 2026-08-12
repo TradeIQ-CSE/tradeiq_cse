@@ -1,8 +1,8 @@
 # Migrations — market-trading (`market_data` database)
 
 TypeORM migrations for this service live here. `1786358400000-InitialSchema.ts`
-creates the `market_data` schema (15 tables) per the mentor-reviewed schema v2
-(verified against ERD v2).
+creates the `market_data` schema (15 tables) per schema v2 (verified against
+ERD v2).
 
 Migrations run **automatically at service startup** (`migrationsRun: true` in
 `src/app.module.ts`) — the app applies pending migrations against

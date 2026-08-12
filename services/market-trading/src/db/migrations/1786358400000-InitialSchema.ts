@@ -2,7 +2,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 
 /**
  * 0001_initial — market_data schema (15 tables).
- * Source: tradeiq_cse_schema_v2.sql (post-mentor review, 07 Aug 2026),
+ * Source: tradeiq_cse_schema_v2.sql (07 Aug 2026),
  * verified 1:1 against ERD v2 (docs/diagrams/fig14-erd-v2.json).
  * Conventions: money numeric(18,4); prices numeric(12,4); ids uuid.
  * NOTE: daily_prices.trade_date FK references trading_calendar — seed/ingestion
