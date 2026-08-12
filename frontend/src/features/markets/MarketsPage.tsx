@@ -1,10 +1,13 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AppShell } from '../../layout/AppShell';
 import { ApiError } from '../../lib/api';
+import { localeFor } from '../../i18n';
 import watchAddIcon from '../../assets/icons/watch-add.svg';
 import { SecuritiesSort } from './types';
 import { useSecurities } from './useSecurities';
 import {
+  formatCount,
   formatPrice,
   formatSigned,
   formatVolume,
@@ -14,16 +17,14 @@ import './markets.css';
 
 const PAGE_SIZE = 20;
 
-type FilterChip = 'all' | 'gainers' | 'losers' | 'most-active';
+type FilterChip = 'all' | 'gainers' | 'losers' | 'mostActive';
 
-const FILTER_CHIPS: { key: FilterChip; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'gainers', label: 'Gainers' },
-  { key: 'losers', label: 'Losers' },
-  { key: 'most-active', label: 'Most Active' },
-];
+const FILTER_CHIPS: FilterChip[] = ['all', 'gainers', 'losers', 'mostActive'];
 
 export function MarketsPage() {
+  const { t, i18n } = useTranslation();
+  const locale = localeFor(i18n.resolvedLanguage ?? i18n.language);
+
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SecuritiesSort>('symbol');
   const [page, setPage] = useState(1);
@@ -38,6 +39,7 @@ export function MarketsPage() {
 
   const total = data?.meta?.total ?? 0;
   const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const dash = t('markets.empty');
 
   function toggleWatch(symbol: string) {
     setWatched((prev) => {
@@ -64,9 +66,12 @@ export function MarketsPage() {
       <div className="markets-page">
         <header className="markets-page__header">
           <div>
-            <h1>Browse Securities</h1>
+            <h1>{t('markets.title')}</h1>
             <p className="markets-page__subtitle">
-              {total.toLocaleString()} securities listed on CSE
+              {t('markets.subtitle', {
+                count: total,
+                formattedCount: formatCount(total, locale),
+              })}
             </p>
           </div>
         </header>
@@ -74,13 +79,17 @@ export function MarketsPage() {
         <div className="markets-page__filters">
           {FILTER_CHIPS.map((chip) => (
             <button
-              key={chip.key}
+              key={chip}
               type="button"
-              className={`markets-chip${chip.key === 'all' ? ' markets-chip--active' : ''}`}
-              disabled={chip.key !== 'all'}
-              title={chip.key !== 'all' ? 'Coming soon — needs GET /market/overview' : undefined}
+              className={`markets-chip${chip === 'all' ? ' markets-chip--active' : ''}`}
+              disabled={chip !== 'all'}
+              title={
+                chip !== 'all'
+                  ? t('markets.unavailable.marketOverview')
+                  : undefined
+              }
             >
-              {chip.label}
+              {t(`markets.filters.${chip}`)}
             </button>
           ))}
 
@@ -96,17 +105,17 @@ export function MarketsPage() {
           <select
             className="markets-select"
             disabled
-            title="Sector data is not yet available in the seeded dataset"
+            title={t('markets.unavailable.sectors')}
           >
-            <option>Select Segment</option>
+            <option>{t('markets.filters.selectSegment')}</option>
           </select>
 
           <select
             className="markets-select"
             disabled
-            title="Coming soon — needs GET /market/overview"
+            title={t('markets.unavailable.marketOverview')}
           >
-            <option>Select Market Cap</option>
+            <option>{t('markets.filters.selectMarketCap')}</option>
           </select>
         </div>
 
@@ -115,10 +124,10 @@ export function MarketsPage() {
             <div className="markets-page__state markets-page__state--error">
               {error instanceof ApiError
                 ? error.body.message
-                : 'Could not reach the market-trading API.'}
+                : t('markets.states.unreachable')}
             </div>
           ) : !isPending && data && data.data.length === 0 ? (
-            <div className="markets-page__state">No securities match your filters.</div>
+            <div className="markets-page__state">{t('markets.states.empty')}</div>
           ) : (
             <>
               <div className="markets-row markets-row--head">
@@ -127,22 +136,34 @@ export function MarketsPage() {
                   onClick={() => toggleSort('symbol')}
                   aria-current={sort === 'symbol'}
                 >
-                  Symbol
+                  {t('markets.columns.symbol')}
                 </button>
                 <button
                   className="markets-sort"
                   onClick={() => toggleSort('company_name')}
                   aria-current={sort === 'company_name'}
                 >
-                  Sector
+                  {t('markets.columns.sector')}
                 </button>
-                <span>Cap</span>
-                <span className="markets-col--right">Price</span>
-                <span className="markets-col--right">Change</span>
-                <span className="markets-col--right">%</span>
-                <span className="markets-col--right">Volume</span>
-                <span className="markets-col--right">P/E</span>
-                <span className="markets-col--right">Watch</span>
+                <span>{t('markets.columns.cap')}</span>
+                <span className="markets-col--right">
+                  {t('markets.columns.price')}
+                </span>
+                <span className="markets-col--right">
+                  {t('markets.columns.change')}
+                </span>
+                <span className="markets-col--right">
+                  {t('markets.columns.changePct')}
+                </span>
+                <span className="markets-col--right">
+                  {t('markets.columns.volume')}
+                </span>
+                <span className="markets-col--right">
+                  {t('markets.columns.peRatio')}
+                </span>
+                <span className="markets-col--right">
+                  {t('markets.columns.watch')}
+                </span>
               </div>
 
               <div className="markets-card__body">
@@ -151,11 +172,12 @@ export function MarketsPage() {
                       <div className="markets-row markets-row--skeleton" key={i} />
                     ))
                   : data?.data.map((security) => {
-                      const cap = marketCapBand(
+                      const band = marketCapBand(
                         security.shares_outstanding,
                         security.price,
                       );
                       const positive = (security.change ?? 0) >= 0;
+                      const isWatched = watched.has(security.symbol);
                       return (
                         <div className="markets-row" key={security.symbol}>
                           <div className="markets-row__symbol">
@@ -167,20 +189,28 @@ export function MarketsPage() {
                             </span>
                           </div>
                           <span className="markets-row__sector">
-                            {security.sector?.name ?? '—'}
+                            {security.sector?.name ?? dash}
                           </span>
-                          <span className="markets-row__cap">{cap ?? '—'}</span>
+                          <span className="markets-row__cap">
+                            {band ? t(`markets.cap.${band}`) : dash}
+                          </span>
                           <span className="markets-col--right markets-mono markets-row__price">
-                            {security.price !== null ? formatPrice(security.price) : '—'}
+                            {security.price !== null
+                              ? formatPrice(security.price, locale)
+                              : dash}
                           </span>
                           <span
                             className={`markets-col--right markets-mono ${
-                              security.change === null ? '' : positive ? 'markets-positive' : 'markets-negative'
+                              security.change === null
+                                ? ''
+                                : positive
+                                  ? 'markets-positive'
+                                  : 'markets-negative'
                             }`}
                           >
                             {security.change !== null
-                              ? formatSigned(security.change, 2)
-                              : '—'}
+                              ? formatSigned(security.change, 2, locale)
+                              : dash}
                           </span>
                           <span
                             className={`markets-col--right markets-mono ${
@@ -192,28 +222,32 @@ export function MarketsPage() {
                             }`}
                           >
                             {security.change_pct !== null
-                              ? `${formatSigned(security.change_pct, 2)}%`
-                              : '—'}
+                              ? `${formatSigned(security.change_pct, 2, locale)}%`
+                              : dash}
                           </span>
                           <span className="markets-col--right markets-mono markets-row__volume">
-                            {security.volume !== null ? formatVolume(security.volume) : '—'}
+                            {security.volume !== null
+                              ? formatVolume(security.volume, locale)
+                              : dash}
                           </span>
                           <span className="markets-col--right markets-mono markets-row__volume">
-                            {security.pe_ratio !== null ? security.pe_ratio.toFixed(1) : '—'}
+                            {security.pe_ratio !== null
+                              ? formatPrice(security.pe_ratio, locale)
+                              : dash}
                           </span>
                           <span className="markets-col--right">
                             <button
                               type="button"
                               className={`markets-watch${
-                                watched.has(security.symbol) ? ' markets-watch--active' : ''
+                                isWatched ? ' markets-watch--active' : ''
                               }`}
                               onClick={() => toggleWatch(security.symbol)}
-                              aria-pressed={watched.has(security.symbol)}
-                              title={
-                                watched.has(security.symbol)
-                                  ? 'Remove from watchlist'
-                                  : 'Add to watchlist'
-                              }
+                              aria-pressed={isWatched}
+                              title={t(
+                                isWatched
+                                  ? 'markets.watch.remove'
+                                  : 'markets.watch.add',
+                              )}
                             >
                               <img src={watchAddIcon} alt="" width={14} height={14} />
                             </button>
@@ -229,17 +263,20 @@ export function MarketsPage() {
         {!isError && total > 0 && (
           <footer className="markets-page__footer">
             <span>
-              Page {page} of {lastPage}
+              {t('markets.pagination.page', {
+                page: formatCount(page, locale),
+                lastPage: formatCount(lastPage, locale),
+              })}
             </span>
             <div className="markets-page__pager">
               <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                Previous
+                {t('markets.pagination.previous')}
               </button>
               <button
                 disabled={page >= lastPage}
                 onClick={() => setPage((p) => p + 1)}
               >
-                Next
+                {t('markets.pagination.next')}
               </button>
             </div>
           </footer>

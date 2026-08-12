@@ -1,4 +1,6 @@
+import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
+import { SUPPORTED_LANGUAGES } from '../i18n';
 import logoIcon from '../assets/icons/logo.svg';
 import marketsIcon from '../assets/icons/markets.svg';
 import watchlistIcon from '../assets/icons/watchlist.svg';
@@ -14,13 +16,16 @@ import './sidebar.css';
 
 interface NavItem {
   key: string;
-  label: string;
+  /** Translation key under nav.items. */
+  labelKey: string;
   icon: string;
   to?: string;
 }
 
 interface NavSection {
-  label: string;
+  key: string;
+  /** Translation key under nav.sections. */
+  labelKey: string;
   items: NavItem[];
 }
 
@@ -29,52 +34,65 @@ interface NavSection {
 // Figma shell but are visually disabled rather than dead links.
 const NAV_SECTIONS: NavSection[] = [
   {
-    label: 'Markets',
+    key: 'markets',
+    labelKey: 'markets',
     items: [
-      { key: 'markets', label: 'Markets', icon: marketsIcon, to: '/' },
-      { key: 'watchlist', label: 'Watchlist', icon: watchlistIcon },
+      { key: 'markets', labelKey: 'markets', icon: marketsIcon, to: '/' },
+      { key: 'watchlist', labelKey: 'watchlist', icon: watchlistIcon },
     ],
   },
   {
-    label: 'My Portfolio',
+    key: 'portfolio',
+    labelKey: 'portfolio',
     items: [
-      { key: 'portfolio', label: 'Portfolio', icon: portfolioIcon },
-      { key: 'trades', label: 'Trades', icon: tradesIcon },
+      { key: 'portfolio', labelKey: 'portfolio', icon: portfolioIcon },
+      { key: 'trades', labelKey: 'trades', icon: tradesIcon },
     ],
   },
   {
-    label: 'Trading',
+    key: 'trading',
+    labelKey: 'trading',
     items: [
-      { key: 'paper-trading', label: 'Paper Trading', icon: paperTradingIcon },
+      {
+        key: 'paper-trading',
+        labelKey: 'paperTrading',
+        icon: paperTradingIcon,
+      },
     ],
   },
   {
-    label: 'Analysis',
+    key: 'analysis',
+    labelKey: 'analysis',
     items: [
-      { key: 'backtesting', label: 'Backtesting', icon: backtestingIcon },
-      { key: 'ai-insights', label: 'AI Insights', icon: aiInsightsIcon },
+      { key: 'backtesting', labelKey: 'backtesting', icon: backtestingIcon },
+      { key: 'ai-insights', labelKey: 'aiInsights', icon: aiInsightsIcon },
     ],
   },
   {
-    label: 'Utilities',
-    items: [{ key: 'reports', label: 'Reports', icon: reportsIcon }],
+    key: 'utilities',
+    labelKey: 'utilities',
+    items: [{ key: 'reports', labelKey: 'reports', icon: reportsIcon }],
   },
 ];
 
 export function Sidebar() {
+  const { t, i18n } = useTranslation();
+
   return (
     <aside className="sidebar">
       <div className="sidebar__brand">
         <span className="sidebar__logo-badge">
           <img src={logoIcon} alt="" width={12} height={12} />
         </span>
-        <span className="sidebar__brand-name">TradeIQ CSE</span>
+        <span className="sidebar__brand-name">{t('app.name')}</span>
       </div>
 
       <nav className="sidebar__nav">
         {NAV_SECTIONS.map((section) => (
-          <div className="sidebar__section" key={section.label}>
-            <p className="sidebar__section-label">{section.label}</p>
+          <div className="sidebar__section" key={section.key}>
+            <p className="sidebar__section-label">
+              {t(`nav.sections.${section.labelKey}`)}
+            </p>
             {section.items.map((item) =>
               item.to ? (
                 <NavLink
@@ -86,7 +104,7 @@ export function Sidebar() {
                   }
                 >
                   <img src={item.icon} alt="" width={13} height={13} />
-                  <span>{item.label}</span>
+                  <span>{t(`nav.items.${item.labelKey}`)}</span>
                 </NavLink>
               ) : (
                 <span
@@ -95,7 +113,7 @@ export function Sidebar() {
                   aria-disabled="true"
                 >
                   <img src={item.icon} alt="" width={13} height={13} />
-                  <span>{item.label}</span>
+                  <span>{t(`nav.items.${item.labelKey}`)}</span>
                 </span>
               ),
             )}
@@ -104,23 +122,39 @@ export function Sidebar() {
       </nav>
 
       <div className="sidebar__footer">
-        <span className="sidebar__item sidebar__item--disabled" aria-disabled="true">
+        <span
+          className="sidebar__item sidebar__item--disabled"
+          aria-disabled="true"
+        >
           <img src={settingsIcon} alt="" width={13} height={13} />
-          <span>Settings</span>
+          <span>{t('nav.items.settings')}</span>
         </span>
 
         <div className="sidebar__language">
-          <p className="sidebar__section-label">Language</p>
+          <p className="sidebar__section-label">{t('nav.language')}</p>
           <div className="sidebar__language-toggle">
-            <button type="button" className="sidebar__lang sidebar__lang--active">
-              EN
-            </button>
-            <button type="button" className="sidebar__lang" disabled>
-              සිං
-            </button>
-            <button type="button" className="sidebar__lang" disabled>
-              தமிழ்
-            </button>
+            {SUPPORTED_LANGUAGES.map((language) => (
+              <button
+                key={language.code}
+                type="button"
+                lang={language.code}
+                className={`sidebar__lang${
+                  i18n.resolvedLanguage === language.code
+                    ? ' sidebar__lang--active'
+                    : ''
+                }`}
+                aria-pressed={i18n.resolvedLanguage === language.code}
+                disabled={!language.available}
+                title={
+                  language.available
+                    ? undefined
+                    : t('nav.languageUnavailable', { language: language.label })
+                }
+                onClick={() => void i18n.changeLanguage(language.code)}
+              >
+                {language.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -128,7 +162,9 @@ export function Sidebar() {
           <span className="sidebar__avatar">N</span>
           <span className="sidebar__profile-text">
             <span className="sidebar__profile-name">Nimesh</span>
-            <span className="sidebar__profile-role">Live trader</span>
+            <span className="sidebar__profile-role">
+              {t('nav.profile.role')}
+            </span>
           </span>
           <img src={userMenuIcon} alt="" width={12} height={12} />
         </div>
