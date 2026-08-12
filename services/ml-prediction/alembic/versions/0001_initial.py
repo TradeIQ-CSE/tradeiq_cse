@@ -1,6 +1,6 @@
 """0001_initial — ml schema (3 tables).
 
-Source: tradeiq_cse_schema_v2.sql (post-mentor review, 07 Aug 2026),
+Source: tradeiq_cse_schema_v2.sql (07 Aug 2026),
 verified 1:1 against ERD v2 (docs/diagrams/fig14-erd-v2.json).
 
 Revision ID: 0001_initial

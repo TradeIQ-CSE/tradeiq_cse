@@ -8,8 +8,8 @@
 
 SRS v1.1 names no deployable services — only the data stores (3.10.1:
 *market-data store*, *user store*, *machine-learning store*) — and states (3.1)
-that allocating subsystems to services is a design decision. The mentor-reviewed
-schema v2 (`tradeiq_cse_schema_v2.sql`, verified 1:1 against ERD v2) fixes the
+that allocating subsystems to services is a design decision. Schema v2
+(`tradeiq_cse_schema_v2.sql`, verified 1:1 against ERD v2) fixes the
 namespaces `auth` / `market_data` / `ml`. The repo skeleton already ships three
 services.
 

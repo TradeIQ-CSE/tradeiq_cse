@@ -113,7 +113,12 @@ Securities browser list.
       "sector": { "gics_code": "4010", "name": "Banks" },
       "shares_outstanding": 1467151555,
       "data_from": "2017-01-02",
-      "data_to": "2025-12-31"
+      "data_to": "2025-12-31",
+      "price": 89.70,
+      "change": -0.80,
+      "change_pct": -0.89,
+      "volume": 512800,
+      "pe_ratio": 6.2
     },
     {
       "symbol": "HNB.N0000",
@@ -121,7 +126,12 @@ Securities browser list.
       "sector": { "gics_code": "4010", "name": "Banks" },
       "shares_outstanding": 565107403,
       "data_from": "2017-01-02",
-      "data_to": "2025-12-31"
+      "data_to": "2025-12-31",
+      "price": 195.50,
+      "change": 1.20,
+      "change_pct": 0.62,
+      "volume": 134200,
+      "pe_ratio": 6.9
     }
   ],
   "meta": { "page": 1, "page_size": 2, "total": 3 }
@@ -134,6 +144,15 @@ Securities browser list.
 - `shares_outstanding`: `null` when unknown (excluded from market-cap filtering —
   see §6).
 - `sector`: `null` when the security is unclassified.
+- `price`, `change`, `change_pct`, `volume`: same "latest vs. previous trading
+  day" semantics as `/securities/{symbol}`'s `latest` object (§4) — as-of the
+  most recent trading day with price data (§2.4). All `null` when the security
+  has no price history; `change`/`change_pct` individually `null` on the first
+  day of coverage (no previous trading day).
+- `pe_ratio`: currently valid P/E (`valid_to IS NULL` row in `market_ratios`),
+  else `null`. Added as a v0.1 extension for the Browse Securities table
+  (Figma `Market` frame) — additive and nullable, doesn't break existing
+  consumers of the v0 shape.
 
 ### Errors
 
@@ -292,7 +311,7 @@ Gainers / losers / most-active tables for the public markets landing page
 | `mid` | ≥ Rs 5 B and < Rs 20 B |
 | `small` | < Rs 5 B |
 
-> ⚠️ **v0 proposal, pending mentor sign-off.** SRS 3.1.1.1 requires band filtering
+> ⚠️ **v0 proposal, pending sign-off.** SRS 3.1.1.1 requires band filtering
 > but does not fix thresholds; these are tunable server-side constants. Securities
 > with unknown `shares_outstanding` are excluded only while a `market_cap` filter
 > is applied.
@@ -358,7 +377,7 @@ All errors use the envelope in [error-envelope.md](./error-envelope.md):
    derivable from the distinct `sector` objects in `GET /securities` responses.
    A dedicated reference endpoint is a candidate for the next contract revision
    if FE finds derivation awkward.
-2. **Market-cap thresholds are proposed constants** (§6), pending mentor sign-off.
+2. **Market-cap thresholds are proposed constants** (§6), pending sign-off.
 3. **No API versioning** on this internal surface; versioning arrives with the
    separate public developer API (SRS 3.1.3, Phase 8).
 4. **Ratios coverage:** P/E and P/B only, matching schema v2 `market_ratios`.
