@@ -25,6 +25,28 @@ describe('config', () => {
       process.env.MARKET_TRADING_PORT = '4100';
       expect(appConfig().port).toBe(4100);
     });
+
+    it('defaults CORS origins to the Vite dev server', () => {
+      delete process.env.MARKET_TRADING_CORS_ORIGINS;
+      expect(appConfig().corsOrigins).toEqual(['http://localhost:5173']);
+    });
+
+    it('splits and trims a comma-separated CORS origin list', () => {
+      process.env.MARKET_TRADING_CORS_ORIGINS =
+        'http://localhost:5173, https://app.example.com';
+      expect(appConfig().corsOrigins).toEqual([
+        'http://localhost:5173',
+        'https://app.example.com',
+      ]);
+    });
+
+    it('drops empty entries from a trailing or doubled comma', () => {
+      process.env.MARKET_TRADING_CORS_ORIGINS = 'http://a.test,,http://b.test,';
+      expect(appConfig().corsOrigins).toEqual([
+        'http://a.test',
+        'http://b.test',
+      ]);
+    });
   });
 
   describe('databaseConfig', () => {

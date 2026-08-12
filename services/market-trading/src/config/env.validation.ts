@@ -24,6 +24,11 @@ class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   MARKET_DATA_DATABASE_URL!: string;
+
+  //: Comma-separated browser origins allowed to call this API.
+  @IsOptional()
+  @IsString()
+  MARKET_TRADING_CORS_ORIGINS?: string;
 }
 
 export function validate(config: Record<string, unknown>) {
