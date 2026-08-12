@@ -37,6 +37,42 @@ Bundle resolution order: `--seed-dir` / `CSE_SEED_DATA_DIR` →
 (`src/data_ingestion/fixtures/sample`, used so a fresh `docker compose up`
 always has queryable data).
 
+### Building a bundle from cse-dataset
+
+cse-dataset's `backfill_ohlcv.py` writes accepted OHLCV **one file per trading
+date** (`data/raw/ohlcv/accepted/<date>/<source>/canonical_ohlcv.csv`), and its
+generated artifacts are gitignored — so a fresh checkout has no bundle to point
+at. `build_seed_bundle` regenerates one:
+
+```sh
+# in a cse-dataset checkout — produces the inputs (metadata hits the CSE API)
+uv run python scripts/01_collect_metadata.py
+uv run python scripts/backfill_ohlcv.py   # defaults to the 2025 source file
+
+# back here — consolidate them into a bundle
+uv run python -m data_ingestion.build_seed_bundle \
+    --dataset-root ~/path/to/cse-dataset \
+    --out /tmp/cse-bundle-2025 --from 2025-01-01 --to 2025-12-31
+
+CSE_SEED_DATA_DIR=/tmp/cse-bundle-2025 docker compose up market-data-seed
+```
+
+It also normalises `listing_date` from the CSE API's `DD/MMM/YYYY` to ISO,
+which `seed_data.parse_date` requires.
+
+**Known gaps in the regenerated data:**
+
+- **Sectors are unresolved.** `01_collect_metadata.py` hardcodes
+  `sector = "Unknown"`, and no symbol→sector mapping exists in the CSE API,
+  the daily price files (`MAIN TYPE`/`SUB TYPE` are share class), or
+  `39GICS-Daily.xlsx` (sector *index values* only). `securities.sector_id`
+  therefore stays NULL. `https://www.cse.lk/api/allSectors` does return the 22
+  GICS sectors with codes, if a per-company mapping is ever found.
+- **No `market_ratios`.** The seed never populates it, so `pe_ratio` is always
+  null on API responses.
+- **17 quarantined dates in 2025** (23 rejected rows) — a known source-data
+  issue (TIQ-26); `repair_ohlcv_missing.py` upstream recovers 15 of them.
+
 ### Run it
 
 ```sh

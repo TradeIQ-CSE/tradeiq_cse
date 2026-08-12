@@ -32,6 +32,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       MARKET_TRADING_PORT: ${MARKET_TRADING_PORT:-3001}
       MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@db:5432/market_data
+      MARKET_TRADING_CORS_ORIGINS: ${MARKET_TRADING_CORS_ORIGINS:-http://localhost:5173}
     ports:
       - "${MARKET_TRADING_PORT:-3001}:3001"
     depends_on:
@@ -53,9 +54,15 @@ services:
       context: .
       dockerfile: pipeline/data-ingestion/Dockerfile
     command: ["python", "-m", "data_ingestion.seed"]
+    # A host bundle is bind-mounted at /seed; CSE_SEED_DATA_DIR is rewritten to
+    # that container path so the host path never leaks inside. With the var
+    # unset, the mount falls back to the sample fixture and the empty
+    # CSE_SEED_DATA_DIR makes seed.py use its own bundled copy anyway.
+    volumes:
+      - ${CSE_SEED_DATA_DIR:-./pipeline/data-ingestion/src/data_ingestion/fixtures/sample}:/seed:ro
     environment:
       DATA_INGESTION_MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@db:5432/market_data
-      CSE_SEED_DATA_DIR: ${CSE_SEED_DATA_DIR:-}
+      CSE_SEED_DATA_DIR: ${CSE_SEED_DATA_DIR:+/seed}
       CSE_DATA_SOURCE_URL: ${CSE_DATA_SOURCE_URL:-}
     depends_on:
       market-trading:
