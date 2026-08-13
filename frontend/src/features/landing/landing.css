@@ -1,0 +1,55 @@
+@import './landing-nav.css';
+@import './landing-hero.css';
+@import './landing-market-data.css';
+@import './landing-alerts.css';
+@import './landing-insights.css';
+@import './landing-backtesting.css';
+@import './landing-cta.css';
+@import './landing-footer.css';
+
+.landing-page {
+  min-height: 100%;
+  background: var(--bg-app);
+  color: var(--text-primary);
+}
+
+.landing-section-eyebrow {
+  display: block;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+}
+
+.landing-section-heading {
+  margin: 14px 0 0;
+  font-size: 38px;
+  font-weight: 900;
+  letter-spacing: -0.95px;
+  line-height: 1.1;
+  color: var(--text-heading);
+}
+
+.landing-section-heading span {
+  display: block;
+}
+
+.landing-section-copy {
+  max-width: 494px;
+  margin: 17.5px 0 21px;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1.625;
+}
+
+.landing-section-link {
+  color: var(--accent-text);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.landing-section-link:hover {
+  text-decoration: underline;
+}

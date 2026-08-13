@@ -28,8 +28,7 @@
     }
   },
   "topbar": {
-    "searchPlaceholder": "Search symbol or company…",
-    "aiAssistant": "AI Assistant"
+    "searchPlaceholder": "Search symbol or company…"
   },
   "markets": {
     "title": "Browse Securities",
@@ -78,5 +77,117 @@
       "sectors": "Sector data is not yet available in the seeded dataset"
     },
     "empty": "—"
+  },
+  "landing": {
+    "nav": {
+      "tagline": "COLOMBO STOCK EXCHANGE",
+      "links": {
+        "market": "Market",
+        "stockbrokerFirms": "Stockbroker Firms",
+        "investors": "Investors",
+        "newsEvents": "News & Events",
+        "rulesCirculars": "Rules & Circulars",
+        "aboutUs": "About Us"
+      },
+      "openAccount": "Open an Account",
+      "signIn": "Sign in"
+    },
+    "hero": {
+      "badge": "Colombo Stock Exchange",
+      "headlineLine1": "The professional edge",
+      "headlineLine2": "for CSE investors.",
+      "subtitle": "Advanced charting, AI-driven signals, portfolio analytics, and paper trading — built for Sri Lankan investors.",
+      "getStarted": "Get started free",
+      "signIn": "Sign in →",
+      "dataNote": "End-of-day data · Delayed"
+    },
+    "marketData": {
+      "eyebrow": "Market data",
+      "headingLine1": "The full CSE picture,",
+      "headingLine2": "at a glance.",
+      "description": "Browse all 297 listed securities with real price data, sector filters, and OHLC breakdowns. Filter by gainers, losers, or most active in one click.",
+      "cta": "Explore the markets →",
+      "cardTitle": "CSE Securities"
+    },
+    "alerts": {
+      "eyebrow": "Smart alerts",
+      "heading": "Never miss a signal.",
+      "items": {
+        "bullish": {
+          "title": "Bullish crossover detected",
+          "meta": "JKH · 2 min ago",
+          "description": "MA 7 crossed above MA 20 — momentum building"
+        },
+        "portfolio": {
+          "title": "Portfolio alert",
+          "meta": "LOLC · 18 min ago",
+          "description": "Position down 4.5% — below entry support at Rs. 340"
+        },
+        "bearish": {
+          "title": "Bearish signal",
+          "meta": "COMB · 1 hr ago",
+          "description": "Approaching key resistance at Rs. 91.50 — watch closely"
+        }
+      }
+    },
+    "insights": {
+      "panelTitle": "Direction Probabilities · 1-Week",
+      "panelBadge": "Statistical model",
+      "bull": "↑ Bull",
+      "flat": "→ Flat",
+      "bear": "↓ Bear",
+      "eyebrow": "AI insights",
+      "headingLine1": "Model-driven signals,",
+      "headingLine2": "not gut feeling.",
+      "description": "See Up / Flat / Down probability splits for every major CSE symbol. Understand your open positions through the same lens, updated each trading day.",
+      "cta": "See AI insights →"
+    },
+    "backtesting": {
+      "eyebrow": "Strategy Backtesting",
+      "headingLine1": "Test before",
+      "headingLine2": "you invest.",
+      "description": "Run any strategy — MA Crossover, RSI, MACD, Bollinger Bands and more — against years of CSE historical data. A guided 7-step wizard walks you through setup in minutes, then surfaces a full analytics dashboard.",
+      "quickTitle": "Quick Backtest",
+      "quickDescription": "Pick a strategy, pick a stock, run. Default CSE rules, results in seconds.",
+      "customTitle": "Custom Backtest",
+      "customDescription": "Fine-tune capital, commission, slippage, risk limits, and choose your own metrics.",
+      "cta": "Run your first backtest →",
+      "steps": {
+        "mode": "Mode",
+        "strategy": "Strategy",
+        "market": "Market",
+        "execution": "Execution",
+        "portfolio": "Portfolio",
+        "metrics": "Metrics",
+        "ai": "AI",
+        "results": "Results"
+      },
+      "selectStrategy": "Select Strategy",
+      "strategies": {
+        "maCrossover": "MA Crossover",
+        "rsi": "RSI",
+        "macd": "MACD",
+        "bollinger": "Bollinger Bands"
+      },
+      "parameters": "Parameters",
+      "shortMa": "Short MA",
+      "longMa": "Long MA",
+      "sampleResults": "Sample results",
+      "totalReturn": "Total Return",
+      "sharpe": "Sharpe",
+      "winRate": "Win Rate"
+    },
+    "cta": {
+      "heading": "Start trading smarter today.",
+      "subtitle": "Join investors using TradeIQ to analyse the Colombo Stock Exchange with professional-grade tools.",
+      "button": "Create a free account",
+      "dataNote": "End-of-day data · Delayed"
+    },
+    "footer": {
+      "disclaimer": "Market data is sourced from publicly available Colombo Stock Exchange (CSE) data. Data may be delayed and is provided for research, educational, and simulation purposes only.",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "contact": "Contact"
+    }
   }
 }

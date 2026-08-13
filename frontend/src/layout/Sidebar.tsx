@@ -37,7 +37,7 @@ const NAV_SECTIONS: NavSection[] = [
     key: 'markets',
     labelKey: 'markets',
     items: [
-      { key: 'markets', labelKey: 'markets', icon: marketsIcon, to: '/' },
+      { key: 'markets', labelKey: 'markets', icon: marketsIcon, to: '/markets' },
       { key: 'watchlist', labelKey: 'watchlist', icon: watchlistIcon },
     ],
   },
