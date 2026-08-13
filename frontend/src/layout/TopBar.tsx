@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
 import searchIcon from '../assets/icons/search.svg';
-import aiAssistantIcon from '../assets/icons/ai-assistant.svg';
 import './topbar.css';
 
 interface TopBarProps {
@@ -22,11 +21,6 @@ export function TopBar({ search, onSearchChange }: TopBarProps) {
           onChange={(event) => onSearchChange(event.target.value)}
         />
       </label>
-      <div className="topbar__spacer" />
-      <button type="button" className="topbar__ai-assistant" disabled>
-        <img src={aiAssistantIcon} alt="" width={11} height={11} />
-        {t('topbar.aiAssistant')}
-      </button>
     </div>
   );
 }
