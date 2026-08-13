@@ -1,0 +1,82 @@
+{
+  "app": {
+    "name": "TradeIQ CSE"
+  },
+  "nav": {
+    "sections": {
+      "markets": "Markets",
+      "portfolio": "My Portfolio",
+      "trading": "Trading",
+      "analysis": "Analysis",
+      "utilities": "Utilities"
+    },
+    "items": {
+      "markets": "Markets",
+      "watchlist": "Watchlist",
+      "portfolio": "Portfolio",
+      "trades": "Trades",
+      "paperTrading": "Paper Trading",
+      "backtesting": "Backtesting",
+      "aiInsights": "AI Insights",
+      "reports": "Reports",
+      "settings": "Settings"
+    },
+    "language": "Language",
+    "languageUnavailable": "{{language}} translation is not available yet",
+    "profile": {
+      "role": "Live trader"
+    }
+  },
+  "topbar": {
+    "searchPlaceholder": "Search symbol or company…",
+    "aiAssistant": "AI Assistant"
+  },
+  "markets": {
+    "title": "Browse Securities",
+    "subtitle_one": "{{formattedCount}} security listed on CSE",
+    "subtitle_other": "{{formattedCount}} securities listed on CSE",
+    "filters": {
+      "all": "All",
+      "gainers": "Gainers",
+      "losers": "Losers",
+      "mostActive": "Most Active",
+      "selectSegment": "Select Segment",
+      "selectMarketCap": "Select Market Cap"
+    },
+    "columns": {
+      "symbol": "Symbol",
+      "sector": "Sector",
+      "cap": "Cap",
+      "price": "Price",
+      "change": "Change",
+      "changePct": "%",
+      "volume": "Volume",
+      "peRatio": "P/E",
+      "watch": "Watch"
+    },
+    "cap": {
+      "large": "Large",
+      "mid": "Mid",
+      "small": "Small"
+    },
+    "states": {
+      "loading": "Loading securities…",
+      "empty": "No securities match your filters.",
+      "unreachable": "Could not reach the market-trading API."
+    },
+    "watch": {
+      "add": "Add to watchlist",
+      "remove": "Remove from watchlist"
+    },
+    "pagination": {
+      "page": "Page {{page}} of {{lastPage}}",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "unavailable": {
+      "marketOverview": "Coming soon — needs GET /market/overview",
+      "sectors": "Sector data is not yet available in the seeded dataset"
+    },
+    "empty": "—"
+  }
+}
