@@ -143,9 +143,15 @@
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
+  text-decoration: none;
 }
 
 .landing-nav__link--active {
   border-bottom-color: var(--accent);
   color: var(--accent-text);
+}
+
+.landing-nav__link:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }

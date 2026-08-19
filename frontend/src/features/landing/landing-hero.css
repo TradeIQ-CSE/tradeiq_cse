@@ -52,6 +52,7 @@
 .landing-hero__actions {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10.5px;
   margin-top: 35px;
 }

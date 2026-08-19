@@ -1,7 +1,6 @@
 import { LandingNav } from './LandingNav';
 import { LandingHero } from './LandingHero';
 import { LandingMarketData } from './LandingMarketData';
-import { LandingAlerts } from './LandingAlerts';
 import { LandingInsights } from './LandingInsights';
 import { LandingBacktesting } from './LandingBacktesting';
 import { LandingCta } from './LandingCta';
@@ -15,7 +14,6 @@ export function LandingPage() {
       <main>
         <LandingHero />
         <LandingMarketData />
-        <LandingAlerts />
         <LandingInsights />
         <LandingBacktesting />
         <LandingCta />

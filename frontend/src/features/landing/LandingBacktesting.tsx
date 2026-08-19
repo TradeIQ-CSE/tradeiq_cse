@@ -9,15 +9,18 @@ const WIZARD_STEPS = [
   { key: 'execution', state: 'todo' },
   { key: 'portfolio', state: 'todo' },
   { key: 'metrics', state: 'todo' },
-  { key: 'ai', state: 'todo' },
   { key: 'results', state: 'todo' },
 ] as const;
 
-const STRATEGIES = [
-  { key: 'maCrossover', glyph: '〜', active: true },
-  { key: 'rsi', glyph: '⟳', active: false },
-  { key: 'macd', glyph: '≋', active: false },
-  { key: 'bollinger', glyph: '◈', active: false },
+// Rule-set DSL v1 is price-based only: exactly one buy condition plus one or
+// more sell conditions (IMPLEMENTATION_PLAN.md decision D2). Indicator-based
+// entries (MA/RSI/MACD/BB) are chart overlays in v1, so they must not be
+// advertised here as selectable strategies.
+const RULES = [
+  { key: 'priceFalls', glyph: '↓', kind: 'buy', active: true },
+  { key: 'takeProfit', glyph: '◎', kind: 'sell', active: true },
+  { key: 'stopLoss', glyph: '⊘', kind: 'sell', active: true },
+  { key: 'endOfPeriod', glyph: '⇥', kind: 'sell', active: false },
 ] as const;
 
 export function LandingBacktesting() {
@@ -77,15 +80,15 @@ export function LandingBacktesting() {
         <div className="landing-backtesting__body">
           <p className="landing-backtesting__label">{t('landing.backtesting.selectStrategy')}</p>
           <div className="landing-backtesting__strategies">
-            {STRATEGIES.map((strategy) => (
+            {RULES.map((rule) => (
               <div
-                key={strategy.key}
+                key={rule.key}
                 className={`landing-backtesting__strategy${
-                  strategy.active ? ' landing-backtesting__strategy--active' : ''
+                  rule.active ? ' landing-backtesting__strategy--active' : ''
                 }`}
               >
-                <span className="landing-backtesting__strategy-glyph">{strategy.glyph}</span>
-                <span>{t(`landing.backtesting.strategies.${strategy.key}`)}</span>
+                <span className="landing-backtesting__strategy-glyph">{rule.glyph}</span>
+                <span>{t(`landing.backtesting.rules.${rule.key}`)}</span>
               </div>
             ))}
           </div>
@@ -94,12 +97,12 @@ export function LandingBacktesting() {
             <p className="landing-backtesting__params-label">{t('landing.backtesting.parameters')}</p>
             <div className="landing-backtesting__params-grid">
               <div>
-                <p className="landing-backtesting__field-label">{t('landing.backtesting.shortMa')}</p>
-                <div className="landing-backtesting__field-value">7</div>
+                <p className="landing-backtesting__field-label">{t('landing.backtesting.takeProfitPct')}</p>
+                <div className="landing-backtesting__field-value">10%</div>
               </div>
               <div>
-                <p className="landing-backtesting__field-label">{t('landing.backtesting.longMa')}</p>
-                <div className="landing-backtesting__field-value">20</div>
+                <p className="landing-backtesting__field-label">{t('landing.backtesting.stopLossPct')}</p>
+                <div className="landing-backtesting__field-value">5%</div>
               </div>
             </div>
           </div>
@@ -113,12 +116,14 @@ export function LandingBacktesting() {
               <p className="landing-backtesting__stat-value landing-backtesting__stat-value--positive">+58.3%</p>
             </div>
             <div className="landing-backtesting__stat">
-              <p className="landing-backtesting__stat-label">{t('landing.backtesting.sharpe')}</p>
-              <p className="landing-backtesting__stat-value">1.24</p>
+              <p className="landing-backtesting__stat-label">{t('landing.backtesting.maxDrawdown')}</p>
+              <p className="landing-backtesting__stat-value landing-backtesting__stat-value--negative">
+                -12.4%
+              </p>
             </div>
             <div className="landing-backtesting__stat">
-              <p className="landing-backtesting__stat-label">{t('landing.backtesting.winRate')}</p>
-              <p className="landing-backtesting__stat-value">64%</p>
+              <p className="landing-backtesting__stat-label">{t('landing.backtesting.volatility')}</p>
+              <p className="landing-backtesting__stat-value">18.6%</p>
             </div>
           </div>
         </div>
