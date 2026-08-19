@@ -31,6 +31,11 @@ describe('SecuritiesService', () => {
     service = module.get(SecuritiesService);
   });
 
+  const mockDateRange = () =>
+    managerQuery.mockResolvedValueOnce([
+      { from: '2017-01-02', to: '2025-12-31' },
+    ]);
+
   it('rejects an unknown sector code', async () => {
     sectorsFindOne.mockResolvedValue(null);
 
@@ -42,6 +47,7 @@ describe('SecuritiesService', () => {
   });
 
   it('maps rows into the contract response shape, computing change from prev_close', async () => {
+    mockDateRange();
     managerQuery.mockResolvedValueOnce([{ total: '1' }]).mockResolvedValueOnce([
       {
         symbol: 'JKH.N0000',
@@ -80,27 +86,39 @@ describe('SecuritiesService', () => {
           pe_ratio: 12.34,
         },
       ],
-      meta: { page: 1, page_size: 50, total: 1 },
+      meta: {
+        page: 1,
+        page_size: 50,
+        total: 1,
+        as_of: '2025-12-31',
+        available_from: '2017-01-02',
+        available_to: '2025-12-31',
+      },
     });
   });
 
   it('formats pg Date columns as YYYY-MM-DD, not RFC 3339 timestamps', async () => {
-    managerQuery.mockResolvedValueOnce([{ total: '1' }]).mockResolvedValueOnce([
-      {
-        symbol: 'JKH.N0000',
-        company_name: 'John Keells Holdings PLC',
-        gics_code: null,
-        sector_name: null,
-        shares_outstanding: null,
-        // node-postgres hands back Date objects for `date` columns.
-        data_from: new Date(2025, 0, 2),
-        data_to: new Date(2025, 11, 31),
-        price: null,
-        volume: null,
-        prev_close: null,
-        pe_ratio: null,
-      },
-    ]);
+    managerQuery
+      .mockResolvedValueOnce([
+        { from: new Date(2017, 0, 2), to: new Date(2025, 11, 31) },
+      ])
+      .mockResolvedValueOnce([{ total: '1' }])
+      .mockResolvedValueOnce([
+        {
+          symbol: 'JKH.N0000',
+          company_name: 'John Keells Holdings PLC',
+          gics_code: null,
+          sector_name: null,
+          shares_outstanding: null,
+          // node-postgres hands back Date objects for `date` columns.
+          data_from: new Date(2025, 0, 2),
+          data_to: new Date(2025, 11, 31),
+          price: null,
+          volume: null,
+          prev_close: null,
+          pe_ratio: null,
+        },
+      ]);
 
     const result = await service.list({
       sort: 'symbol',
@@ -113,6 +131,7 @@ describe('SecuritiesService', () => {
   });
 
   it('leaves price fields null when a security has no price history', async () => {
+    mockDateRange();
     managerQuery.mockResolvedValueOnce([{ total: '1' }]).mockResolvedValueOnce([
       {
         symbol: 'NEW.N0000',
@@ -148,5 +167,42 @@ describe('SecuritiesService', () => {
       volume: null,
       pe_ratio: null,
     });
+  });
+
+  it('settles a non-trading date to the previous session', async () => {
+    mockDateRange();
+    managerQuery
+      .mockResolvedValueOnce([{ trade_date: '2025-08-15' }])
+      .mockResolvedValueOnce([{ total: '0' }])
+      .mockResolvedValueOnce([]);
+
+    const result = await service.list({
+      as_of: '2025-08-17',
+      sort: 'symbol',
+      page: 1,
+      page_size: 50,
+    });
+
+    expect(managerQuery).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('WHERE trade_date <= $1::date'),
+      ['2025-08-17'],
+    );
+    expect(result.meta.as_of).toBe('2025-08-15');
+  });
+
+  it('rejects a date outside the available price range', async () => {
+    mockDateRange();
+
+    await expect(
+      service.list({
+        as_of: '2016-12-31',
+        sort: 'symbol',
+        page: 1,
+        page_size: 50,
+      }),
+    ).rejects.toBeInstanceOf(ValidationFailedException);
+
+    expect(managerQuery).toHaveBeenCalledTimes(1);
   });
 });

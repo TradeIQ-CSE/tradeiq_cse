@@ -4,6 +4,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Matches,
   Max,
   Min,
   MinLength,
@@ -21,6 +22,15 @@ export class ListSecuritiesQueryDto {
   @IsString()
   @MinLength(1)
   search?: string;
+
+  // Trading date the whole page is priced at. Omitted means the latest date
+  // that has price data; meta.as_of always echoes the date actually used, so a
+  // client never has to guess which day it is looking at.
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'must be a calendar date in YYYY-MM-DD form',
+  })
+  as_of?: string;
 
   @IsOptional()
   @IsIn(['symbol', 'company_name'])

@@ -20,6 +20,10 @@ export interface PageMeta {
   page: number;
   page_size: number;
   total: number;
+  // Trading date the rows are priced at, and the selectable bounds.
+  as_of?: string | null;
+  available_from?: string | null;
+  available_to?: string | null;
 }
 
 export async function getEnvelope<T>(
