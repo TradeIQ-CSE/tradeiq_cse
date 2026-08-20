@@ -116,9 +116,12 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
-    environment:
-      VITE_MARKET_TRADING_API_URL: ${VITE_MARKET_TRADING_API_URL:-http://localhost:3001}
-      VITE_IDENTITY_AUTH_API_URL: ${VITE_IDENTITY_AUTH_API_URL:-http://localhost:3002}
+      # Build args, not `environment`: Vite bakes these into the bundle when
+      # the image is built, and the runtime stage only serves static files.
+      # These are browser-visible origins, so nothing secret belongs here.
+      args:
+        VITE_MARKET_TRADING_API_URL: ${VITE_MARKET_TRADING_API_URL:-http://localhost:3001}
+        VITE_IDENTITY_AUTH_API_URL: ${VITE_IDENTITY_AUTH_API_URL:-http://localhost:3002}
     ports:
       - "${FRONTEND_PORT:-5173}:5173"
     depends_on:
