@@ -22,7 +22,16 @@ export interface SecurityListItem {
 
 export interface SecurityListResult {
   data: SecurityListItem[];
-  meta: { page: number; page_size: number; total: number };
+  meta: {
+    page: number;
+    page_size: number;
+    total: number;
+    // The trading date every row is priced at, plus the bounds a client may
+    // ask for, so a date picker can be populated from one response.
+    as_of: string | null;
+    available_from: string | null;
+    available_to: string | null;
+  };
 }
 
 // Raw row shape from the hand-written query in list() below. Numeric/bigint
@@ -68,6 +77,20 @@ export class SecuritiesService {
     private readonly sectors: Repository<Sector>,
   ) {}
 
+  // Bounds of the priced history, used both to default `as_of` and to reject
+  // dates the dataset cannot answer.
+  private async priceDateRange(): Promise<{
+    from: string | null;
+    to: string | null;
+  }> {
+    const rows: { from: Date | string | null; to: Date | string | null }[] =
+      await this.securities.manager.query(
+        `SELECT MIN(trade_date) AS from, MAX(trade_date) AS to
+         FROM market_data.daily_prices`,
+      );
+    return { from: toIsoDate(rows[0].from), to: toIsoDate(rows[0].to) };
+  }
+
   async list(query: ListSecuritiesQueryDto): Promise<SecurityListResult> {
     let sectorId: string | undefined;
     if (query.sector !== undefined) {
@@ -80,6 +103,36 @@ export class SecuritiesService {
         ]);
       }
       sectorId = sector.sectorId;
+    }
+
+    const range = await this.priceDateRange();
+
+    // Every row on a page is priced at this one date. Pricing each security at
+    // its own last traded day instead would silently mix dates across the
+    // table, making the change column incomparable between rows.
+    let asOf = query.as_of ?? range.to;
+    if (query.as_of !== undefined && range.from !== null && range.to !== null) {
+      if (query.as_of < range.from || query.as_of > range.to) {
+        throw new ValidationFailedException([
+          {
+            field: 'as_of',
+            reason: `must fall between ${range.from} and ${range.to}`,
+          },
+        ]);
+      }
+
+      // Weekends and holidays hold no prices, and roughly 40% of calendar dates
+      // in a year are non-trading. Rather than answering those with a page of
+      // nulls, settle back to the most recent session on or before the request;
+      // meta.as_of reports the date actually used so the client can show it.
+      const settled: { trade_date: Date | string | null }[] =
+        await this.securities.manager.query(
+          `SELECT MAX(trade_date) AS trade_date
+           FROM market_data.daily_prices
+           WHERE trade_date <= $1::date`,
+          [query.as_of],
+        );
+      asOf = toIsoDate(settled[0].trade_date) ?? asOf;
     }
 
     const conditions: string[] = [];
@@ -106,6 +159,9 @@ export class SecuritiesService {
       params,
     );
 
+    params.push(asOf);
+    const asOfParam = `$${params.length}`;
+
     const listParams = [
       ...params,
       query.page_size,
@@ -113,29 +169,27 @@ export class SecuritiesService {
     ];
     const rows: RawSecurityRow[] = await this.securities.manager.query(
       `
-      WITH latest AS (
-        SELECT DISTINCT ON (security_id) security_id, close, volume
+      WITH priced AS (
+        SELECT security_id, close, volume
         FROM market_data.daily_prices
-        ORDER BY security_id, trade_date DESC
+        WHERE trade_date = ${asOfParam}::date
       ),
       prior AS (
-        SELECT security_id, close AS prev_close FROM (
-          SELECT security_id, close,
-                 ROW_NUMBER() OVER (PARTITION BY security_id ORDER BY trade_date DESC) AS rn
-          FROM market_data.daily_prices
-        ) ranked
-        WHERE rn = 2
+        SELECT DISTINCT ON (security_id) security_id, close AS prev_close
+        FROM market_data.daily_prices
+        WHERE trade_date < ${asOfParam}::date
+        ORDER BY security_id, trade_date DESC
       )
       SELECT
         s.symbol, s.company_name,
         sec.gics_code, sec.sector_name,
         s.shares_outstanding, s.data_from, s.data_to,
-        latest.close AS price, latest.volume AS volume,
+        priced.close AS price, priced.volume AS volume,
         prior.prev_close AS prev_close,
         mr.pe_ratio AS pe_ratio
       FROM market_data.securities s
       LEFT JOIN market_data.sectors sec ON sec.sector_id = s.sector_id
-      LEFT JOIN latest ON latest.security_id = s.security_id
+      LEFT JOIN priced ON priced.security_id = s.security_id
       LEFT JOIN prior ON prior.security_id = s.security_id
       LEFT JOIN market_data.market_ratios mr
         ON mr.security_id = s.security_id AND mr.valid_to IS NULL
@@ -152,6 +206,9 @@ export class SecuritiesService {
         page: query.page,
         page_size: query.page_size,
         total: Number(countRows[0].total),
+        as_of: asOf,
+        available_from: range.from,
+        available_to: range.to,
       },
     };
   }

@@ -97,6 +97,7 @@ Securities browser list.
 |---|---|---|---|
 | `sector` | string | — | Filter by GICS sector code (e.g. `4010`). Must be a code present in the sectors reference data |
 | `search` | string | — | Case-insensitive match: prefix on `symbol`, substring on `company_name`. Min 1 char |
+| `as_of` | date | latest available | Trading date used for price, change and volume. Non-trading dates settle to the previous available session |
 | `sort` | enum | `symbol` | `symbol` \| `company_name` (ascending) |
 | `page`, `page_size` | — | — | See §2.3 |
 
@@ -134,7 +135,14 @@ Securities browser list.
       "pe_ratio": 6.9
     }
   ],
-  "meta": { "page": 1, "page_size": 2, "total": 3 }
+  "meta": {
+    "page": 1,
+    "page_size": 2,
+    "total": 3,
+    "as_of": "2025-12-31",
+    "available_from": "2017-01-02",
+    "available_to": "2025-12-31"
+  }
 }
 ```
 
@@ -153,6 +161,9 @@ Securities browser list.
   else `null`. Added as a v0.1 extension for the Browse Securities table
   (Figma `Market` frame) — additive and nullable, doesn't break existing
   consumers of the v0 shape.
+- `meta.as_of` is the trading date actually used. When a weekend or holiday is
+  requested, it may be earlier than the requested date. `available_from` and
+  `available_to` are the bounds accepted by the date filter.
 
 ### Errors
 

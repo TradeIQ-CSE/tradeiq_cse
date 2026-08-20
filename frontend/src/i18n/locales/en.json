@@ -76,7 +76,9 @@
       "marketOverview": "Coming soon: needs GET /market/overview",
       "sectors": "Sector data is not yet available in the seeded dataset"
     },
-    "empty": "—"
+    "empty": "—",
+    "tradingDate": "Trading date",
+    "asOf": "as of {{date}}"
   },
   "landing": {
     "nav": {

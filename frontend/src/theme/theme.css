@@ -1,6 +1,12 @@
 /* Design tokens extracted from Figma (TradeIQ CSE, "Market" frame,
    node 76:792) via get_design_context. */
 :root {
+  /* The UI is dark-only, so tell the browser to render native controls dark
+     too. Without this, form widgets default to their light rendering and a
+     date input's calendar indicator is a near-black glyph on a near-black
+     field. Also covers scrollbars and the date picker popup itself. */
+  color-scheme: dark;
+
   --bg-app: #0b0c19;
   --bg-panel: #0d0e1d;
   --bg-card: #12131f;

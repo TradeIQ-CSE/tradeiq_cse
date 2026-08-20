@@ -28,16 +28,23 @@ export function MarketsPage() {
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SecuritiesSort>('symbol');
   const [page, setPage] = useState(1);
+  const [asOf, setAsOf] = useState('');
   const [watched, setWatched] = useState<Set<string>>(new Set());
 
   const { data, isPending, isError, error } = useSecurities({
     search: search.trim(),
+    as_of: asOf,
     sort,
     page,
     page_size: PAGE_SIZE,
   });
 
   const total = data?.meta?.total ?? 0;
+  // Server-echoed date the rows are priced at. Every row on the page shares it,
+  // so it is stated once here rather than per row.
+  const resolvedAsOf = data?.meta?.as_of ?? '';
+  const availableFrom = data?.meta?.available_from ?? undefined;
+  const availableTo = data?.meta?.available_to ?? undefined;
   const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const dash = t('markets.empty');
 
@@ -72,8 +79,24 @@ export function MarketsPage() {
                 count: total,
                 formattedCount: formatCount(total, locale),
               })}
+              {resolvedAsOf ? ` · ${t('markets.asOf', { date: resolvedAsOf })}` : ''}
             </p>
           </div>
+
+          <label className="markets-page__date">
+            <span>{t('markets.tradingDate')}</span>
+            <input
+              type="date"
+              className="markets-select"
+              value={asOf || resolvedAsOf}
+              min={availableFrom}
+              max={availableTo}
+              onChange={(event) => {
+                setAsOf(event.target.value);
+                setPage(1);
+              }}
+            />
+          </label>
         </header>
 
         <div className="markets-page__filters">
