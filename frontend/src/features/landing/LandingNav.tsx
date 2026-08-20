@@ -3,16 +3,15 @@ import { SUPPORTED_LANGUAGES } from '../../i18n';
 import logoIcon from '../../assets/icons/logo.svg';
 import searchIcon from '../../assets/icons/search.svg';
 import signInIcon from '../../assets/icons/sign-in.svg';
-import chevronDownIcon from '../../assets/icons/chevron-down.svg';
-import chevronDownActiveIcon from '../../assets/icons/chevron-down-active.svg';
 
+// `href` marks a section that exists; the rest are planned but unbuilt, so they
+// render disabled rather than as controls that silently do nothing. Stockbroker
+// Firms, Investors and Rules & Circulars were dropped entirely — they mirrored
+// cse.lk's nav with no counterpart anywhere in the project scope.
 const SITE_LINKS = [
-  { key: 'market', active: true },
-  { key: 'stockbrokerFirms', active: false },
-  { key: 'investors', active: false },
-  { key: 'newsEvents', active: false },
-  { key: 'rulesCirculars', active: false },
-  { key: 'aboutUs', active: false },
+  { key: 'market', href: '/markets' },
+  { key: 'newsEvents', href: null },
+  { key: 'aboutUs', href: null },
 ] as const;
 
 export function LandingNav() {
@@ -74,19 +73,25 @@ export function LandingNav() {
 
       <nav className="landing-nav__links">
         {SITE_LINKS.map((link) => (
-          <button
-            key={link.key}
-            type="button"
-            className={`landing-nav__link${link.active ? ' landing-nav__link--active' : ''}`}
-          >
-            {t(`landing.nav.links.${link.key}`)}
-            <img
-              src={link.active ? chevronDownActiveIcon : chevronDownIcon}
-              alt=""
-              width={11}
-              height={11}
-            />
-          </button>
+          link.href ? (
+            <a
+              key={link.key}
+              href={link.href}
+              className="landing-nav__link landing-nav__link--active"
+            >
+              {t(`landing.nav.links.${link.key}`)}
+            </a>
+          ) : (
+            <button
+              key={link.key}
+              type="button"
+              className="landing-nav__link"
+              disabled
+              title={t('landing.nav.linkUnavailable')}
+            >
+              {t(`landing.nav.links.${link.key}`)}
+            </button>
+          )
         ))}
       </nav>
     </header>

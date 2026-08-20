@@ -73,7 +73,7 @@
       "next": "Next"
     },
     "unavailable": {
-      "marketOverview": "Coming soon — needs GET /market/overview",
+      "marketOverview": "Coming soon: needs GET /market/overview",
       "sectors": "Sector data is not yet available in the seeded dataset"
     },
     "empty": "—"
@@ -83,20 +83,18 @@
       "tagline": "COLOMBO STOCK EXCHANGE",
       "links": {
         "market": "Market",
-        "stockbrokerFirms": "Stockbroker Firms",
-        "investors": "Investors",
         "newsEvents": "News & Events",
-        "rulesCirculars": "Rules & Circulars",
         "aboutUs": "About Us"
       },
       "openAccount": "Open an Account",
-      "signIn": "Sign in"
+      "signIn": "Sign in",
+      "linkUnavailable": "Coming soon"
     },
     "hero": {
       "badge": "Colombo Stock Exchange",
       "headlineLine1": "The professional edge",
       "headlineLine2": "for CSE investors.",
-      "subtitle": "Advanced charting, AI-driven signals, portfolio analytics, and paper trading — built for Sri Lankan investors.",
+      "subtitle": "Advanced charting, model-driven signals, portfolio analytics and paper trading, built for Sri Lankan investors.",
       "getStarted": "Get started free",
       "signIn": "Sign in →",
       "dataNote": "End-of-day data · Delayed"
@@ -105,30 +103,10 @@
       "eyebrow": "Market data",
       "headingLine1": "The full CSE picture,",
       "headingLine2": "at a glance.",
-      "description": "Browse all 297 listed securities with real price data, sector filters, and OHLC breakdowns. Filter by gainers, losers, or most active in one click.",
+      "description": "Browse every security listed on the CSE with real end-of-day prices, search, and OHLC breakdowns.",
       "cta": "Explore the markets →",
-      "cardTitle": "CSE Securities"
-    },
-    "alerts": {
-      "eyebrow": "Smart alerts",
-      "heading": "Never miss a signal.",
-      "items": {
-        "bullish": {
-          "title": "Bullish crossover detected",
-          "meta": "JKH · 2 min ago",
-          "description": "MA 7 crossed above MA 20 — momentum building"
-        },
-        "portfolio": {
-          "title": "Portfolio alert",
-          "meta": "LOLC · 18 min ago",
-          "description": "Position down 4.5% — below entry support at Rs. 340"
-        },
-        "bearish": {
-          "title": "Bearish signal",
-          "meta": "COMB · 1 hr ago",
-          "description": "Approaching key resistance at Rs. 91.50 — watch closely"
-        }
-      }
+      "cardTitle": "CSE Securities",
+      "descriptionCounted": "Browse all {{formattedCount}} securities listed on the CSE with real end-of-day prices, search, and OHLC breakdowns."
     },
     "insights": {
       "panelTitle": "Direction Probabilities · 1-Week",
@@ -146,7 +124,7 @@
       "eyebrow": "Strategy Backtesting",
       "headingLine1": "Test before",
       "headingLine2": "you invest.",
-      "description": "Run any strategy — MA Crossover, RSI, MACD, Bollinger Bands and more — against years of CSE historical data. A guided 7-step wizard walks you through setup in minutes, then surfaces a full analytics dashboard.",
+      "description": "Build a price-based rule set, then run it against CSE historical data. A guided 7-step wizard walks you through setup in minutes, then surfaces a full analytics dashboard.",
       "quickTitle": "Quick Backtest",
       "quickDescription": "Pick a strategy, pick a stock, run. Default CSE rules, results in seconds.",
       "customTitle": "Custom Backtest",
@@ -159,23 +137,22 @@
         "execution": "Execution",
         "portfolio": "Portfolio",
         "metrics": "Metrics",
-        "ai": "AI",
         "results": "Results"
       },
-      "selectStrategy": "Select Strategy",
-      "strategies": {
-        "maCrossover": "MA Crossover",
-        "rsi": "RSI",
-        "macd": "MACD",
-        "bollinger": "Bollinger Bands"
-      },
+      "selectStrategy": "Select Rules",
       "parameters": "Parameters",
-      "shortMa": "Short MA",
-      "longMa": "Long MA",
       "sampleResults": "Sample results",
       "totalReturn": "Total Return",
-      "sharpe": "Sharpe",
-      "winRate": "Win Rate"
+      "rules": {
+        "priceFalls": "Buy: price falls to",
+        "takeProfit": "Sell: take profit",
+        "stopLoss": "Sell: stop loss",
+        "endOfPeriod": "Sell: end of period"
+      },
+      "takeProfitPct": "Take Profit",
+      "stopLossPct": "Stop Loss",
+      "maxDrawdown": "Max Drawdown",
+      "volatility": "Volatility"
     },
     "cta": {
       "heading": "Start trading smarter today.",

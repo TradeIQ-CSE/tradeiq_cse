@@ -253,6 +253,10 @@
   color: #34d399;
 }
 
+.landing-backtesting__stat-value--negative {
+  color: var(--negative);
+}
+
 @media (max-width: 860px) {
   .landing-backtesting {
     grid-template-columns: 1fr;

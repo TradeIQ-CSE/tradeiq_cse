@@ -3,13 +3,15 @@ const CHART_PATH =
 
 const CHART_AREA_PATH = `${CHART_PATH} L658,268 L4,268 Z`;
 
-const Y_LABELS = ['1200', '1160', '1120', '1080', '1040'];
-const X_LABELS = ['Oct 3', 'Nov 1', 'Nov 29', 'Jan 3', 'Jan 31'];
+// Illustrative screenshot, but the scales must match what the pipeline
+// actually holds: JKH trades in the low-20s and only ASPI and SL20 exist in
+// the `indices` table, so no third index is shown.
+const Y_LABELS = ['26', '24', '22', '20', '18'];
+const X_LABELS = ['Jan 2', 'Apr 1', 'Jul 1', 'Oct 1', 'Dec 31'];
 
 const INDEX_STATS = [
-  { label: 'ASPI', value: '8,423.5', change: '+0.84%', positive: true },
-  { label: 'S&P SL20', value: '2,847.3', change: '+1.12%', positive: true },
-  { label: 'MPI', value: '14,091.2', change: '-0.30%', positive: false },
+  { label: 'ASPI', value: '15,736.9', change: '-0.55%', positive: false },
+  { label: 'S&P SL20', value: '4,734.4', change: '-0.59%', positive: false },
 ];
 
 const NAV_ITEMS = [
@@ -99,8 +101,8 @@ export function LandingHeroMockup() {
               <p className="landing-hero-mockup__symbol">JKH.N0000</p>
               <p className="landing-hero-mockup__symbol-name">John Keells Holdings</p>
             </div>
-            <span className="landing-hero-mockup__price">1,199.51</span>
-            <span className="landing-hero-mockup__price-change">+1.22%</span>
+            <span className="landing-hero-mockup__price">21.70</span>
+            <span className="landing-hero-mockup__price-change">+2.84%</span>
             <div className="landing-hero-mockup__ranges">
               <span>1D</span>
               <span>1W</span>
