@@ -1,11 +1,5 @@
-import { Routes, Route } from "react-router-dom";
-import { InvestorHome, AdminHome } from "./routes";
+import { AppRoutes } from "./routes/AppRoutes";
 
 export default function App() {
-  return (
-    <Routes>
-      <Route path="/" element={<InvestorHome />} />
-      <Route path="/admin" element={<AdminHome />} />
-    </Routes>
-  );
+  return <AppRoutes />;
 }
