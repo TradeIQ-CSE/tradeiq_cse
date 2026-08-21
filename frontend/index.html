@@ -4,6 +4,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TradeIQ CSE</title>
+    <style>
+      html, body, #root {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background-color: #0a0d14;
+        color: #e6e9f0;
+      }
+      /* Hide scrollbars on Sider layout and custom sidebar container */
+      .ant-layout-sider-children::-webkit-scrollbar,
+      .custom-sidebar-scroll::-webkit-scrollbar {
+        display: none;
+      }
+      .ant-layout-sider-children,
+      .custom-sidebar-scroll {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

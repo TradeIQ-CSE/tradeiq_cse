@@ -1,7 +1,2 @@
-export function InvestorHome() {
-  return <div>TradeIQ CSE — Investor view (stub)</div>;
-}
-
-export function AdminHome() {
-  return <div>TradeIQ CSE — Admin view (stub)</div>;
-}
+// Legacy routes file. Routes are now located in AppRoutes.tsx.
+export {};
