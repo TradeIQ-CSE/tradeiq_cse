@@ -5,8 +5,22 @@ import { RuleSet, DailyBar } from '../domain/types';
 describe('Backtesting Engine - Take Profit Execution', () => {
   it('should execute take-profit at the open price if the price gaps up above the take-profit threshold', () => {
     const bars: DailyBar[] = [
-      { date: '2026-08-01', open: 100, high: 102, low: 99, close: 100, volume: 100 },
-      { date: '2026-08-02', open: 108, high: 110, low: 107, close: 109, volume: 100 }, // Gaps up to 108 (TP threshold was 105)
+      {
+        date: '2026-08-01',
+        open: 100,
+        high: 102,
+        low: 99,
+        close: 100,
+        volume: 100,
+      },
+      {
+        date: '2026-08-02',
+        open: 108,
+        high: 110,
+        low: 107,
+        close: 109,
+        volume: 100,
+      }, // Gaps up to 108 (TP threshold was 105)
     ];
 
     const rules: RuleSet = {

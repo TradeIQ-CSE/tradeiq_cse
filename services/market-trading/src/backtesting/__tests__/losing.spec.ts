@@ -1,5 +1,9 @@
 import { runBacktest } from '../engine/runBacktest';
-import { DEFAULT_TEST_FEES, DEFAULT_SIZING, createSampleBars } from './fixtures';
+import {
+  DEFAULT_TEST_FEES,
+  DEFAULT_SIZING,
+  createSampleBars,
+} from './fixtures';
 import { RuleSet } from '../domain/types';
 import { round4 } from '../domain/rounding';
 
@@ -42,7 +46,7 @@ describe('Backtesting Engine - Losing Trade', () => {
         buyTrade.grossValue -
         buyTrade.fees.total +
         sellTrade.grossValue -
-        sellTrade.fees.total
+        sellTrade.fees.total,
     );
     expect(result.finalCash).toBe(expectedFinalCash);
   });

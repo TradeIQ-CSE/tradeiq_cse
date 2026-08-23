@@ -1,5 +1,9 @@
 import { runBacktest } from '../engine/runBacktest';
-import { DEFAULT_TEST_FEES, DEFAULT_SIZING, createSampleBars } from './fixtures';
+import {
+  DEFAULT_TEST_FEES,
+  DEFAULT_SIZING,
+  createSampleBars,
+} from './fixtures';
 import { RuleSet } from '../domain/types';
 
 describe('Backtesting Engine - End of Period Exit', () => {

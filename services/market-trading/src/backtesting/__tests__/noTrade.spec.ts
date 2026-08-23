@@ -1,5 +1,9 @@
 import { runBacktest } from '../engine/runBacktest';
-import { DEFAULT_TEST_FEES, DEFAULT_SIZING, createSampleBars } from './fixtures';
+import {
+  DEFAULT_TEST_FEES,
+  DEFAULT_SIZING,
+  createSampleBars,
+} from './fixtures';
 import { RuleSet } from '../domain/types';
 
 describe('Backtesting Engine - No Trade', () => {
@@ -8,9 +12,7 @@ describe('Backtesting Engine - No Trade', () => {
     const rules: RuleSet = {
       version: '1.0',
       buyCondition: { type: 'price_falls_to', value: 80 }, // Price never falls to 80
-      sellConditions: [
-        { type: 'take_profit_pct', value: 5 },
-      ],
+      sellConditions: [{ type: 'take_profit_pct', value: 5 }],
     };
 
     const initialCapital = 10000;

@@ -1,5 +1,9 @@
 import { runBacktest } from '../engine/runBacktest';
-import { DEFAULT_TEST_FEES, DEFAULT_SIZING, createSampleBars } from './fixtures';
+import {
+  DEFAULT_TEST_FEES,
+  DEFAULT_SIZING,
+  createSampleBars,
+} from './fixtures';
 import { RuleSet } from '../domain/types';
 import { round4 } from '../domain/rounding';
 
@@ -45,7 +49,11 @@ describe('Backtesting Engine - Profitable Trade', () => {
     const totalSellFees = sellTrade.fees.total;
 
     const expectedFinalCash = round4(
-      initialCapital - totalBuyGross - totalBuyFees + totalSellGross - totalSellFees
+      initialCapital -
+        totalBuyGross -
+        totalBuyFees +
+        totalSellGross -
+        totalSellFees,
     );
     expect(result.finalCash).toBe(expectedFinalCash);
     expect(result.finalEquity).toBe(result.finalCash);

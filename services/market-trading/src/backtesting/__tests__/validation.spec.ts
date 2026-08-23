@@ -1,5 +1,9 @@
 import { runBacktest } from '../engine/runBacktest';
-import { DEFAULT_TEST_FEES, DEFAULT_SIZING, createSampleBars } from './fixtures';
+import {
+  DEFAULT_TEST_FEES,
+  DEFAULT_SIZING,
+  createSampleBars,
+} from './fixtures';
 import { RuleSet, DailyBar } from '../domain/types';
 import {
   InvalidRuleError,
@@ -18,10 +22,10 @@ describe('Backtesting Engine - Input Validation', () => {
 
   it('should throw InvalidRuleError for invalid rules DSL', () => {
     // Missing buy condition
-    const badRules1: any = {
+    const badRules1 = {
       version: '1.0',
       sellConditions: [{ type: 'take_profit_pct', value: 5 }],
-    };
+    } as unknown as RuleSet;
     expect(() =>
       runBacktest({
         bars: createSampleBars(),
@@ -31,15 +35,15 @@ describe('Backtesting Engine - Input Validation', () => {
         positionSizing: DEFAULT_SIZING,
         feeConfig: DEFAULT_TEST_FEES,
         rules: badRules1,
-      })
+      }),
     ).toThrow(InvalidRuleError);
 
     // Empty sell conditions
-    const badRules2: any = {
+    const badRules2 = {
       version: '1.0',
-      buyCondition: { type: 'period_start' },
+      buyCondition: { type: 'period_start' as const },
       sellConditions: [],
-    };
+    } as unknown as RuleSet;
     expect(() =>
       runBacktest({
         bars: createSampleBars(),
@@ -49,11 +53,11 @@ describe('Backtesting Engine - Input Validation', () => {
         positionSizing: DEFAULT_SIZING,
         feeConfig: DEFAULT_TEST_FEES,
         rules: badRules2,
-      })
+      }),
     ).toThrow(InvalidRuleError);
 
     // Negative rule value
-    const badRules3: any = {
+    const badRules3: RuleSet = {
       version: '1.0',
       buyCondition: { type: 'price_falls_to', value: -10 },
       sellConditions: [{ type: 'take_profit_pct', value: 5 }],
@@ -67,7 +71,7 @@ describe('Backtesting Engine - Input Validation', () => {
         positionSizing: DEFAULT_SIZING,
         feeConfig: DEFAULT_TEST_FEES,
         rules: badRules3,
-      })
+      }),
     ).toThrow(InvalidRuleError);
   });
 
@@ -82,7 +86,7 @@ describe('Backtesting Engine - Input Validation', () => {
         positionSizing: DEFAULT_SIZING,
         feeConfig: DEFAULT_TEST_FEES,
         rules: validRules,
-      })
+      }),
     ).toThrow(InvalidDateRangeError);
 
     // Invalid date formats
@@ -95,7 +99,7 @@ describe('Backtesting Engine - Input Validation', () => {
         positionSizing: DEFAULT_SIZING,
         feeConfig: DEFAULT_TEST_FEES,
         rules: validRules,
-      })
+      }),
     ).toThrow(InvalidDateRangeError);
   });
 
@@ -109,7 +113,7 @@ describe('Backtesting Engine - Input Validation', () => {
         positionSizing: DEFAULT_SIZING,
         feeConfig: DEFAULT_TEST_FEES,
         rules: validRules,
-      })
+      }),
     ).toThrow(MissingPriceHistoryError);
   });
 
@@ -124,15 +128,29 @@ describe('Backtesting Engine - Input Validation', () => {
         feeConfig: DEFAULT_TEST_FEES,
         rules: validRules,
         warmupPeriod: 5, // Requires 5 warmup bars
-      })
+      }),
     ).toThrow(InsufficientWarmupDataError);
   });
 
   it('should throw InvalidBarDataError for duplicate or malformed bar data', () => {
     // Duplicate dates
     const dupBars: DailyBar[] = [
-      { date: '2026-08-01', open: 100, high: 105, low: 98, close: 102, volume: 1000 },
-      { date: '2026-08-01', open: 102, high: 106, low: 99, close: 103, volume: 1100 },
+      {
+        date: '2026-08-01',
+        open: 100,
+        high: 105,
+        low: 98,
+        close: 102,
+        volume: 1000,
+      },
+      {
+        date: '2026-08-01',
+        open: 102,
+        high: 106,
+        low: 99,
+        close: 103,
+        volume: 1100,
+      },
     ];
     expect(() =>
       runBacktest({
@@ -143,12 +161,19 @@ describe('Backtesting Engine - Input Validation', () => {
         positionSizing: DEFAULT_SIZING,
         feeConfig: DEFAULT_TEST_FEES,
         rules: validRules,
-      })
+      }),
     ).toThrow(InvalidBarDataError);
 
     // Malformed OHLC bounds (high < low)
     const badOhlcBars: DailyBar[] = [
-      { date: '2026-08-01', open: 100, high: 90, low: 95, close: 98, volume: 1000 },
+      {
+        date: '2026-08-01',
+        open: 100,
+        high: 90,
+        low: 95,
+        close: 98,
+        volume: 1000,
+      },
     ];
     expect(() =>
       runBacktest({
@@ -159,7 +184,7 @@ describe('Backtesting Engine - Input Validation', () => {
         positionSizing: DEFAULT_SIZING,
         feeConfig: DEFAULT_TEST_FEES,
         rules: validRules,
-      })
+      }),
     ).toThrow(InvalidBarDataError);
   });
 });

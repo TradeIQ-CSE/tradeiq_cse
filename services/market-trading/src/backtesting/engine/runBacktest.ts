@@ -1,7 +1,6 @@
 import {
   BacktestInput,
   BacktestResult,
-  DailyBar,
   EquityCurvePoint,
   TradeLedgerEntry,
   FeeBreakdown,
@@ -22,22 +21,32 @@ export function runBacktest(input: BacktestInput): BacktestResult {
   // 2. Validate date range format and logic
   const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
   if (!dateRegex.test(input.startDate)) {
-    throw new InvalidDateRangeError(`startDate '${input.startDate}' must be in YYYY-MM-DD format.`);
+    throw new InvalidDateRangeError(
+      `startDate '${input.startDate}' must be in YYYY-MM-DD format.`,
+    );
   }
   if (!dateRegex.test(input.endDate)) {
-    throw new InvalidDateRangeError(`endDate '${input.endDate}' must be in YYYY-MM-DD format.`);
+    throw new InvalidDateRangeError(
+      `endDate '${input.endDate}' must be in YYYY-MM-DD format.`,
+    );
   }
 
   const startMs = Date.parse(input.startDate);
   const endMs = Date.parse(input.endDate);
   if (isNaN(startMs)) {
-    throw new InvalidDateRangeError(`startDate '${input.startDate}' is an invalid calendar date.`);
+    throw new InvalidDateRangeError(
+      `startDate '${input.startDate}' is an invalid calendar date.`,
+    );
   }
   if (isNaN(endMs)) {
-    throw new InvalidDateRangeError(`endDate '${input.endDate}' is an invalid calendar date.`);
+    throw new InvalidDateRangeError(
+      `endDate '${input.endDate}' is an invalid calendar date.`,
+    );
   }
   if (startMs > endMs) {
-    throw new InvalidDateRangeError(`startDate '${input.startDate}' cannot be after endDate '${input.endDate}'.`);
+    throw new InvalidDateRangeError(
+      `startDate '${input.startDate}' cannot be after endDate '${input.endDate}'.`,
+    );
   }
 
   if (input.initialCapital <= 0) {
@@ -46,7 +55,9 @@ export function runBacktest(input: BacktestInput): BacktestResult {
 
   // 3. Validate historical bars
   if (!input.bars || !Array.isArray(input.bars)) {
-    throw new MissingPriceHistoryError('Historical bars are missing or not an array.');
+    throw new MissingPriceHistoryError(
+      'Historical bars are missing or not an array.',
+    );
   }
 
   const dateSeen = new Set<string>();
@@ -56,7 +67,9 @@ export function runBacktest(input: BacktestInput): BacktestResult {
     }
 
     if (dateSeen.has(bar.date)) {
-      throw new InvalidBarDataError(`Duplicate daily bar data found for date: '${bar.date}'`);
+      throw new InvalidBarDataError(
+        `Duplicate daily bar data found for date: '${bar.date}'`,
+      );
     }
     dateSeen.add(bar.date);
 
@@ -68,44 +81,50 @@ export function runBacktest(input: BacktestInput): BacktestResult {
       bar.close < 0 ||
       bar.volume < 0
     ) {
-      throw new InvalidBarDataError(`Bar on date ${bar.date} contains negative prices or volume.`);
+      throw new InvalidBarDataError(
+        `Bar on date ${bar.date} contains negative prices or volume.`,
+      );
     }
     if (bar.high < bar.low) {
-      throw new InvalidBarDataError(`Bar on date ${bar.date} has high (${bar.high}) less than low (${bar.low}).`);
+      throw new InvalidBarDataError(
+        `Bar on date ${bar.date} has high (${bar.high}) less than low (${bar.low}).`,
+      );
     }
     if (bar.high < bar.open || bar.high < bar.close) {
       throw new InvalidBarDataError(
-        `Bar on date ${bar.date} has high (${bar.high}) less than open (${bar.open}) or close (${bar.close}).`
+        `Bar on date ${bar.date} has high (${bar.high}) less than open (${bar.open}) or close (${bar.close}).`,
       );
     }
     if (bar.low > bar.open || bar.low > bar.close) {
       throw new InvalidBarDataError(
-        `Bar on date ${bar.date} has low (${bar.low}) greater than open (${bar.open}) or close (${bar.close}).`
+        `Bar on date ${bar.date} has low (${bar.low}) greater than open (${bar.open}) or close (${bar.close}).`,
       );
     }
   }
 
   // Sort bars chronologically
-  const sortedBars = [...input.bars].sort((a, b) => a.date.localeCompare(b.date));
+  const sortedBars = [...input.bars].sort((a, b) =>
+    a.date.localeCompare(b.date),
+  );
 
   // Partition bars into warmup and simulation
   const warmupBars = sortedBars.filter((bar) => bar.date < input.startDate);
   const simulationBars = sortedBars.filter(
-    (bar) => bar.date >= input.startDate && bar.date <= input.endDate
+    (bar) => bar.date >= input.startDate && bar.date <= input.endDate,
   );
 
   // Check warmup data sufficiency
   const requiredWarmup = input.warmupPeriod ?? 0;
   if (warmupBars.length < requiredWarmup) {
     throw new InsufficientWarmupDataError(
-      `Insufficient warm-up data. Required: ${requiredWarmup}, Available: ${warmupBars.length}`
+      `Insufficient warm-up data. Required: ${requiredWarmup}, Available: ${warmupBars.length}`,
     );
   }
 
   // Check simulation bars presence
   if (simulationBars.length === 0) {
     throw new MissingPriceHistoryError(
-      `No price history bars found within the simulation range: ${input.startDate} to ${input.endDate}`
+      `No price history bars found within the simulation range: ${input.startDate} to ${input.endDate}`,
     );
   }
 
@@ -171,13 +190,19 @@ export function runBacktest(input: BacktestInput): BacktestResult {
         let allocatedCash = cash;
         if (input.positionSizing.type === 'percentage') {
           const pct = input.positionSizing.value ?? 100;
-          allocatedCash = Math.min(cash, round4(input.initialCapital * (pct / 100)));
+          allocatedCash = Math.min(
+            cash,
+            round4(input.initialCapital * (pct / 100)),
+          );
         } else if (input.positionSizing.type === 'absolute') {
           const val = input.positionSizing.value ?? 0;
           allocatedCash = Math.min(cash, val);
         } else if (input.positionSizing.type === 'fixed_quantity') {
           const qty = input.positionSizing.value ?? 0;
-          allocatedCash = Math.min(cash, round4(qty * buyPrice * (1 + totalFeeRate)));
+          allocatedCash = Math.min(
+            cash,
+            round4(qty * buyPrice * (1 + totalFeeRate)),
+          );
         }
 
         // Divide allocated cash by buyPrice * (1 + totalFeeRate)

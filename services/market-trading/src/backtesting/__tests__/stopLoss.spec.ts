@@ -5,8 +5,22 @@ import { RuleSet, DailyBar } from '../domain/types';
 describe('Backtesting Engine - Stop Loss Execution', () => {
   it('should execute stop-loss at the open price if the price gaps down below the stop-loss threshold', () => {
     const bars: DailyBar[] = [
-      { date: '2026-08-01', open: 100, high: 102, low: 99, close: 100, volume: 100 },
-      { date: '2026-08-02', open: 92, high: 93, low: 90, close: 91, volume: 100 }, // Gaps down to 92 (SL threshold was 95)
+      {
+        date: '2026-08-01',
+        open: 100,
+        high: 102,
+        low: 99,
+        close: 100,
+        volume: 100,
+      },
+      {
+        date: '2026-08-02',
+        open: 92,
+        high: 93,
+        low: 90,
+        close: 91,
+        volume: 100,
+      }, // Gaps down to 92 (SL threshold was 95)
     ];
 
     const rules: RuleSet = {

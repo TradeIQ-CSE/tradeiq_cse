@@ -5,8 +5,22 @@ import { RuleSet, DailyBar } from '../domain/types';
 describe('Backtesting Engine - Same-Bar Conflict Precedence', () => {
   it('should prefer stop-loss over take-profit when both are hit on the same bar', () => {
     const bars: DailyBar[] = [
-      { date: '2026-08-01', open: 100, high: 101, low: 99, close: 100, volume: 100 },
-      { date: '2026-08-02', open: 100, high: 106, low: 94, close: 98, volume: 100 }, // High: 106 (TP 105 hit), Low: 94 (SL 95 hit)
+      {
+        date: '2026-08-01',
+        open: 100,
+        high: 101,
+        low: 99,
+        close: 100,
+        volume: 100,
+      },
+      {
+        date: '2026-08-02',
+        open: 100,
+        high: 106,
+        low: 94,
+        close: 98,
+        volume: 100,
+      }, // High: 106 (TP 105 hit), Low: 94 (SL 95 hit)
     ];
 
     const rules: RuleSet = {

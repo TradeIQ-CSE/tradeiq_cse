@@ -1,5 +1,8 @@
 export class BacktestError extends Error {
-  constructor(message: string, public readonly code: string) {
+  constructor(
+    message: string,
+    public readonly code: string,
+  ) {
     super(message);
     Object.setPrototypeOf(this, new.target.prototype);
   }

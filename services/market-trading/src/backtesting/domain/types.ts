@@ -7,7 +7,8 @@ export interface DailyBar {
   volume: number;
 }
 
-export type PositionSizingType = 'full_capital' | 'percentage' | 'absolute' | 'fixed_quantity';
+export type PositionSizingType =
+  'full_capital' | 'percentage' | 'absolute' | 'fixed_quantity';
 
 export interface PositionSizingConfig {
   type: PositionSizingType;
@@ -16,22 +17,17 @@ export interface PositionSizingConfig {
 
 export interface FeeConfig {
   brokerageRate: number; // e.g., 0.0064 (0.64%)
-  cseRate: number;       // e.g., 0.00084 (0.084%)
-  cdsRate: number;       // e.g., 0.00024 (0.024%)
-  secCessRate: number;   // e.g., 0.00072 (0.072%)
-  stlRate: number;       // e.g., 0.00300 (0.3%)
+  cseRate: number; // e.g., 0.00084 (0.084%)
+  cdsRate: number; // e.g., 0.00024 (0.024%)
+  secCessRate: number; // e.g., 0.00072 (0.072%)
+  stlRate: number; // e.g., 0.00300 (0.3%)
 }
 
 export type BuyConditionType =
-  | 'period_start'
-  | 'price_falls_to'
-  | 'price_falls_pct_from_period_start';
+  'period_start' | 'price_falls_to' | 'price_falls_pct_from_period_start';
 
 export type SellConditionType =
-  | 'target_price'
-  | 'take_profit_pct'
-  | 'stop_loss_pct'
-  | 'end_of_period';
+  'target_price' | 'take_profit_pct' | 'stop_loss_pct' | 'end_of_period';
 
 export interface BuyCondition {
   type: BuyConditionType;
@@ -52,7 +48,7 @@ export interface RuleSet {
 export interface BacktestInput {
   bars: DailyBar[];
   startDate: string; // YYYY-MM-DD
-  endDate: string;   // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
   initialCapital: number;
   positionSizing: PositionSizingConfig;
   feeConfig: FeeConfig;
