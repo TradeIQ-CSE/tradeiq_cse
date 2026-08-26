@@ -1,5 +1,8 @@
 import 'reflect-metadata';
+import * as dotenv from 'dotenv';
 import { DataSource } from 'typeorm';
+
+dotenv.config();
 
 export default new DataSource({
   type: 'postgres',
