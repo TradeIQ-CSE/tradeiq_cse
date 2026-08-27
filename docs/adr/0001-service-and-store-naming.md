@@ -20,7 +20,7 @@ Keep all existing names; rename nothing:
 | Service | Owns database | Remit |
 |---|---|---|
 | `identity-auth` | `auth` | Auth, users, portfolios, orders, fills, lots, cash |
-| `market-trading` | `market_data` | Market data, OHLCV, public API, backtesting, paper trading |
+| `market-trading` | `market_data` | Market data, OHLCV, execution quotes, public API, backtesting |
 | `ml-prediction` | `ml` | Batch PPO directional predictions |
 
 ## Consequences
