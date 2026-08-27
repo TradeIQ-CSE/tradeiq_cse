@@ -4,11 +4,11 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  Matches,
   Max,
   Min,
   MinLength,
 } from 'class-validator';
+import { IsCalendarDate } from '../../common/validation/is-calendar-date';
 
 // GET /securities query params — docs/api/endpoint-catalogue-v0.md §3.
 // Property names match the wire query params 1:1 so validation errors report
@@ -27,7 +27,7 @@ export class ListSecuritiesQueryDto {
   // that has price data; meta.as_of always echoes the date actually used, so a
   // client never has to guess which day it is looking at.
   @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+  @IsCalendarDate({
     message: 'must be a calendar date in YYYY-MM-DD form',
   })
   as_of?: string;

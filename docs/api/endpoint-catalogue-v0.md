@@ -310,6 +310,7 @@ Gainers / losers / most-active tables for the public markets landing page
 
 | Param | Type | Default | Description |
 |---|---|---|---|
+| `as_of` | date | latest available | Trading date used for all three rankings. Non-trading dates settle to the previous available session |
 | `sector` | string | — | Restrict to a GICS sector code |
 | `market_cap` | enum | — | `large` \| `mid` \| `small` — bands below |
 | `limit` | int | `10` | Rows per list, 1–50 |
@@ -322,10 +323,11 @@ Gainers / losers / most-active tables for the public markets landing page
 | `mid` | ≥ Rs 5 B and < Rs 20 B |
 | `small` | < Rs 5 B |
 
-> ⚠️ **v0 proposal, pending sign-off.** SRS 3.1.1.1 requires band filtering
-> but does not fix thresholds; these are tunable server-side constants. Securities
-> with unknown `shares_outstanding` are excluded only while a `market_cap` filter
-> is applied.
+> **v0 implementation defaults, pending product sign-off.** The endpoint uses
+> these server-side constants so the documented filter has deterministic
+> behaviour. Securities with unknown `shares_outstanding` are excluded only
+> while a `market_cap` filter is applied. Changing a threshold requires a
+> contract update.
 
 ### 200 — example
 
@@ -357,9 +359,11 @@ Gainers / losers / most-active tables for the public markets landing page
 - Lists are **rank-based, not sign-based**: in a uniformly down market the
   "gainers" list still returns the top `limit` rows (their `change_pct` may be
   negative). FE should render from the data, not assume sign.
-- `change`/`change_pct` vs the previous trading day; `null` when no previous day
-  exists (such rows sink to the bottom of gainers/losers, and are excluded from
-  neither list).
+- `change`/`change_pct` compare the selected session with the preceding market
+  session. Securities without a usable previous close are excluded from gainers
+  and losers because their percentage change cannot be ranked.
+- Most-active ranking does not require a previous close, so its `change` and
+  `change_pct` may be `null`. Rows without volume are excluded from that list.
 - Each list may be shorter than `limit` near listing/epoch boundaries; `[]` is
   valid.
 
@@ -367,7 +371,7 @@ Gainers / losers / most-active tables for the public markets landing page
 
 | Status | Code | When |
 |---|---|---|
-| 400 | `VALIDATION_FAILED` | `market_cap` not in enum; bad `sector` code; `limit` out of range |
+| 400 | `VALIDATION_FAILED` | malformed/out-of-range `as_of`; `market_cap` not in enum; bad `sector` code; `limit` out of range |
 
 ---
 
@@ -388,7 +392,8 @@ All errors use the envelope in [error-envelope.md](./error-envelope.md):
    derivable from the distinct `sector` objects in `GET /securities` responses.
    A dedicated reference endpoint is a candidate for the next contract revision
    if FE finds derivation awkward.
-2. **Market-cap thresholds are proposed constants** (§6), pending sign-off.
+2. **Market-cap thresholds use v0 implementation defaults** (§6), pending
+   product sign-off; future changes need a contract revision.
 3. **No API versioning** on this internal surface; versioning arrives with the
    separate public developer API (SRS 3.1.3, Phase 8).
 4. **Ratios coverage:** P/E and P/B only, matching schema v2 `market_ratios`.
