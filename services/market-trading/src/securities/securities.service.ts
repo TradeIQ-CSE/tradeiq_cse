@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Security } from '../entities/security.entity';
 import { Sector } from '../entities/sector.entity';
 import { ValidationFailedException } from '../common/errors/api-exception';
+import { resolveMarketDate, toIsoDate } from '../common/market-date';
 import { ListSecuritiesQueryDto } from './dto/list-securities-query.dto';
 
 export interface SecurityListItem {
@@ -57,17 +58,6 @@ function round(value: number, decimals: number): number {
   return Math.round(value * factor) / factor;
 }
 
-// The contract fixes dates at YYYY-MM-DD (endpoint-catalogue-v0.md §2.2).
-// Uses local getters, not toISOString(), so a date west of UTC isn't shifted
-// back a day.
-function toIsoDate(value: Date | string | null): string | null {
-  if (value === null) return null;
-  if (typeof value === 'string') return value.slice(0, 10);
-  const month = `${value.getMonth() + 1}`.padStart(2, '0');
-  const day = `${value.getDate()}`.padStart(2, '0');
-  return `${value.getFullYear()}-${month}-${day}`;
-}
-
 @Injectable()
 export class SecuritiesService {
   constructor(
@@ -76,20 +66,6 @@ export class SecuritiesService {
     @InjectRepository(Sector)
     private readonly sectors: Repository<Sector>,
   ) {}
-
-  // Bounds of the priced history, used both to default `as_of` and to reject
-  // dates the dataset cannot answer.
-  private async priceDateRange(): Promise<{
-    from: string | null;
-    to: string | null;
-  }> {
-    const rows: { from: Date | string | null; to: Date | string | null }[] =
-      await this.securities.manager.query(
-        `SELECT MIN(trade_date) AS from, MAX(trade_date) AS to
-         FROM market_data.daily_prices`,
-      );
-    return { from: toIsoDate(rows[0].from), to: toIsoDate(rows[0].to) };
-  }
 
   async list(query: ListSecuritiesQueryDto): Promise<SecurityListResult> {
     let sectorId: string | undefined;
@@ -105,35 +81,14 @@ export class SecuritiesService {
       sectorId = sector.sectorId;
     }
 
-    const range = await this.priceDateRange();
-
     // Every row on a page is priced at this one date. Pricing each security at
     // its own last traded day instead would silently mix dates across the
     // table, making the change column incomparable between rows.
-    let asOf = query.as_of ?? range.to;
-    if (query.as_of !== undefined && range.from !== null && range.to !== null) {
-      if (query.as_of < range.from || query.as_of > range.to) {
-        throw new ValidationFailedException([
-          {
-            field: 'as_of',
-            reason: `must fall between ${range.from} and ${range.to}`,
-          },
-        ]);
-      }
-
-      // Weekends and holidays hold no prices, and roughly 40% of calendar dates
-      // in a year are non-trading. Rather than answering those with a page of
-      // nulls, settle back to the most recent session on or before the request;
-      // meta.as_of reports the date actually used so the client can show it.
-      const settled: { trade_date: Date | string | null }[] =
-        await this.securities.manager.query(
-          `SELECT MAX(trade_date) AS trade_date
-           FROM market_data.daily_prices
-           WHERE trade_date <= $1::date`,
-          [query.as_of],
-        );
-      asOf = toIsoDate(settled[0].trade_date) ?? asOf;
-    }
+    const marketDate = await resolveMarketDate(
+      this.securities.manager,
+      query.as_of,
+    );
+    const asOf = marketDate.asOf;
 
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -207,8 +162,8 @@ export class SecuritiesService {
         page_size: query.page_size,
         total: Number(countRows[0].total),
         as_of: asOf,
-        available_from: range.from,
-        available_to: range.to,
+        available_from: marketDate.availableFrom,
+        available_to: marketDate.availableTo,
       },
     };
   }
