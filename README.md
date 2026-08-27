@@ -13,7 +13,7 @@ CSE (Colombo Stock Exchange) strategy backtesting, paper-trading, and portfolio-
 ├── frontend/                React (Vite + TS) SPA — investor-facing client. Routing stub only.
 │                            A separate admin UI may be added later as its own app.
 ├── services/
-│   ├── market-trading/      NestJS. Market data, OHLCV, public dev API, backtesting, paper trading.
+│   ├── market-trading/      NestJS. Market data, OHLCV, execution quotes, public API, backtesting.
 │   │                        Owns the `market_data` Postgres database.
 │   ├── identity-auth/       NestJS. Auth, users, portfolios, orders, fills, lots, cash.
 │   │                        Owns the `auth` Postgres database.
@@ -26,8 +26,8 @@ CSE (Colombo Stock Exchange) strategy backtesting, paper-trading, and portfolio-
 │   └── db/init.sql          Creates one database + dedicated user per service inside the
 │                            single shared Postgres instance (first boot only).
 ├── docs/
-│   ├── api/                 API contracts: endpoint catalogue + structured error envelope.
-│   └── adr/                 Architecture Decision Records (D1–D7 resolutions).
+│   ├── api/                 API contracts: market data, paper trading + structured errors.
+│   └── adr/                 Architecture Decision Records.
 ├── docker-compose.yml       Brings up the shared Postgres instance, the 3 services, and the frontend.
 └── .github/workflows/       CI: install, lint, typecheck, build, test on every PR.
 ```
@@ -83,6 +83,13 @@ one-off/scheduled job, run with:
 ```sh
 docker compose run --rm data-ingestion
 ```
+
+## API contracts
+
+- [Market-data endpoint catalogue](./docs/api/endpoint-catalogue-v0.md)
+- [Paper-trading v1 contract](./docs/api/paper-trading-v1.md)
+- [Structured error envelope](./docs/api/error-envelope.md)
+- [Architecture decisions](./docs/adr/)
 
 ## Local (non-Docker) development
 
