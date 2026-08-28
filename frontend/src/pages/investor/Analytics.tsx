@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Typography, Space, Card, Spin } from 'antd';
-import { AreaChartOutlined, ReloadOutlined, ExperimentOutlined } from '@ant-design/icons';
+import { ReloadOutlined, ExperimentOutlined } from '@ant-design/icons';
 
 const { Title, Text, Paragraph } = Typography;
 
