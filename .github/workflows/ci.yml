@@ -80,6 +80,7 @@ jobs:
     env:
       MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@localhost:5432/market_data
       AUTH_DATABASE_URL: postgresql://auth:changeme@localhost:5432/auth
+      JWT_SECRET: test-only-ci-secret
       ML_DATABASE_URL: postgresql://ml:changeme@localhost:5432/ml
     steps:
       - uses: actions/checkout@v4
@@ -107,6 +108,10 @@ jobs:
       - name: TypeORM migrations (identity-auth)
         working-directory: services/identity-auth
         run: pnpm run migration:run
+
+      - name: Identity-auth API E2E
+        working-directory: services/identity-auth
+        run: pnpm run test:e2e --runInBand
 
       - uses: astral-sh/setup-uv@v3
         with:
