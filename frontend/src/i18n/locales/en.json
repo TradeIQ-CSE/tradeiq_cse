@@ -2,6 +2,7 @@
   "app": {
     "name": "TradeIQ CSE"
   },
+  "dashboard": "Dashboard",
   "nav": {
     "sections": {
       "markets": "Markets",
