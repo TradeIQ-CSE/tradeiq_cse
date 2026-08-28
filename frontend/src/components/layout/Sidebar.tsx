@@ -44,7 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobile, onClose }) => {
     return 'markets';
   };
 
-  const handleMenuClick = (info: any) => {
+  const handleMenuClick = (info: { key: string }) => {
     navigate(`/${info.key}`);
     if (isMobile && onClose) {
       onClose();
