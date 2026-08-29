@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AppShell } from '../../layout/AppShell';
+import { AppShell } from '../../components/layout/AppShell';
 import { ApiError } from '../../lib/api';
 import { localeFor } from '../../i18n';
 import watchAddIcon from '../../assets/icons/watch-add.svg';
+import {
+  MARKET_FILTERS,
+  MarketFilter,
+} from './definitions/market-filter';
 import { SecuritiesSort } from './types';
 import { useSecurities } from './useSecurities';
 import {
@@ -17,25 +21,22 @@ import './markets.css';
 
 const PAGE_SIZE = 20;
 
-type FilterChip = 'all' | 'gainers' | 'losers' | 'mostActive';
-
-const FILTER_CHIPS: FilterChip[] = ['all', 'gainers', 'losers', 'mostActive'];
-
 export function MarketsPage() {
   const { t, i18n } = useTranslation();
   const locale = localeFor(i18n.resolvedLanguage ?? i18n.language);
 
-  const [search, setSearch] = useState('');
-  const [sort, setSort] = useState<SecuritiesSort>('symbol');
-  const [page, setPage] = useState(1);
-  const [asOf, setAsOf] = useState('');
-  const [watched, setWatched] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [securitySort, setSecuritySort] =
+    useState<SecuritiesSort>('symbol');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [selectedTradingDate, setSelectedTradingDate] = useState<string>('');
+  const [watchedSymbols, setWatchedSymbols] = useState<Set<string>>(new Set());
 
-  const { data, isPending, isError, error } = useSecurities({
-    search: search.trim(),
-    as_of: asOf,
-    sort,
-    page,
+  const { data, isPending, isFetching, isError, error } = useSecurities({
+    search: searchQuery.trim(),
+    as_of: selectedTradingDate,
+    sort: securitySort,
+    page: currentPage,
     page_size: PAGE_SIZE,
   });
 
@@ -49,7 +50,7 @@ export function MarketsPage() {
   const dash = t('markets.empty');
 
   function toggleWatch(symbol: string) {
-    setWatched((prev) => {
+    setWatchedSymbols((prev) => {
       const next = new Set(prev);
       if (next.has(symbol)) next.delete(symbol);
       else next.add(symbol);
@@ -58,56 +59,41 @@ export function MarketsPage() {
   }
 
   function toggleSort(next: SecuritiesSort) {
-    setSort(next);
-    setPage(1);
+    setSecuritySort(next);
+    setCurrentPage(1);
   }
 
   return (
     <AppShell
-      search={search}
+      search={searchQuery}
       onSearchChange={(value) => {
-        setSearch(value);
-        setPage(1);
+        setSearchQuery(value);
+        setCurrentPage(1);
       }}
     >
       <div className="markets-page">
         <header className="markets-page__header">
-          <div>
-            <h1>{t('markets.title')}</h1>
-            <p className="markets-page__subtitle">
-              {t('markets.subtitle', {
-                count: total,
-                formattedCount: formatCount(total, locale),
-              })}
-              {resolvedAsOf ? ` · ${t('markets.asOf', { date: resolvedAsOf })}` : ''}
-            </p>
-          </div>
-
-          <label className="markets-page__date">
-            <span>{t('markets.tradingDate')}</span>
-            <input
-              type="date"
-              className="markets-select"
-              value={asOf || resolvedAsOf}
-              min={availableFrom}
-              max={availableTo}
-              onChange={(event) => {
-                setAsOf(event.target.value);
-                setPage(1);
-              }}
-            />
-          </label>
+          <h1>{t('markets.title')}</h1>
+          <p className="markets-page__subtitle">
+            {t('markets.subtitle', {
+              count: total,
+              formattedCount: formatCount(total, locale),
+            })}
+            {resolvedAsOf ? ` · ${t('markets.asOf', { date: resolvedAsOf })}` : ''}
+          </p>
         </header>
 
         <div className="markets-page__filters">
-          {FILTER_CHIPS.map((chip) => (
+          {MARKET_FILTERS.map((chip) => (
             <button
               key={chip}
               type="button"
-              className={`markets-chip${chip === 'all' ? ' markets-chip--active' : ''}`}
-              disabled={chip !== 'all'}
+              className={`markets-chip${
+                chip === MarketFilter.All ? ' markets-chip--active' : ''
+              }`}
+              disabled={chip !== MarketFilter.All}
               title={
-                chip !== 'all'
+                chip !== MarketFilter.All
                   ? t('markets.unavailable.marketOverview')
                   : undefined
               }
@@ -140,9 +126,31 @@ export function MarketsPage() {
           >
             <option>{t('markets.filters.selectMarketCap')}</option>
           </select>
+
+          <label className="markets-page__date">
+            <span>{t('markets.tradingDate')}</span>
+            <input
+              type="date"
+              className="markets-select"
+              value={selectedTradingDate || resolvedAsOf}
+              min={availableFrom}
+              max={availableTo}
+              onChange={(event) => {
+                setSelectedTradingDate(event.target.value);
+                setCurrentPage(1);
+              }}
+            />
+          </label>
         </div>
 
-        <div className="markets-card">
+        <div className="markets-card" aria-busy={isFetching}>
+          {isFetching && (
+            <span
+              className="markets-card__progress"
+              role="status"
+              aria-label={t('markets.states.loading')}
+            />
+          )}
           {isError ? (
             <div className="markets-page__state markets-page__state--error">
               {error instanceof ApiError
@@ -157,14 +165,14 @@ export function MarketsPage() {
                 <button
                   className="markets-sort"
                   onClick={() => toggleSort('symbol')}
-                  aria-current={sort === 'symbol'}
+                  aria-current={securitySort === 'symbol'}
                 >
                   {t('markets.columns.symbol')}
                 </button>
                 <button
                   className="markets-sort"
                   onClick={() => toggleSort('company_name')}
-                  aria-current={sort === 'company_name'}
+                  aria-current={securitySort === 'company_name'}
                 >
                   {t('markets.columns.sector')}
                 </button>
@@ -200,7 +208,7 @@ export function MarketsPage() {
                         security.price,
                       );
                       const positive = (security.change ?? 0) >= 0;
-                      const isWatched = watched.has(security.symbol);
+                      const isWatched = watchedSymbols.has(security.symbol);
                       return (
                         <div className="markets-row" key={security.symbol}>
                           <div className="markets-row__symbol">
@@ -287,17 +295,20 @@ export function MarketsPage() {
           <footer className="markets-page__footer">
             <span>
               {t('markets.pagination.page', {
-                page: formatCount(page, locale),
+                page: formatCount(currentPage, locale),
                 lastPage: formatCount(lastPage, locale),
               })}
             </span>
             <div className="markets-page__pager">
-              <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              <button
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage((page) => page - 1)}
+              >
                 {t('markets.pagination.previous')}
               </button>
               <button
-                disabled={page >= lastPage}
-                onClick={() => setPage((p) => p + 1)}
+                disabled={currentPage >= lastPage}
+                onClick={() => setCurrentPage((page) => page + 1)}
               >
                 {t('markets.pagination.next')}
               </button>

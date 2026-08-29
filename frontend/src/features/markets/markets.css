@@ -3,15 +3,16 @@
   flex-direction: column;
   gap: 10.5px;
   padding: 14px;
-  min-height: 100%;
+  min-height: calc(100vh - 38.5px);
 }
 
 .markets-page__header {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 14px;
-  flex-wrap: wrap;
+  min-height: 42.75px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 0;
 }
 
 .markets-page__header h1 {
@@ -25,8 +26,9 @@
   display: flex;
   align-items: center;
   gap: 7px;
+  margin-left: auto;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 10px;
   white-space: nowrap;
 }
 
@@ -87,6 +89,7 @@
 }
 
 .markets-card {
+  position: relative;
   background: var(--bg-card);
   border: 0.8px solid var(--border-subtle-3);
   border-radius: var(--radius-card);
@@ -95,6 +98,29 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+}
+
+.markets-card__progress {
+  position: absolute;
+  inset: 0 auto auto 0;
+  z-index: 2;
+  width: 35%;
+  height: 1.6px;
+  border-radius: 999px;
+  background: var(--accent);
+  animation: markets-progress 1s ease-in-out infinite alternate;
+}
+
+@keyframes markets-progress {
+  from {
+    transform: translateX(-10%);
+    opacity: 0.55;
+  }
+
+  to {
+    transform: translateX(185%);
+    opacity: 1;
+  }
 }
 
 .markets-row {
@@ -251,4 +277,19 @@
 
 .markets-page__pager button:disabled {
   opacity: 0.4;
+}
+
+@media (max-width: 940px) {
+  .markets-page__date {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .markets-card {
+    overflow-x: auto;
+  }
+
+  .markets-row {
+    min-width: 820px;
+  }
 }
