@@ -7,6 +7,8 @@ import {
   PieChartOutlined,
   ShoppingOutlined,
 } from '@ant-design/icons';
+import { CandlestickChart } from '../../components/charts/CandlestickChart';
+import { MOCK_OHLC_DATA } from '../../data/fixtures/ohlc';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -72,6 +74,22 @@ export const Dashboard: React.FC = () => {
                 Active Orders
               </Button>
             </Space>
+          </Card>
+        </Col>
+        <Col span={24}>
+          <Card
+            style={{
+              backgroundColor: '#0b0e13',
+              borderColor: 'rgba(255,255,255,0.04)',
+            }}
+          >
+            <Title level={4} style={{ color: '#e2e8f0', marginTop: 0 }}>
+              Candlestick component preview
+            </Title>
+            <Paragraph style={{ color: '#64748b' }}>
+              Fixture data is used here to verify responsive OHLC rendering.
+            </Paragraph>
+            <CandlestickChart data={MOCK_OHLC_DATA.DEFAULT} />
           </Card>
         </Col>
       </Row>

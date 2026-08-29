@@ -36,7 +36,7 @@ export const Analytics: React.FC = () => {
           </Space>
         </div>
 
-        <Space size={12} wrap block>
+        <Space size={12} wrap style={{ width: '100%' }}>
           <Button
             type="primary"
             icon={<ExperimentOutlined />}

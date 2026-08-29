@@ -28,7 +28,7 @@ export const Orders: React.FC = () => {
         <Paragraph style={{ color: '#64748b' }}>
           Place buy/sell orders or cancel active open orders matching your execution preferences.
         </Paragraph>
-        <Space size={12} wrap block>
+        <Space size={12} wrap style={{ width: '100%' }}>
           <Button
             type="primary"
             icon={<ArrowUpOutlined />}

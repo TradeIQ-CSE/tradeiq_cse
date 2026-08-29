@@ -1,7 +1,11 @@
 // Shared client for the market-trading API. Response/error shapes follow
 // docs/api/endpoint-catalogue-v0.md and docs/api/error-envelope.md.
 
-const MARKET_TRADING_API_URL = import.meta.env.VITE_MARKET_TRADING_API_URL;
+// Vite does not read the repository-level Compose .env file when the frontend
+// is run directly. Keep the documented local API origin as a safe default,
+// while still allowing deployments to inject a different browser-visible URL.
+const MARKET_TRADING_API_URL =
+  import.meta.env.VITE_MARKET_TRADING_API_URL || 'http://localhost:3001';
 
 export interface ApiErrorBody {
   code: string;

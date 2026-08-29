@@ -1,284 +1,178 @@
-import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Menu, Avatar, Dropdown, Space, Typography, Segmented } from 'antd';
-import {
-  DashboardOutlined,
-  StockOutlined,
-  StarOutlined,
-  PieChartOutlined,
-  ShoppingOutlined,
-  ShoppingCartOutlined,
-  LineChartOutlined,
-  ThunderboltOutlined,
-  FileTextOutlined,
-  UserOutlined,
-  SettingOutlined,
-  LogoutOutlined,
-} from '@ant-design/icons';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SUPPORTED_LANGUAGES } from '../../i18n';
-
-const { Text } = Typography;
+import aiInsightsIcon from '../../assets/icons/ai-insights.svg';
+import backtestingIcon from '../../assets/icons/backtesting.svg';
+import logoIcon from '../../assets/icons/logo.svg';
+import marketsIcon from '../../assets/icons/markets.svg';
+import paperTradingIcon from '../../assets/icons/paper-trading.svg';
+import portfolioIcon from '../../assets/icons/portfolio.svg';
+import reportsIcon from '../../assets/icons/reports.svg';
+import settingsIcon from '../../assets/icons/settings.svg';
+import signInIcon from '../../assets/icons/sign-in.svg';
+import tradesIcon from '../../assets/icons/trades.svg';
+import watchlistIcon from '../../assets/icons/watchlist.svg';
+import './sidebar.css';
 
 interface SidebarProps {
   isMobile?: boolean;
   onClose?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ isMobile, onClose }) => {
+interface NavigationItem {
+  label: string;
+  path: string;
+  icon: string;
+}
+
+interface NavigationSection {
+  label: string;
+  items: NavigationItem[];
+}
+
+export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { t, i18n } = useTranslation();
 
-  const getSelectedKey = () => {
-    const path = location.pathname;
-    if (path.startsWith('/dashboard')) return 'dashboard';
-    if (path.startsWith('/markets')) return 'markets';
-    if (path.startsWith('/watchlist')) return 'watchlist';
-    if (path.startsWith('/portfolio')) return 'portfolio';
-    if (path.startsWith('/orders')) return 'orders';
-    if (path.startsWith('/paper-trading')) return 'paper-trading';
-    if (path.startsWith('/analytics')) return 'analytics';
-    if (path.startsWith('/ai-insights')) return 'ai-insights';
-    if (path.startsWith('/admin')) return 'admin';
-    return 'markets';
-  };
-
-  const handleMenuClick = (info: { key: string }) => {
-    navigate(`/${info.key}`);
-    if (isMobile && onClose) {
-      onClose();
-    }
-  };
-
-  const handleLanguageChange = (value: string) => {
-    i18n.changeLanguage(value);
-  };
-
-  const profileMenuItems = [
+  const navigation: NavigationSection[] = [
     {
-      key: 'settings',
-      label: t('nav.items.settings') || 'Settings',
-      icon: <SettingOutlined />,
-      onClick: () => navigate('/settings'),
-    },
-    {
-      key: 'logout',
-      label: 'Logout',
-      icon: <LogoutOutlined />,
-      onClick: () => console.log('Logout clicked'),
-    },
-  ];
-
-  // Grouped Menu structure matching Figma sections
-  const menuItems = [
-    {
-      type: 'group' as const,
-      label: <span style={{ color: '#45556c', fontSize: '10px', fontWeight: 600, letterSpacing: '1px' }}>MARKETS</span>,
-      children: [
+      label: t('nav.sections.markets'),
+      items: [
+        { label: t('nav.items.markets'), path: '/markets', icon: marketsIcon },
         {
-          key: 'dashboard',
-          icon: <DashboardOutlined style={{ fontSize: '16px' }} />,
-          label: t('dashboard') || 'Dashboard',
-        },
-        {
-          key: 'markets',
-          icon: <StockOutlined style={{ fontSize: '16px' }} />,
-          label: t('nav.items.markets') || 'Markets',
-        },
-        {
-          key: 'watchlist',
-          icon: <StarOutlined style={{ fontSize: '16px' }} />,
-          label: t('nav.items.watchlist') || 'Watchlist',
+          label: t('nav.items.watchlist'),
+          path: '/watchlist',
+          icon: watchlistIcon,
         },
       ],
     },
     {
-      type: 'group' as const,
-      label: <span style={{ color: '#45556c', fontSize: '10px', fontWeight: 600, letterSpacing: '1px' }}>MY PORTFOLIO</span>,
-      children: [
+      label: t('nav.sections.portfolio'),
+      items: [
         {
-          key: 'portfolio',
-          icon: <PieChartOutlined style={{ fontSize: '16px' }} />,
-          label: t('nav.items.portfolio') || 'Portfolio',
+          label: t('nav.items.portfolio'),
+          path: '/portfolio',
+          icon: portfolioIcon,
         },
+        { label: t('nav.items.trades'), path: '/orders', icon: tradesIcon },
+      ],
+    },
+    {
+      label: t('nav.sections.trading'),
+      items: [
         {
-          key: 'orders',
-          icon: <ShoppingOutlined style={{ fontSize: '16px' }} />,
-          label: t('nav.items.trades') || 'Orders',
+          label: t('nav.items.paperTrading'),
+          path: '/paper-trading',
+          icon: paperTradingIcon,
         },
       ],
     },
     {
-      type: 'group' as const,
-      label: <span style={{ color: '#45556c', fontSize: '10px', fontWeight: 600, letterSpacing: '1px' }}>TRADING</span>,
-      children: [
+      label: t('nav.sections.analysis'),
+      items: [
         {
-          key: 'paper-trading',
-          icon: <ShoppingCartOutlined style={{ fontSize: '16px' }} />,
-          label: t('nav.items.paperTrading') || 'Paper Trading',
+          label: t('nav.items.backtesting'),
+          path: '/analytics',
+          icon: backtestingIcon,
+        },
+        {
+          label: t('nav.items.aiInsights'),
+          path: '/ai-insights',
+          icon: aiInsightsIcon,
         },
       ],
     },
     {
-      type: 'group' as const,
-      label: <span style={{ color: '#45556c', fontSize: '10px', fontWeight: 600, letterSpacing: '1px' }}>ANALYSIS</span>,
-      children: [
-        {
-          key: 'analytics',
-          icon: <LineChartOutlined style={{ fontSize: '16px' }} />,
-          label: t('nav.items.backtesting') || 'Analytics',
-        },
-        {
-          key: 'ai-insights',
-          icon: <ThunderboltOutlined style={{ fontSize: '16px' }} />,
-          label: t('nav.items.aiInsights') || 'AI Assistant',
-        },
-      ],
-    },
-    {
-      type: 'group' as const,
-      label: <span style={{ color: '#45556c', fontSize: '10px', fontWeight: 600, letterSpacing: '1px' }}>UTILITIES</span>,
-      children: [
-        {
-          key: 'admin',
-          icon: <FileTextOutlined style={{ fontSize: '16px' }} />,
-          label: 'Admin Panel',
-        },
+      label: t('nav.sections.utilities'),
+      items: [
+        { label: t('nav.items.reports'), path: '/reports', icon: reportsIcon },
       ],
     },
   ];
+
+  function openPage(path: string) {
+    navigate(path);
+    if (isMobile) onClose?.();
+  }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        backgroundColor: '#0b0e13',
-        borderRight: isMobile ? 'none' : '1px solid rgba(255, 255, 255, 0.04)',
-      }}
-    >
-      {/* Brand Logo Header */}
-      <div
-        style={{
-          height: '64px',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 24px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
-          gap: '12px',
-        }}
+    <aside className="sidebar" aria-label="Primary navigation">
+      <button
+        type="button"
+        className="sidebar__brand"
+        onClick={() => openPage('/markets')}
       >
-        <div
-          style={{
-            width: '28px',
-            height: '28px',
-            borderRadius: '6px',
-            backgroundColor: '#722ed1',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#fff',
-            fontWeight: 'bold',
-            fontSize: '16px',
-            boxShadow: '0 2px 8px rgba(114, 46, 209, 0.4)',
-          }}
-        >
-          T
-        </div>
-        <Text style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '16px', letterSpacing: '0.5px' }}>
-          {t('app.name') || 'TradeIQ CSE'}
-        </Text>
-      </div>
+        <span className="sidebar__logo">
+          <img src={logoIcon} alt="" width={12} height={12} />
+        </span>
+        <span>{t('app.name')}</span>
+      </button>
 
-      {/* Navigation Menu */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 8px 24px 8px' }}>
-        <Menu
-          mode="inline"
-          theme="dark"
-          selectedKeys={[getSelectedKey()]}
-          items={menuItems}
-          onClick={handleMenuClick}
-          style={{
-            backgroundColor: 'transparent',
-            border: 'none',
-          }}
-        />
-      </div>
+      <nav className="sidebar__navigation">
+        {navigation.map((section) => (
+          <section className="sidebar__section" key={section.label}>
+            <h2>{section.label}</h2>
+            {section.items.map((item) => {
+              const isActive = location.pathname.startsWith(item.path);
+              return (
+                <button
+                  type="button"
+                  className={`sidebar__item${isActive ? ' sidebar__item--active' : ''}`}
+                  aria-current={isActive ? 'page' : undefined}
+                  onClick={() => openPage(item.path)}
+                  key={item.path}
+                >
+                  <img src={item.icon} alt="" width={13} height={13} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </section>
+        ))}
+      </nav>
 
-      {/* Footer Area */}
-      <div
-        style={{
-          padding: '16px 20px',
-          borderTop: '1px solid rgba(255, 255, 255, 0.04)',
-          backgroundColor: '#070a0e',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '16px',
-        }}
-      >
-        {/* Language selector toggle */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <span style={{ fontSize: '10px', color: '#45556c', fontWeight: 600 }}>
-            {t('nav.language') || 'LANGUAGE'}
-          </span>
-          <Segmented
-            options={SUPPORTED_LANGUAGES.map((lang) => ({
-              label: lang.label,
-              value: lang.code,
-              disabled: !lang.available && lang.code !== i18n.resolvedLanguage,
-            }))}
-            value={i18n.resolvedLanguage || 'en'}
-            onChange={(value) => handleLanguageChange(value as string)}
-            style={{
-              backgroundColor: '#0b0e13',
-              color: '#90a1b9',
-              fontSize: '11px',
-              padding: '2px',
-            }}
-          />
-        </div>
+      <footer className="sidebar__footer">
+        <button type="button" className="sidebar__item sidebar__settings" disabled>
+          <img src={settingsIcon} alt="" width={13} height={13} />
+          <span>{t('nav.items.settings')}</span>
+        </button>
 
-        {/* User profile dropdown card */}
-        <Dropdown menu={{ items: profileMenuItems }} trigger={['click']} placement="topRight">
-          <button
-            type="button"
-            aria-label="Open profile menu"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '10px 12px',
-              borderRadius: '8px',
-              backgroundColor: '#0b0e13',
-              cursor: 'pointer',
-              border: '1px solid rgba(255, 255, 255, 0.04)',
-              transition: 'background-color 0.2s',
-              width: '100%',
-              textAlign: 'left',
-              fontFamily: 'inherit',
-              color: 'inherit',
-            }}
-            className="sidebar-profile-card"
-          >
-            <Space size={10}>
-              <Avatar
-                size="small"
-                style={{ backgroundColor: '#722ed1', verticalAlign: 'middle' }}
-                icon={<UserOutlined />}
+        <div className="sidebar__language">
+          <span>{t('nav.language')}</span>
+          <div className="sidebar__language-options">
+            {SUPPORTED_LANGUAGES.map((language) => (
+              <button
+                type="button"
+                key={language.code}
+                className={
+                  i18n.resolvedLanguage === language.code
+                    ? 'sidebar__language-option sidebar__language-option--active'
+                    : 'sidebar__language-option'
+                }
+                disabled={!language.available}
+                title={
+                  language.available
+                    ? undefined
+                    : t('nav.languageUnavailable', { language: language.label })
+                }
+                onClick={() => void i18n.changeLanguage(language.code)}
               >
-                N
-              </Avatar>
-              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
-                <span style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: 600 }}>Nimesh</span>
-                <span style={{ color: '#64748b', fontSize: '10px' }}>{t('nav.profile.role') || 'Live trader'}</span>
-              </div>
-            </Space>
-            <span style={{ color: '#45556c', fontSize: '10px' }}>▼</span>
-          </button>
-        </Dropdown>
-      </div>
-    </div>
+                {language.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button type="button" className="sidebar__profile" disabled>
+          <span className="sidebar__avatar">G</span>
+          <span className="sidebar__profile-copy">
+            <strong>Guest</strong>
+            <small>Not signed in</small>
+          </span>
+          <img src={signInIcon} alt="" width={13} height={13} />
+        </button>
+      </footer>
+    </aside>
   );
-};
+}

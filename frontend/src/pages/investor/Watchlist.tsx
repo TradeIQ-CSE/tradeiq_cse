@@ -28,7 +28,7 @@ export const Watchlist: React.FC = () => {
         <Paragraph style={{ color: '#64748b' }}>
           Select custom items in the Markets page to add them to your watchlist. Use the actions below to manage lists.
         </Paragraph>
-        <Space size={12} wrap block>
+        <Space size={12} wrap style={{ width: '100%' }}>
           <Button
             type="primary"
             icon={<PlusOutlined />}
