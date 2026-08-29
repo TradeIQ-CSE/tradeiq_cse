@@ -149,7 +149,7 @@ describe('Portfolios (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(204);
 
-    await request(app.getHttpServer())
+    const deleted = await request(app.getHttpServer())
       .get(`/portfolios/${portfolioId}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(404);
@@ -167,9 +167,30 @@ describe('Portfolios (e2e)', () => {
       .send({ name: 'Other portfolio', starting_capital: 200000 })
       .expect(201);
 
-    await request(app.getHttpServer())
+    const otherUsers = await request(app.getHttpServer())
       .get(`/portfolios/${otherCreated.body.data.portfolio_id}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(404);
+
+    const neverExisted = await request(app.getHttpServer())
+      .get(`/portfolios/${randomUUID()}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
+
+    // The envelopes must be indistinguishable, or the response itself
+    // discloses whether a portfolio exists and who owns it. trace_id is
+    // per-request by design, so compare everything else.
+    const envelope = (res: { body: { error: Record<string, unknown> } }) => {
+      const { trace_id, ...rest } = res.body.error;
+      expect(trace_id).toEqual(expect.any(String));
+      return rest;
+    };
+
+    expect(envelope(deleted)).toEqual({
+      code: 'PORTFOLIO_NOT_FOUND',
+      message: 'Portfolio not found.',
+    });
+    expect(envelope(otherUsers)).toEqual(envelope(deleted));
+    expect(envelope(neverExisted)).toEqual(envelope(deleted));
   });
 });
