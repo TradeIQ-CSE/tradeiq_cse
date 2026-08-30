@@ -8,7 +8,11 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
-import { ApiErrorCode, ApiException } from '../errors/api-exception';
+import {
+  ApiErrorCode,
+  ApiErrorField,
+  ApiException,
+} from '../errors/api-exception';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -21,11 +25,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let status: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR;
     let code: ApiErrorCode = 'INTERNAL';
     let message = 'An unexpected error occurred.';
+    let fields: ApiErrorField[] | undefined;
 
     if (exception instanceof ApiException) {
       status = exception.getStatus();
       code = exception.code;
       message = exception.message;
+      fields = exception.fields;
     } else if (exception instanceof HttpException) {
       status = exception.getStatus();
       if (status === HttpStatus.NOT_FOUND) {
@@ -42,12 +48,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (status === HttpStatus.INTERNAL_SERVER_ERROR) {
       code = 'INTERNAL';
       message = 'An unexpected error occurred.';
+      fields = undefined;
     }
 
     response.status(status).json({
       error: {
         code,
         message,
+        ...(fields ? { fields } : {}),
         trace_id: traceId,
       },
     });
