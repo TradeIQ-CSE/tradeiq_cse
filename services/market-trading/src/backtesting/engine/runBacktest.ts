@@ -21,10 +21,15 @@ type Transaction = { grossValue: number; fees: FeeBreakdown; cashFlow: number };
 export function runBacktest(input: BacktestInput): BacktestResult {
   validateRule(input.rules);
 
-  const validD = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(Date.parse(d));
+  const validD = (d: string) =>
+    /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(Date.parse(d));
 
   // [Function: validate] All input + OHLCV + date + warmup validation
-  if (!validD(input.startDate) || !validD(input.endDate) || input.startDate > input.endDate) {
+  if (
+    !validD(input.startDate) ||
+    !validD(input.endDate) ||
+    input.startDate > input.endDate
+  ) {
     throw new InvalidDateRangeError('Invalid date range.');
   }
   if (input.initialCapital <= 0) {
@@ -42,33 +47,55 @@ export function runBacktest(input: BacktestInput): BacktestResult {
     }
     dates.add(b.date);
     if (
-      b.open < 0 || b.high < 0 || b.low < 0 || b.close < 0 || b.volume < 0 ||
-      b.high < b.low || b.high < b.open || b.high < b.close || b.low > b.open || b.low > b.close
+      b.open < 0 ||
+      b.high < 0 ||
+      b.low < 0 ||
+      b.close < 0 ||
+      b.volume < 0 ||
+      b.high < b.low ||
+      b.high < b.open ||
+      b.high < b.close ||
+      b.low > b.open ||
+      b.low > b.close
     ) {
       throw new InvalidBarDataError(`Invalid OHLCV: ${b.date}`);
     }
   }
 
   // [Function: prepareBars] Sort and split warmup/simulation data
-  const warmup = bars.filter(b => b.date < input.startDate);
-  const sim = bars.filter(b => b.date >= input.startDate && b.date <= input.endDate);
+  const warmup = bars.filter((b) => b.date < input.startDate);
+  const sim = bars.filter(
+    (b) => b.date >= input.startDate && b.date <= input.endDate,
+  );
   const req = input.warmupPeriod ?? 0;
 
   if (warmup.length < req) {
-    throw new InsufficientWarmupDataError(`Warmup required ${req}, got ${warmup.length}.`);
+    throw new InsufficientWarmupDataError(
+      `Warmup required ${req}, got ${warmup.length}.`,
+    );
   }
   if (sim.length === 0) {
     throw new MissingPriceHistoryError('No bars in simulation range.');
   }
 
-  let cash = round4(input.initialCapital), qty = 0, entryPrice = 0, entryDate = '', completed = false;
-  const trades: TradeLedgerEntry[] = [], curve: EquityCurvePoint[] = [];
+  let cash = round4(input.initialCapital),
+    qty = 0,
+    entryPrice = 0,
+    entryDate = '',
+    completed = false;
+  const trades: TradeLedgerEntry[] = [],
+    curve: EquityCurvePoint[] = [];
   const startP = sim[0].open;
   const f = input.feeConfig;
-  const feeRate = f.brokerageRate + f.cseRate + f.cdsRate + f.secCessRate + f.stlRate;
+  const feeRate =
+    f.brokerageRate + f.cseRate + f.cdsRate + f.secCessRate + f.stlRate;
 
   // [Function: transaction] Fees + trade creation
-  const transaction = (q: number, p: number, type: 'BUY' | 'SELL'): Transaction => {
+  const transaction = (
+    q: number,
+    p: number,
+    type: 'BUY' | 'SELL',
+  ): Transaction => {
     const gross = round4(q * p);
     const fees: FeeBreakdown = {
       brokerage: round4(gross * f.brokerageRate),
@@ -78,11 +105,16 @@ export function runBacktest(input: BacktestInput): BacktestResult {
       stl: round4(gross * f.stlRate),
       total: 0,
     };
-    fees.total = round4(fees.brokerage + fees.cse + fees.cds + fees.secCess + fees.stl);
+    fees.total = round4(
+      fees.brokerage + fees.cse + fees.cds + fees.secCess + fees.stl,
+    );
     return {
       grossValue: gross,
       fees,
-      cashFlow: type === 'BUY' ? round4(-(gross + fees.total)) : round4(gross - fees.total),
+      cashFlow:
+        type === 'BUY'
+          ? round4(-(gross + fees.total))
+          : round4(gross - fees.total),
     };
   };
 
@@ -98,11 +130,17 @@ export function runBacktest(input: BacktestInput): BacktestResult {
       if (rule.type === 'period_start' && i === 0) {
         sig = { price: bar.open, reason: 'period_start' };
       } else if (rule.type === 'price_falls_to' && bar.low <= val) {
-        sig = { price: Math.min(bar.open, val), reason: `price_falls_to(${val})` };
+        sig = {
+          price: Math.min(bar.open, val),
+          reason: `price_falls_to(${val})`,
+        };
       } else if (rule.type === 'price_falls_pct_from_period_start') {
         const target = round4(startP * (1 - val / 100));
         if (bar.low <= target) {
-          sig = { price: Math.min(bar.open, target), reason: `price_falls_pct_from_period_start(${val}%)` };
+          sig = {
+            price: Math.min(bar.open, target),
+            reason: `price_falls_pct_from_period_start(${val}%)`,
+          };
         }
       }
 
@@ -110,14 +148,21 @@ export function runBacktest(input: BacktestInput): BacktestResult {
         const sz = input.positionSizing;
         let alloc = cash;
         if (sz.type === 'percentage') {
-          alloc = Math.min(cash, round4(input.initialCapital * ((sz.value ?? 100) / 100)));
+          alloc = Math.min(
+            cash,
+            round4(input.initialCapital * ((sz.value ?? 100) / 100)),
+          );
         } else if (sz.type === 'absolute') {
           alloc = Math.min(cash, sz.value ?? 0);
         }
 
-        let q = sz.type === 'fixed_quantity'
-          ? Math.min(Math.floor(sz.value ?? 0), Math.floor(cash / (sig.price * (1 + feeRate))))
-          : Math.floor(alloc / (sig.price * (1 + feeRate)));
+        let q =
+          sz.type === 'fixed_quantity'
+            ? Math.min(
+                Math.floor(sz.value ?? 0),
+                Math.floor(cash / (sig.price * (1 + feeRate))),
+              )
+            : Math.floor(alloc / (sig.price * (1 + feeRate)));
 
         let tx = transaction(q, sig.price, 'BUY');
         while (q > 0 && -tx.cashFlow > cash) {
@@ -147,22 +192,39 @@ export function runBacktest(input: BacktestInput): BacktestResult {
     // [Function: sellSignal] All sell rules + precedence
     else if (qty > 0 && !completed && bar.date !== entryDate) {
       let sig: Signal | null = null;
-      const stopLoss = input.rules.sellConditions.find(r => r.type === 'stop_loss_pct');
-      const takeProfit = input.rules.sellConditions.find(r => r.type === 'take_profit_pct');
-      const target = input.rules.sellConditions.find(r => r.type === 'target_price');
+      const stopLoss = input.rules.sellConditions.find(
+        (r) => r.type === 'stop_loss_pct',
+      );
+      const takeProfit = input.rules.sellConditions.find(
+        (r) => r.type === 'take_profit_pct',
+      );
+      const target = input.rules.sellConditions.find(
+        (r) => r.type === 'target_price',
+      );
 
       if (stopLoss) {
         const val = stopLoss.value ?? 0;
         const p = round4(entryPrice * (1 - val / 100));
-        if (bar.low <= p) sig = { price: Math.min(bar.open, p), reason: `stop_loss_pct(${val}%)` };
+        if (bar.low <= p)
+          sig = {
+            price: Math.min(bar.open, p),
+            reason: `stop_loss_pct(${val}%)`,
+          };
       }
       if (!sig && takeProfit) {
         const val = takeProfit.value ?? 0;
         const p = round4(entryPrice * (1 + val / 100));
-        if (bar.high >= p) sig = { price: Math.max(bar.open, p), reason: `take_profit_pct(${val}%)` };
+        if (bar.high >= p)
+          sig = {
+            price: Math.max(bar.open, p),
+            reason: `take_profit_pct(${val}%)`,
+          };
       }
       if (!sig && target?.value !== undefined && bar.high >= target.value) {
-        sig = { price: Math.max(bar.open, target.value), reason: `target_price(${target.value})` };
+        sig = {
+          price: Math.max(bar.open, target.value),
+          reason: `target_price(${target.value})`,
+        };
       }
       if (!sig && i === sim.length - 1) {
         sig = { price: bar.close, reason: 'end_of_period' };
