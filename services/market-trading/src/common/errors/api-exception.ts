@@ -37,3 +37,9 @@ export class ValidationFailedException extends ApiException {
     );
   }
 }
+
+export class SecurityNotFoundException extends ApiException {
+  constructor() {
+    super(HttpStatus.NOT_FOUND, 'SECURITY_NOT_FOUND', 'Security not found.');
+  }
+}

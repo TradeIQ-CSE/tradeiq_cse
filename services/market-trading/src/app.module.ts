@@ -7,6 +7,7 @@ import databaseConfig from './config/database.config';
 import { validate } from './config/env.validation';
 import { HealthModule } from './health/health.module';
 import { MarketOverviewModule } from './market-overview/market-overview.module';
+import { PaperTradingQuotesModule } from './paper-trading-quotes/paper-trading-quotes.module';
 import { SecuritiesModule } from './securities/securities.module';
 
 @Module({
@@ -37,6 +38,7 @@ import { SecuritiesModule } from './securities/securities.module';
     }),
     HealthModule,
     MarketOverviewModule,
+    PaperTradingQuotesModule,
     SecuritiesModule,
   ],
 })

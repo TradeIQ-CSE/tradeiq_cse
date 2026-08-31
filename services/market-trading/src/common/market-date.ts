@@ -19,6 +19,8 @@ export interface ResolvedMarketDate {
 // The API contract fixes dates at YYYY-MM-DD. node-postgres returns `date`
 // columns as Date objects, so format them without applying a UTC conversion
 // that could move the calendar day in some time zones.
+export function toIsoDate(value: Date | string): string;
+export function toIsoDate(value: Date | string | null): string | null;
 export function toIsoDate(value: Date | string | null): string | null {
   if (value === null) return null;
   if (typeof value === 'string') return value.slice(0, 10);
