@@ -8,7 +8,13 @@ export class DailyPrice {
   @PrimaryColumn({ name: 'trade_date', type: 'date' })
   tradeDate!: string;
 
-  @Column({ name: 'open', type: 'numeric', precision: 12, scale: 4, nullable: true })
+  @Column({
+    name: 'open',
+    type: 'numeric',
+    precision: 12,
+    scale: 4,
+    nullable: true,
+  })
   open?: string;
 
   @Column({ name: 'high', type: 'numeric', precision: 12, scale: 4 })
@@ -20,7 +26,13 @@ export class DailyPrice {
   @Column({ name: 'close', type: 'numeric', precision: 12, scale: 4 })
   close!: string;
 
-  @Column({ name: 'adjusted_close', type: 'numeric', precision: 12, scale: 4, nullable: true })
+  @Column({
+    name: 'adjusted_close',
+    type: 'numeric',
+    precision: 12,
+    scale: 4,
+    nullable: true,
+  })
   adjustedClose?: string;
 
   @Column({ name: 'volume', type: 'bigint' })

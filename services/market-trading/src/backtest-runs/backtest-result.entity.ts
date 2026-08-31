@@ -1,4 +1,15 @@
 import { Entity, Column, PrimaryColumn } from 'typeorm';
+import {
+  TradeLedgerEntry,
+  EquityCurvePoint,
+} from '../backtesting/domain/types';
+
+export interface BacktestSummaryMetrics {
+  initialCapital: number;
+  finalCash: number;
+  finalEquity: number;
+  totalReturnPct: number;
+}
 
 @Entity({ name: 'backtest_results', schema: 'market_data' })
 export class BacktestResult {
@@ -12,13 +23,13 @@ export class BacktestResult {
   symbol!: string;
 
   @Column({ name: 'summary_metrics', type: 'jsonb' })
-  summaryMetrics!: any;
+  summaryMetrics!: BacktestSummaryMetrics;
 
   @Column({ name: 'trade_ledger', type: 'jsonb' })
-  tradeLedger!: any;
+  tradeLedger!: TradeLedgerEntry[];
 
   @Column({ name: 'equity_curve', type: 'jsonb' })
-  equityCurve!: any;
+  equityCurve!: EquityCurvePoint[];
 
   @Column({ name: 'created_at', type: 'timestamptz', default: () => 'now()' })
   createdAt!: Date;

@@ -1,4 +1,15 @@
 import { Entity, Column, PrimaryColumn } from 'typeorm';
+import {
+  FeeConfig,
+  PositionSizingConfig,
+  RuleSet,
+} from '../backtesting/domain/types';
+
+export interface BacktestExecutionAssumptions {
+  feeConfig: FeeConfig;
+  positionSizing: PositionSizingConfig;
+  warmupPeriod: number;
+}
 
 @Entity({ name: 'backtest_runs', schema: 'market_data' })
 export class BacktestRun {
@@ -20,16 +31,26 @@ export class BacktestRun {
   @Column({ name: 'end_date', type: 'date' })
   endDate!: string;
 
-  @Column({ name: 'starting_capital', type: 'numeric', precision: 18, scale: 4 })
+  @Column({
+    name: 'starting_capital',
+    type: 'numeric',
+    precision: 18,
+    scale: 4,
+  })
   startingCapital!: number;
 
   @Column({ name: 'rule_config', type: 'jsonb' })
-  ruleConfig!: any;
+  ruleConfig!: RuleSet;
 
   @Column({ name: 'execution_assumptions', type: 'jsonb' })
-  executionAssumptions!: any;
+  executionAssumptions!: BacktestExecutionAssumptions;
 
-  @Column({ name: 'dataset_version', type: 'varchar', length: 50, nullable: true })
+  @Column({
+    name: 'dataset_version',
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+  })
   datasetVersion?: string;
 
   @Column({ name: 'failure_code', type: 'varchar', length: 50, nullable: true })

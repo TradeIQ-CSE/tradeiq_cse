@@ -4,11 +4,13 @@ import request from 'supertest';
 import { BacktestRunsController } from '../src/backtest-runs/backtest-runs.controller';
 import { BacktestRunsService } from '../src/backtest-runs/backtest-runs.service';
 import { BacktestRunsRepository } from '../src/backtest-runs/backtest-runs.repository';
+import { BacktestRun } from '../src/backtest-runs/backtest-run.entity';
+import { BacktestResult } from '../src/backtest-runs/backtest-result.entity';
 import { configureMarketTradingApp } from '../src/app.setup';
 
 describe('Backtest Runs (e2e)', () => {
   let app: INestApplication;
-  let mockRepo: any;
+  let mockRepo: Partial<Record<keyof BacktestRunsRepository, jest.Mock>>;
 
   const validDto = {
     symbol: 'JKH',
@@ -23,15 +25,50 @@ describe('Backtest Runs (e2e)', () => {
   };
 
   const sampleBars = [
-    { tradeDate: '2026-08-01', open: '100.00', high: '105.00', low: '98.00', close: '102.00', volume: '1000' },
-    { tradeDate: '2026-08-02', open: '102.00', high: '103.00', low: '95.00', close: '96.00', volume: '1100' },
-    { tradeDate: '2026-08-03', open: '96.00', high: '108.00', low: '95.00', close: '107.00', volume: '1200' },
-    { tradeDate: '2026-08-04', open: '107.00', high: '115.00', low: '106.00', close: '112.00', volume: '1300' },
-    { tradeDate: '2026-08-05', open: '112.00', high: '120.00', low: '111.00', close: '118.00', volume: '1400' },
+    {
+      tradeDate: '2026-08-01',
+      open: '100.00',
+      high: '105.00',
+      low: '98.00',
+      close: '102.00',
+      volume: '1000',
+    },
+    {
+      tradeDate: '2026-08-02',
+      open: '102.00',
+      high: '103.00',
+      low: '95.00',
+      close: '96.00',
+      volume: '1100',
+    },
+    {
+      tradeDate: '2026-08-03',
+      open: '96.00',
+      high: '108.00',
+      low: '95.00',
+      close: '107.00',
+      volume: '1200',
+    },
+    {
+      tradeDate: '2026-08-04',
+      open: '107.00',
+      high: '115.00',
+      low: '106.00',
+      close: '112.00',
+      volume: '1300',
+    },
+    {
+      tradeDate: '2026-08-05',
+      open: '112.00',
+      high: '120.00',
+      low: '111.00',
+      close: '118.00',
+      volume: '1400',
+    },
   ];
 
-  const runsStore = new Map<string, any>();
-  const resultsStore = new Map<string, any>();
+  const runsStore = new Map<string, BacktestRun>();
+  const resultsStore = new Map<string, BacktestResult>();
 
   beforeAll(async () => {
     mockRepo = {
@@ -47,21 +84,23 @@ describe('Backtest Runs (e2e)', () => {
         runsStore.set(run.id, run);
         return run;
       }),
-      findRunByIdAndOwner: jest.fn().mockImplementation(async (id, ownerId) => {
+      findRunByIdAndOwner: jest.fn().mockImplementation(async (id) => {
         return runsStore.get(id) || null;
       }),
-      updateRunStatus: jest.fn().mockImplementation(async (id, status, fields) => {
-        const run = runsStore.get(id);
-        if (run) {
-          run.status = status;
-          Object.assign(run, fields);
-        }
-      }),
+      updateRunStatus: jest
+        .fn()
+        .mockImplementation(async (id, status, fields) => {
+          const run = runsStore.get(id);
+          if (run) {
+            run.status = status;
+            Object.assign(run, fields);
+          }
+        }),
       saveResult: jest.fn().mockImplementation(async (result) => {
         resultsStore.set(result.backtestRunId, result);
         return result;
       }),
-      findResultByRunIdAndOwner: jest.fn().mockImplementation(async (runId, ownerId) => {
+      findResultByRunIdAndOwner: jest.fn().mockImplementation(async (runId) => {
         return resultsStore.get(runId) || null;
       }),
       runInTransaction: jest.fn().mockImplementation(async (cb) => {

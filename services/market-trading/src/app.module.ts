@@ -45,4 +45,3 @@ import { BacktestRunsModule } from './backtest-runs/backtest-runs.module';
   ],
 })
 export class AppModule {}
-

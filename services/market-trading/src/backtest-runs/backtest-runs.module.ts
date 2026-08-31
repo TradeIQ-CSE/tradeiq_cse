@@ -10,7 +10,12 @@ import { DailyPrice } from '../db/entities/daily-price.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([BacktestRun, BacktestResult, Security, DailyPrice]),
+    TypeOrmModule.forFeature([
+      BacktestRun,
+      BacktestResult,
+      Security,
+      DailyPrice,
+    ]),
   ],
   controllers: [BacktestRunsController],
   providers: [BacktestRunsService, BacktestRunsRepository],

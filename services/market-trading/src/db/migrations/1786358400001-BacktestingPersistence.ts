@@ -5,7 +5,9 @@ export class BacktestingPersistence1786358400001 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // 1. Drop existing placeholder tables
-    await queryRunner.query(`DROP TABLE IF EXISTS market_data.backtest_results`);
+    await queryRunner.query(
+      `DROP TABLE IF EXISTS market_data.backtest_results`,
+    );
     await queryRunner.query(`DROP TABLE IF EXISTS market_data.backtest_runs`);
 
     // 2. Create backtest_runs table matching the persistence model
@@ -32,8 +34,12 @@ export class BacktestingPersistence1786358400001 implements MigrationInterface {
     `);
 
     // Add indexes for quick querying
-    await queryRunner.query(`CREATE INDEX idx_backtest_runs_owner_id ON market_data.backtest_runs(owner_id)`);
-    await queryRunner.query(`CREATE INDEX idx_backtest_runs_status ON market_data.backtest_runs(status)`);
+    await queryRunner.query(
+      `CREATE INDEX idx_backtest_runs_owner_id ON market_data.backtest_runs(owner_id)`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX idx_backtest_runs_status ON market_data.backtest_runs(status)`,
+    );
 
     // 3. Create backtest_results table
     await queryRunner.query(`
@@ -51,7 +57,9 @@ export class BacktestingPersistence1786358400001 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP TABLE IF EXISTS market_data.backtest_results`);
+    await queryRunner.query(
+      `DROP TABLE IF EXISTS market_data.backtest_results`,
+    );
     await queryRunner.query(`DROP TABLE IF EXISTS market_data.backtest_runs`);
   }
 }

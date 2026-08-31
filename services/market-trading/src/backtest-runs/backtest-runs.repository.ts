@@ -13,7 +13,10 @@ export class BacktestRunsRepository {
     private readonly entityManager: EntityManager,
   ) {}
 
-  async createRun(run: BacktestRun, manager?: EntityManager): Promise<BacktestRun> {
+  async createRun(
+    run: BacktestRun,
+    manager?: EntityManager,
+  ): Promise<BacktestRun> {
     const em = manager || this.entityManager;
     return em.save(BacktestRun, run);
   }
@@ -37,7 +40,10 @@ export class BacktestRunsRepository {
     await em.update(BacktestRun, id, { status, ...updateFields });
   }
 
-  async saveResult(result: BacktestResult, manager?: EntityManager): Promise<BacktestResult> {
+  async saveResult(
+    result: BacktestResult,
+    manager?: EntityManager,
+  ): Promise<BacktestResult> {
     const em = manager || this.entityManager;
     return em.save(BacktestResult, result);
   }
@@ -64,7 +70,8 @@ export class BacktestRunsRepository {
     startDate?: string,
     endDate?: string,
   ): Promise<DailyPrice[]> {
-    const query = this.entityManager.createQueryBuilder(DailyPrice, 'dp')
+    const query = this.entityManager
+      .createQueryBuilder(DailyPrice, 'dp')
       .where('dp.securityId = :securityId', { securityId });
 
     if (startDate) {
@@ -82,7 +89,8 @@ export class BacktestRunsRepository {
     startDate: string,
     warmupPeriod: number,
   ): Promise<DailyPrice[]> {
-    return this.entityManager.createQueryBuilder(DailyPrice, 'dp')
+    return this.entityManager
+      .createQueryBuilder(DailyPrice, 'dp')
       .where('dp.securityId = :securityId', { securityId })
       .andWhere('dp.tradeDate < :startDate', { startDate })
       .orderBy('dp.tradeDate', 'DESC')
@@ -90,7 +98,9 @@ export class BacktestRunsRepository {
       .getMany();
   }
 
-  async runInTransaction<T>(work: (manager: EntityManager) => Promise<T>): Promise<T> {
+  async runInTransaction<T>(
+    work: (manager: EntityManager) => Promise<T>,
+  ): Promise<T> {
     return this.entityManager.transaction(work);
   }
 }
