@@ -21,5 +21,3 @@ import { JwtAuthGuard } from './jwt-auth.guard';
   exports: [JwtModule],
 })
 export class AuthModule {}
-
-//specify auth token lifetime
