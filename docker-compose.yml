@@ -79,11 +79,20 @@ services:
       IDENTITY_AUTH_PORT: ${IDENTITY_AUTH_PORT:-3002}
       AUTH_DATABASE_URL: postgresql://auth:changeme@db:5432/auth
       JWT_SECRET: ${JWT_SECRET:-changeme}
+      # Paper-order execution prices against market-trading over REST; there is
+      # no direct market_data access (SRS 3.6.2).
+      MARKET_TRADING_URL: http://market-trading:3001
     ports:
       - "${IDENTITY_AUTH_PORT:-3002}:3002"
     depends_on:
       db:
         condition: service_healthy
+      # Ordering only, deliberately not service_healthy: portfolios and the
+      # cash ledger work without market-trading, and order execution already
+      # degrades to 503 DEPENDENCY_UNAVAILABLE. Gating startup on it would take
+      # identity-auth down for endpoints that never touch market data.
+      market-trading:
+        condition: service_started
 
   ml-prediction-migrate:
     image: tradeiq/ml-prediction

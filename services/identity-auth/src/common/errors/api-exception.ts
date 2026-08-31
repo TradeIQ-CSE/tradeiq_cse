@@ -9,6 +9,7 @@ export type ApiErrorCode =
   | 'VALIDATION_FAILED'
   | 'PORTFOLIO_NOT_FOUND'
   | 'IDEMPOTENCY_KEY_REUSED'
+  | 'DEPENDENCY_UNAVAILABLE'
   | 'INTERNAL';
 
 export interface ApiErrorField {
@@ -65,6 +66,20 @@ export class IdempotencyKeyReusedException extends ApiException {
       HttpStatus.CONFLICT,
       'IDEMPOTENCY_KEY_REUSED',
       'This idempotency key was already used with a different request.',
+    );
+  }
+}
+
+// docs/api/error-envelope.md §2 — a required internal service is temporarily
+// unavailable. Distinct from INTERNAL: the caller may safely retry, and
+// paper-trading-v1.md §4 relies on that distinction, since a transient
+// dependency failure must not consume the request's idempotency key.
+export class DependencyUnavailableException extends ApiException {
+  constructor() {
+    super(
+      HttpStatus.SERVICE_UNAVAILABLE,
+      'DEPENDENCY_UNAVAILABLE',
+      'A required service is temporarily unavailable.',
     );
   }
 }

@@ -5,6 +5,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUrl,
   Max,
   Min,
   validateSync,
@@ -28,6 +29,16 @@ class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   JWT_SECRET!: string;
+
+  //: Base URL of the market-trading service, used for execution quotes.
+  @IsOptional()
+  @IsUrl({ require_tld: false })
+  MARKET_TRADING_URL?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  MARKET_TRADING_TIMEOUT_MS?: number;
 }
 
 export function validate(config: Record<string, unknown>) {
