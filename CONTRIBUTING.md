@@ -102,21 +102,21 @@ PR descriptions should briefly state:
 - What changed.
 - Why it changed.
 - Any test or validation performed.
-- A link back to the Linear issue, if one applies.
+- The GitHub issue it closes, if one applies.
 
 Example PR description:
 
 ```markdown
 ## Summary
-- Adds GET /market/overview with gainers/losers/most-active.
-- Wires Redis cache with EOD invalidation.
-
-## Linear
-https://linear.app/nimeshk-personal/issue/TIQ-40
+- adds GET /market/overview with gainers/losers/most-active
+- wires Redis cache with EOD invalidation
 
 ## Validation
 - `pnpm --filter market-trading test`
 - `docker compose up` clean-run verified
+
+## Issue
+Closes #40
 ```
 
 ## Monorepo Ground Rules
