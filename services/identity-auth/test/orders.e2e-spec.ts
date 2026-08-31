@@ -15,10 +15,10 @@ import {
 
 // docs/api/paper-trading-v1.md §6.
 //
-// market-trading is stubbed rather than reached over HTTP: the ticket requires
-// the suite prove no cross-service SQL, and a stub is the only way to assert
-// that identity-auth never touches market_data. It also lets a single test pin
-// a stale or unpriced quote without seeding a second database.
+// market-trading is stubbed rather than reached over HTTP, so a stale or
+// unpriced quote can be pinned without seeding a second database. The stub
+// removes the HTTP path only — the boundary itself is asserted separately in
+// the 'service boundary' block below.
 describe('Orders (e2e)', () => {
   let app: INestApplication;
   let jwtService: JwtService;
@@ -560,6 +560,34 @@ describe('Orders (e2e)', () => {
         .expect(200);
       expect(fills.body.meta.total).toBe(1);
       expect(fills.body.data[0].fees).toHaveLength(5);
+    });
+  });
+
+  // CONTRIBUTING.md / SRS 3.6.2 — each service owns its database exclusively.
+  describe('service boundary', () => {
+    // Stubbing the quote client proves nothing about SQL, so assert the
+    // guarantee at the level that actually enforces it: docker/db/init.sql
+    // revokes CONNECT per database, so identity-auth's role cannot reach
+    // market_data no matter what any query says. This fails if someone grants
+    // the role access to make a shortcut work.
+    it('cannot connect to the market_data database at all', async () => {
+      const [privileges] = await dataSource.query(
+        `SELECT has_database_privilege(current_user, 'market_data', 'CONNECT') AS market_data,
+                has_database_privilege(current_user, current_database(), 'CONNECT') AS own`,
+      );
+
+      expect(privileges.market_data).toBe(false);
+      // Guards against the assertion above passing for the wrong reason, such
+      // as the role having no privileges anywhere.
+      expect(privileges.own).toBe(true);
+    });
+
+    it('holds no market_data tables in its own catalogue', async () => {
+      const rows = await dataSource.query(
+        `SELECT table_schema FROM information_schema.tables
+          WHERE table_schema NOT IN ('information_schema') AND table_schema LIKE 'market%'`,
+      );
+      expect(rows).toEqual([]);
     });
   });
 
