@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+# CodeRabbit only auto-reviews the repository's default branch, plus anything
+# listed in base_branches. `dev` is the default, and `main` is deliberately not
+# listed: every commit reaching main has already been reviewed on its way into
+# dev, so a release PR would just repeat the same comments.
+#
+# There is no setting that excludes a base branch, so leaving base_branches
+# empty is what keeps main quiet. Adding "main" here would undo that.
+reviews:
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+
+  finishing_touches:
+    unit_tests:
+      enabled: false
