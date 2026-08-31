@@ -1,0 +1,82 @@
+/* Design tokens extracted from Figma (TradeIQ CSE, "Market" frame,
+   node 76:792) via get_design_context. */
+:root {
+  /* The UI is dark-only, so tell the browser to render native controls dark
+     too. Without this, form widgets default to their light rendering and a
+     date input's calendar indicator is a near-black glyph on a near-black
+     field. Also covers scrollbars and the date picker popup itself. */
+  color-scheme: dark;
+
+  --bg-app: #0b0c19;
+  --bg-panel: #0d0e1d;
+  --bg-card: #12131f;
+
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-subtle-2: rgba(255, 255, 255, 0.05);
+  --border-subtle-3: rgba(255, 255, 255, 0.07);
+  --border-faint: rgba(255, 255, 255, 0.03);
+  --border-divider: rgba(255, 255, 255, 0.08);
+
+  --text-heading: #f1f5f9;
+  --text-primary: #e2e8f0;
+  --text-secondary: #90a1b9;
+  --text-muted: #64748b;
+  --text-faint: #45556c;
+  --text-label: #314158;
+
+  --accent: #7c3aed;
+  --accent-2: #4f46e5;
+  --accent-text: #a78bfa;
+  --accent-soft: rgba(124, 58, 237, 0.15);
+  --accent-soft-strong: rgba(124, 58, 237, 0.2);
+  --accent-soft-active: rgba(124, 58, 237, 0.28);
+  --accent-border: rgba(124, 58, 237, 0.35);
+  --accent-gradient: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+
+  --positive: #00d492;
+  --negative: #ff6467;
+
+  --radius-pill: 10.5px;
+  --radius-sm: 8.5px;
+  --radius-card: 14.5px;
+
+  /*
+    Inter carries no Sinhala or Tamil glyphs, so the stack falls through to
+    the platform fonts for those scripts ("Nirmala UI" on Windows; macOS and
+    Android resolve them via the system fallback chain). Without these the
+    browser picks an arbitrary fallback and line metrics jump between
+    languages. Self-hosted Noto Sans Sinhala/Tamil would make this
+    deterministic — see the i18n follow-ups on the PR.
+  */
+  --font-sans:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Noto Sans Sinhala", "Noto Sans Tamil", "Iskoola Pota", "Latha",
+    "Nirmala UI", sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+  color: inherit;
+}

@@ -97,6 +97,7 @@ Securities browser list.
 |---|---|---|---|
 | `sector` | string | — | Filter by GICS sector code (e.g. `4010`). Must be a code present in the sectors reference data |
 | `search` | string | — | Case-insensitive match: prefix on `symbol`, substring on `company_name`. Min 1 char |
+| `as_of` | date | latest available | Trading date used for price, change and volume. Non-trading dates settle to the previous available session |
 | `sort` | enum | `symbol` | `symbol` \| `company_name` (ascending) |
 | `page`, `page_size` | — | — | See §2.3 |
 
@@ -113,7 +114,12 @@ Securities browser list.
       "sector": { "gics_code": "4010", "name": "Banks" },
       "shares_outstanding": 1467151555,
       "data_from": "2017-01-02",
-      "data_to": "2025-12-31"
+      "data_to": "2025-12-31",
+      "price": 89.70,
+      "change": -0.80,
+      "change_pct": -0.89,
+      "volume": 512800,
+      "pe_ratio": 6.2
     },
     {
       "symbol": "HNB.N0000",
@@ -121,10 +127,22 @@ Securities browser list.
       "sector": { "gics_code": "4010", "name": "Banks" },
       "shares_outstanding": 565107403,
       "data_from": "2017-01-02",
-      "data_to": "2025-12-31"
+      "data_to": "2025-12-31",
+      "price": 195.50,
+      "change": 1.20,
+      "change_pct": 0.62,
+      "volume": 134200,
+      "pe_ratio": 6.9
     }
   ],
-  "meta": { "page": 1, "page_size": 2, "total": 3 }
+  "meta": {
+    "page": 1,
+    "page_size": 2,
+    "total": 3,
+    "as_of": "2025-12-31",
+    "available_from": "2017-01-02",
+    "available_to": "2025-12-31"
+  }
 }
 ```
 
@@ -134,6 +152,18 @@ Securities browser list.
 - `shares_outstanding`: `null` when unknown (excluded from market-cap filtering —
   see §6).
 - `sector`: `null` when the security is unclassified.
+- `price`, `change`, `change_pct`, `volume`: same "latest vs. previous trading
+  day" semantics as `/securities/{symbol}`'s `latest` object (§4) — as-of the
+  most recent trading day with price data (§2.4). All `null` when the security
+  has no price history; `change`/`change_pct` individually `null` on the first
+  day of coverage (no previous trading day).
+- `pe_ratio`: currently valid P/E (`valid_to IS NULL` row in `market_ratios`),
+  else `null`. Added as a v0.1 extension for the Browse Securities table
+  (Figma `Market` frame) — additive and nullable, doesn't break existing
+  consumers of the v0 shape.
+- `meta.as_of` is the trading date actually used. When a weekend or holiday is
+  requested, it may be earlier than the requested date. `available_from` and
+  `available_to` are the bounds accepted by the date filter.
 
 ### Errors
 
@@ -280,6 +310,7 @@ Gainers / losers / most-active tables for the public markets landing page
 
 | Param | Type | Default | Description |
 |---|---|---|---|
+| `as_of` | date | latest available | Trading date used for all three rankings. Non-trading dates settle to the previous available session |
 | `sector` | string | — | Restrict to a GICS sector code |
 | `market_cap` | enum | — | `large` \| `mid` \| `small` — bands below |
 | `limit` | int | `10` | Rows per list, 1–50 |
@@ -292,10 +323,11 @@ Gainers / losers / most-active tables for the public markets landing page
 | `mid` | ≥ Rs 5 B and < Rs 20 B |
 | `small` | < Rs 5 B |
 
-> ⚠️ **v0 proposal, pending mentor sign-off.** SRS 3.1.1.1 requires band filtering
-> but does not fix thresholds; these are tunable server-side constants. Securities
-> with unknown `shares_outstanding` are excluded only while a `market_cap` filter
-> is applied.
+> **v0 implementation defaults, pending product sign-off.** The endpoint uses
+> these server-side constants so the documented filter has deterministic
+> behaviour. Securities with unknown `shares_outstanding` are excluded only
+> while a `market_cap` filter is applied. Changing a threshold requires a
+> contract update.
 
 ### 200 — example
 
@@ -327,9 +359,11 @@ Gainers / losers / most-active tables for the public markets landing page
 - Lists are **rank-based, not sign-based**: in a uniformly down market the
   "gainers" list still returns the top `limit` rows (their `change_pct` may be
   negative). FE should render from the data, not assume sign.
-- `change`/`change_pct` vs the previous trading day; `null` when no previous day
-  exists (such rows sink to the bottom of gainers/losers, and are excluded from
-  neither list).
+- `change`/`change_pct` compare the selected session with the preceding market
+  session. Securities without a usable previous close are excluded from gainers
+  and losers because their percentage change cannot be ranked.
+- Most-active ranking does not require a previous close, so its `change` and
+  `change_pct` may be `null`. Rows without volume are excluded from that list.
 - Each list may be shorter than `limit` near listing/epoch boundaries; `[]` is
   valid.
 
@@ -337,7 +371,7 @@ Gainers / losers / most-active tables for the public markets landing page
 
 | Status | Code | When |
 |---|---|---|
-| 400 | `VALIDATION_FAILED` | `market_cap` not in enum; bad `sector` code; `limit` out of range |
+| 400 | `VALIDATION_FAILED` | malformed/out-of-range `as_of`; `market_cap` not in enum; bad `sector` code; `limit` out of range |
 
 ---
 
@@ -358,7 +392,8 @@ All errors use the envelope in [error-envelope.md](./error-envelope.md):
    derivable from the distinct `sector` objects in `GET /securities` responses.
    A dedicated reference endpoint is a candidate for the next contract revision
    if FE finds derivation awkward.
-2. **Market-cap thresholds are proposed constants** (§6), pending mentor sign-off.
+2. **Market-cap thresholds use v0 implementation defaults** (§6), pending
+   product sign-off; future changes need a contract revision.
 3. **No API versioning** on this internal surface; versioning arrives with the
    separate public developer API (SRS 3.1.3, Phase 8).
 4. **Ratios coverage:** P/E and P/B only, matching schema v2 `market_ratios`.

@@ -6,7 +6,7 @@
 
 ## Context
 
-The PPO directional-prediction service is owned by the **mentor + Shayan**,
+The PPO directional-prediction service is owned by **Meelan + Shayan**,
 including the notebook handover (`TradeIQ-CSE/cse-dataset` issue #26). This team
 makes **no ML design decisions**.
 

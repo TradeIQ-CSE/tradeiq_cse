@@ -1,0 +1,173 @@
+{
+  "app": {
+    "name": "TradeIQ CSE"
+  },
+  "dashboard": "Dashboard",
+  "nav": {
+    "sections": {
+      "markets": "Markets",
+      "portfolio": "My Portfolio",
+      "trading": "Trading",
+      "analysis": "Analysis",
+      "utilities": "Utilities"
+    },
+    "items": {
+      "markets": "Markets",
+      "watchlist": "Watchlist",
+      "portfolio": "Portfolio",
+      "trades": "Trades",
+      "paperTrading": "Paper Trading",
+      "backtesting": "Backtesting",
+      "aiInsights": "AI Insights",
+      "reports": "Reports",
+      "settings": "Settings"
+    },
+    "language": "Language",
+    "languageUnavailable": "{{language}} translation is not available yet",
+    "profile": {
+      "role": "Live trader"
+    }
+  },
+  "topbar": {
+    "searchPlaceholder": "Search symbol or company…"
+  },
+  "markets": {
+    "title": "Browse Securities",
+    "subtitle_one": "{{formattedCount}} security listed on CSE",
+    "subtitle_other": "{{formattedCount}} securities listed on CSE",
+    "filters": {
+      "all": "All",
+      "gainers": "Gainers",
+      "losers": "Losers",
+      "mostActive": "Most Active",
+      "selectSegment": "Select Segment",
+      "selectMarketCap": "Select Market Cap"
+    },
+    "columns": {
+      "symbol": "Symbol",
+      "sector": "Sector",
+      "cap": "Cap",
+      "price": "Price",
+      "change": "Change",
+      "changePct": "%",
+      "volume": "Volume",
+      "peRatio": "P/E",
+      "watch": "Watch"
+    },
+    "cap": {
+      "large": "Large",
+      "mid": "Mid",
+      "small": "Small"
+    },
+    "states": {
+      "loading": "Loading securities…",
+      "empty": "No securities match your filters.",
+      "unreachable": "Could not reach the market-trading API."
+    },
+    "watch": {
+      "add": "Add to watchlist",
+      "remove": "Remove from watchlist"
+    },
+    "pagination": {
+      "page": "Page {{page}} of {{lastPage}}",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "unavailable": {
+      "marketOverview": "Coming soon: needs GET /market/overview",
+      "sectors": "Sector data is not yet available in the seeded dataset"
+    },
+    "empty": "—",
+    "tradingDate": "Trading date",
+    "asOf": "as of {{date}}"
+  },
+  "landing": {
+    "nav": {
+      "tagline": "COLOMBO STOCK EXCHANGE",
+      "links": {
+        "market": "Market",
+        "newsEvents": "News & Events",
+        "aboutUs": "About Us"
+      },
+      "openAccount": "Open an Account",
+      "signIn": "Sign in",
+      "linkUnavailable": "Coming soon"
+    },
+    "hero": {
+      "badge": "Colombo Stock Exchange",
+      "headlineLine1": "The professional edge",
+      "headlineLine2": "for CSE investors.",
+      "subtitle": "Advanced charting, model-driven signals, portfolio analytics and paper trading, built for Sri Lankan investors.",
+      "getStarted": "Get started free",
+      "signIn": "Sign in →",
+      "dataNote": "End-of-day data · Delayed"
+    },
+    "marketData": {
+      "eyebrow": "Market data",
+      "headingLine1": "The full CSE picture,",
+      "headingLine2": "at a glance.",
+      "description": "Browse every security listed on the CSE with real end-of-day prices, search, and OHLC breakdowns.",
+      "cta": "Explore the markets →",
+      "cardTitle": "CSE Securities",
+      "descriptionCounted": "Browse all {{formattedCount}} securities listed on the CSE with real end-of-day prices, search, and OHLC breakdowns."
+    },
+    "insights": {
+      "panelTitle": "Direction Probabilities · 1-Week",
+      "panelBadge": "Statistical model",
+      "bull": "↑ Bull",
+      "flat": "→ Flat",
+      "bear": "↓ Bear",
+      "eyebrow": "AI insights",
+      "headingLine1": "Model-driven signals,",
+      "headingLine2": "not gut feeling.",
+      "description": "See Up / Flat / Down probability splits for every major CSE symbol. Understand your open positions through the same lens, updated each trading day.",
+      "cta": "See AI insights →"
+    },
+    "backtesting": {
+      "eyebrow": "Strategy Backtesting",
+      "headingLine1": "Test before",
+      "headingLine2": "you invest.",
+      "description": "Build a price-based rule set, then run it against CSE historical data. A guided 7-step wizard walks you through setup in minutes, then surfaces a full analytics dashboard.",
+      "quickTitle": "Quick Backtest",
+      "quickDescription": "Pick a strategy, pick a stock, run. Default CSE rules, results in seconds.",
+      "customTitle": "Custom Backtest",
+      "customDescription": "Fine-tune capital, commission, slippage, risk limits, and choose your own metrics.",
+      "cta": "Run your first backtest →",
+      "steps": {
+        "mode": "Mode",
+        "strategy": "Strategy",
+        "market": "Market",
+        "execution": "Execution",
+        "portfolio": "Portfolio",
+        "metrics": "Metrics",
+        "results": "Results"
+      },
+      "selectStrategy": "Select Rules",
+      "parameters": "Parameters",
+      "sampleResults": "Sample results",
+      "totalReturn": "Total Return",
+      "rules": {
+        "priceFalls": "Buy: price falls to",
+        "takeProfit": "Sell: take profit",
+        "stopLoss": "Sell: stop loss",
+        "endOfPeriod": "Sell: end of period"
+      },
+      "takeProfitPct": "Take Profit",
+      "stopLossPct": "Stop Loss",
+      "maxDrawdown": "Max Drawdown",
+      "volatility": "Volatility"
+    },
+    "cta": {
+      "heading": "Start trading smarter today.",
+      "subtitle": "Join investors using TradeIQ to analyse the Colombo Stock Exchange with professional-grade tools.",
+      "button": "Create a free account",
+      "dataNote": "End-of-day data · Delayed"
+    },
+    "footer": {
+      "disclaimer": "Market data is sourced from publicly available Colombo Stock Exchange (CSE) data. Data may be delayed and is provided for research, educational, and simulation purposes only.",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "contact": "Contact"
+    }
+  }
+}

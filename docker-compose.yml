@@ -19,34 +19,9 @@ services:
       timeout: 5s
       retries: 10
 
-  # One-shot schema migration jobs. Each API service starts only after its own
-  # migrations have completed successfully.
-  market-trading-migrate:
-    image: tradeiq/market-trading
-    build:
-      context: .
-      dockerfile: services/market-trading/Dockerfile
-    command: ["pnpm", "run", "migration:run"]
-    environment:
-      MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@db:5432/market_data
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: "no"
-
-  market-data-seed:
-    build:
-      context: .
-      dockerfile: pipeline/data-ingestion/Dockerfile
-    command: ["python", "-m", "data_ingestion.seed"]
-    environment:
-      DATA_INGESTION_MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@db:5432/market_data
-      CSE_SEED_DATA_DIR: ${CSE_SEED_DATA_DIR:-}
-      CSE_DATA_SOURCE_URL: ${CSE_DATA_SOURCE_URL:-}
-    depends_on:
-      market-trading-migrate:
-        condition: service_completed_successfully
-    restart: "no"
+  # The Nest API services apply their own TypeORM migrations at startup
+  # (migrationsRun: true) before serving traffic. market-trading's healthcheck
+  # doubles as the "market_data schema is ready" signal for the seed job.
 
   market-trading:
     image: tradeiq/market-trading
@@ -57,22 +32,40 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       MARKET_TRADING_PORT: ${MARKET_TRADING_PORT:-3001}
       MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@db:5432/market_data
+      MARKET_TRADING_CORS_ORIGINS: ${MARKET_TRADING_CORS_ORIGINS:-http://localhost:5173}
     ports:
       - "${MARKET_TRADING_PORT:-3001}:3001"
     depends_on:
-      market-data-seed:
-        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://localhost:3001/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\"",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
-  identity-auth-migrate:
-    image: tradeiq/identity-auth
+  market-data-seed:
     build:
       context: .
-      dockerfile: services/identity-auth/Dockerfile
-    command: ["pnpm", "run", "migration:run"]
+      dockerfile: pipeline/data-ingestion/Dockerfile
+    command: ["python", "-m", "data_ingestion.seed"]
+    # A host bundle is bind-mounted at /seed; CSE_SEED_DATA_DIR is rewritten to
+    # that container path so the host path never leaks inside. With the var
+    # unset, the mount falls back to the sample fixture and the empty
+    # CSE_SEED_DATA_DIR makes seed.py use its own bundled copy anyway.
+    volumes:
+      - ${CSE_SEED_DATA_DIR:-./pipeline/data-ingestion/src/data_ingestion/fixtures/sample}:/seed:ro
     environment:
-      AUTH_DATABASE_URL: postgresql://auth:changeme@db:5432/auth
+      DATA_INGESTION_MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@db:5432/market_data
+      CSE_SEED_DATA_DIR: ${CSE_SEED_DATA_DIR:+/seed}
+      CSE_DATA_SOURCE_URL: ${CSE_DATA_SOURCE_URL:-}
     depends_on:
-      db:
+      market-trading:
         condition: service_healthy
     restart: "no"
 
@@ -89,8 +82,8 @@ services:
     ports:
       - "${IDENTITY_AUTH_PORT:-3002}:3002"
     depends_on:
-      identity-auth-migrate:
-        condition: service_completed_successfully
+      db:
+        condition: service_healthy
 
   ml-prediction-migrate:
     image: tradeiq/ml-prediction
@@ -123,9 +116,12 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
-    environment:
-      VITE_MARKET_TRADING_API_URL: ${VITE_MARKET_TRADING_API_URL:-http://localhost:3001}
-      VITE_IDENTITY_AUTH_API_URL: ${VITE_IDENTITY_AUTH_API_URL:-http://localhost:3002}
+      # Build args, not `environment`: Vite bakes these into the bundle when
+      # the image is built, and the runtime stage only serves static files.
+      # These are browser-visible origins, so nothing secret belongs here.
+      args:
+        VITE_MARKET_TRADING_API_URL: ${VITE_MARKET_TRADING_API_URL:-http://localhost:3001}
+        VITE_IDENTITY_AUTH_API_URL: ${VITE_IDENTITY_AUTH_API_URL:-http://localhost:3002}
     ports:
       - "${FRONTEND_PORT:-5173}:5173"
     depends_on:
@@ -141,8 +137,8 @@ services:
       DATA_INGESTION_MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@db:5432/market_data
       CSE_DATA_SOURCE_URL: ${CSE_DATA_SOURCE_URL:-}
     depends_on:
-      market-trading-migrate:
-        condition: service_completed_successfully
+      market-trading:
+        condition: service_healthy
 
 volumes:
   db-data:

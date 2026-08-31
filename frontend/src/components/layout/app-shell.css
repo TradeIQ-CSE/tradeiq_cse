@@ -1,0 +1,30 @@
+.app-shell {
+  min-height: 100vh;
+  background: var(--bg-app);
+}
+
+.app-shell__sider {
+  position: fixed !important;
+  inset: 0 auto 0 0;
+  z-index: 10;
+  height: 100vh;
+  background: var(--bg-panel) !important;
+  border-right: 0.8px solid var(--border-subtle);
+}
+
+.app-shell__main {
+  min-height: 100vh;
+  margin-left: 192px;
+  background: var(--bg-app);
+}
+
+.app-shell__main--mobile {
+  margin-left: 0;
+}
+
+.app-shell__content {
+  min-width: 0;
+  min-height: calc(100vh - 38.5px);
+  margin-top: 38.5px;
+  background: var(--bg-app);
+}

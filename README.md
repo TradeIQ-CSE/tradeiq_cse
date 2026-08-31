@@ -13,7 +13,7 @@ CSE (Colombo Stock Exchange) strategy backtesting, paper-trading, and portfolio-
 ├── frontend/                React (Vite + TS) SPA — investor-facing client. Routing stub only.
 │                            A separate admin UI may be added later as its own app.
 ├── services/
-│   ├── market-trading/      NestJS. Market data, OHLCV, public dev API, backtesting, paper trading.
+│   ├── market-trading/      NestJS. Market data, OHLCV, execution quotes, public API, backtesting.
 │   │                        Owns the `market_data` Postgres database.
 │   ├── identity-auth/       NestJS. Auth, users, portfolios, orders, fills, lots, cash.
 │   │                        Owns the `auth` Postgres database.
@@ -26,8 +26,8 @@ CSE (Colombo Stock Exchange) strategy backtesting, paper-trading, and portfolio-
 │   └── db/init.sql          Creates one database + dedicated user per service inside the
 │                            single shared Postgres instance (first boot only).
 ├── docs/
-│   ├── api/                 API contracts: endpoint catalogue + structured error envelope.
-│   └── adr/                 Architecture Decision Records (D1–D7 resolutions).
+│   ├── api/                 API contracts: market data, paper trading + structured errors.
+│   └── adr/                 Architecture Decision Records.
 ├── docker-compose.yml       Brings up the shared Postgres instance, the 3 services, and the frontend.
 └── .github/workflows/       CI: install, lint, typecheck, build, test on every PR.
 ```
@@ -62,16 +62,19 @@ This starts:
 
 - `db` — a single Postgres instance hosting one database per service
   (`market_data`, `auth`, `ml`), created by `docker/db/init.sql` on first boot
-- `*-migrate` — one-shot jobs that apply each service's schema migrations
-  (TypeORM for the Nest services, Alembic for `ml-prediction`); API services
-  only start after their migrations complete
+- `market-trading`, `identity-auth` — the Nest API services. Each applies its
+  own TypeORM migrations at startup (`migrationsRun: true`) before accepting
+  traffic, so the schema is always up to date on a fresh `up`
+- `ml-prediction-migrate` — one-shot job applying the Alembic migrations;
+  `ml-prediction` starts only after it completes
 - `market-data-seed` — one-shot job that seeds `market_data` from a cse-dataset
   bundle (sectors → securities → trading calendar → daily prices → indices),
-  right after the market_data migrations. With no bundle configured it loads a
-  small bundled sample so markets data is always queryable on a fresh `up`.
-  The seed is idempotent — see [`pipeline/data-ingestion/README.md`](./pipeline/data-ingestion/README.md)
+  once `market-trading` is healthy (i.e. its startup migrations have finished).
+  With no bundle configured it loads a small bundled sample; note the sample
+  lands a few seconds after `market-trading` starts serving. The seed is
+  idempotent — see [`pipeline/data-ingestion/README.md`](./pipeline/data-ingestion/README.md)
   for the bundle contract and how to load the full 2017–2025 dataset
-- `market-trading`, `identity-auth`, `ml-prediction` — the three API services
+- `ml-prediction` — the ML inference API
 - `frontend` — the React SPA
 
 The `data-ingestion` job itself is **not** part of the default `up` — it's a
@@ -80,6 +83,13 @@ one-off/scheduled job, run with:
 ```sh
 docker compose run --rm data-ingestion
 ```
+
+## API contracts
+
+- [Market-data endpoint catalogue](./docs/api/endpoint-catalogue-v0.md)
+- [Paper-trading v1 contract](./docs/api/paper-trading-v1.md)
+- [Structured error envelope](./docs/api/error-envelope.md)
+- [Architecture decisions](./docs/adr/)
 
 ## Local (non-Docker) development
 
@@ -99,6 +109,11 @@ pnpm typecheck   # typecheck all workspaces
 pnpm test        # run tests in all workspaces
 ```
 
+Note: `pnpm test` runs unit tests only. `pnpm test:e2e` in a Nest service boots
+the full application — including the database connection and startup
+migrations — so it needs a reachable Postgres (e.g. `docker compose up db`)
+and the service's `.env` in place.
+
 For the Python services, from each service directory:
 
 ```sh
@@ -110,13 +125,18 @@ uv run pytest
 
 ## Databases & migrations
 
-Each service owns its schema via an initial migration. On `docker compose up`, one-shot
-`*-migrate` jobs apply pending migrations and each API service starts only after its own
-migrations complete successfully. The same migrations run in CI against a fresh database.
+Each service owns its schema via migrations. The same migrations run in CI
+against a fresh database.
 
-- `market-trading` / `identity-auth`: TypeORM migrations (`typeorm-ts-node-commonjs`), config in
-  `services/<service>/src/db/data-source.ts`.
-- `ml-prediction`: Alembic migrations, config in `services/ml-prediction/alembic.ini`.
+- `market-trading` / `identity-auth`: TypeORM migrations in
+  `services/<service>/src/db/migrations/`, applied automatically at app startup
+  (`migrationsRun: true` — the app migrates its own database before serving
+  traffic, in Docker and locally). The TypeORM CLI
+  (`migration:create` / `migration:run` / `migration:revert`, config in
+  `services/<service>/src/db/data-source.ts`) remains for authoring and manual
+  runs.
+- `ml-prediction`: Alembic migrations, config in `services/ml-prediction/alembic.ini`,
+  applied by the one-shot `ml-prediction-migrate` compose job.
 
 ## Environment variables
 
@@ -135,6 +155,15 @@ what compose needs to wire containers together (Postgres superuser, published po
 injects only the variables each service needs, so one service's secrets are never visible to
 another. Nothing is hardcoded — every connection string, port, and secret is read from the
 environment.
+
+Inside the Nest services, env access goes through `@nestjs/config` only:
+`src/config/` holds namespaced `registerAs` factories (`app`, `database`, plus
+`auth` in identity-auth) and `env.validation.ts`, which fails fast at boot if a
+required variable is missing or malformed. Application code never reads
+`process.env` directly — inject `ConfigService` and use the namespaced keys
+(e.g. `config.getOrThrow('database.url')`). When adding a new variable, update
+the service's `.env.example`, `src/config/env.validation.ts`, and the matching
+`registerAs` factory together.
 
 ## Branching & commits
 

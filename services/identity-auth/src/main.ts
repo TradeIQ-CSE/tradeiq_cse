@@ -1,9 +1,12 @@
 import { NestFactory } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
+import { configureIdentityAuthApp } from './app.setup';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const port = process.env.IDENTITY_AUTH_PORT ?? 3002;
+  configureIdentityAuthApp(app);
+  const port = app.get(ConfigService).getOrThrow<number>('app.port');
   await app.listen(port);
 }
 bootstrap();

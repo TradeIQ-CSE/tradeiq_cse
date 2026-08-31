@@ -7,7 +7,7 @@
 ## Context
 
 SRS 3.1.4.3 requires the data pipeline to run as a **scheduled job, never a
-resident service**. The mentor's guidance is to run it serverless — it does not
+resident service**. It therefore runs serverless — it does not
 need to run 24/7.
 
 ## Decision
