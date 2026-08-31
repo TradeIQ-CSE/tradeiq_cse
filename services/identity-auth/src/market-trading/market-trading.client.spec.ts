@@ -73,12 +73,45 @@ describe('MarketTradingClient', () => {
 
   // §6.2 — an unknown symbol is an auditable rejected order, not an error, so
   // the client reports it as a result the caller can persist.
-  it('reports a 404 as not found rather than throwing', async () => {
-    fetchMock.mockResolvedValue(jsonResponse(404, { error: {} }));
+  it('reports a SECURITY_NOT_FOUND 404 as not found rather than throwing', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(404, {
+        error: { code: 'SECURITY_NOT_FOUND', message: 'Security not found.' },
+      }),
+    );
 
     await expect(client.getQuote('NOPE.X0000')).resolves.toEqual({
       found: false,
     });
+  });
+
+  // A bare 404 means the URL is wrong, not that the symbol is unknown.
+  // Persisting it as a rejection would hide a configuration fault behind an
+  // auditable but incorrect order.
+  it.each([
+    ['an empty envelope', { error: {} }],
+    ['a different code', { error: { code: 'NOT_FOUND' } }],
+    ['no envelope at all', { message: 'Cannot GET /wrong/path' }],
+  ])('throws on a 404 with %s', async (_label, body) => {
+    fetchMock.mockResolvedValue(jsonResponse(404, body));
+
+    await expect(client.getQuote('COMB.N0000')).rejects.toBeInstanceOf(
+      DependencyUnavailableException,
+    );
+  });
+
+  it('throws on a 404 whose body is not JSON', async () => {
+    fetchMock.mockResolvedValue({
+      status: 404,
+      ok: false,
+      json: async () => {
+        throw new Error('Unexpected token');
+      },
+    } as unknown as Response);
+
+    await expect(client.getQuote('COMB.N0000')).rejects.toBeInstanceOf(
+      DependencyUnavailableException,
+    );
   });
 
   // §4 — transient dependency failures are not stored, so the caller's

@@ -81,7 +81,18 @@ export class MarketTradingClient {
     }
 
     if (response.status === 404) {
-      return { found: false };
+      // Only a genuine SECURITY_NOT_FOUND envelope counts as "symbol does not
+      // exist". A bare 404 from a wrong base URL, a stray proxy or a renamed
+      // route would otherwise be persisted as a rejected order telling the
+      // user their symbol is unknown, hiding a configuration fault behind an
+      // auditable but wrong result.
+      if (await this.isSecurityNotFound(response)) {
+        return { found: false };
+      }
+      this.logger.error(
+        'market-trading returned 404 without a SECURITY_NOT_FOUND envelope',
+      );
+      throw new DependencyUnavailableException();
     }
 
     if (!response.ok) {
@@ -108,5 +119,16 @@ export class MarketTradingClient {
     }
 
     return { found: true, quote: data };
+  }
+
+  private async isSecurityNotFound(response: Response): Promise<boolean> {
+    try {
+      const body = (await response.json()) as {
+        error?: { code?: unknown };
+      } | null;
+      return body?.error?.code === 'SECURITY_NOT_FOUND';
+    } catch {
+      return false;
+    }
   }
 }
