@@ -9,8 +9,30 @@ export type ApiErrorCode =
   | 'VALIDATION_FAILED'
   | 'PORTFOLIO_NOT_FOUND'
   | 'IDEMPOTENCY_KEY_REUSED'
+  | 'ORDER_NOT_FOUND'
+  | 'SECURITY_NOT_FOUND'
+  | 'INSUFFICIENT_CASH'
+  | 'INSUFFICIENT_HOLDINGS'
+  | 'TRANSACTION_LIMIT_EXCEEDED'
+  | 'SECURITY_NOT_TRADABLE'
+  | 'PRICE_UNAVAILABLE'
+  | 'STALE_PRICE'
   | 'DEPENDENCY_UNAVAILABLE'
   | 'INTERNAL';
+
+// docs/api/paper-trading-v1.md §6.2 — the seven outcomes that a submitted
+// order records instead of failing. On POST /orders these are persisted on a
+// 201 order with status 'rejected'; on POST /orders/estimate the same
+// conditions are error envelopes (§9.1), because there is no order to attach
+// them to. Both paths derive from the one checker so they cannot disagree.
+export type OrderRejectionCode =
+  | 'INSUFFICIENT_CASH'
+  | 'INSUFFICIENT_HOLDINGS'
+  | 'TRANSACTION_LIMIT_EXCEEDED'
+  | 'SECURITY_NOT_FOUND'
+  | 'SECURITY_NOT_TRADABLE'
+  | 'PRICE_UNAVAILABLE'
+  | 'STALE_PRICE';
 
 export interface ApiErrorField {
   field: string;
@@ -80,6 +102,38 @@ export class DependencyUnavailableException extends ApiException {
       HttpStatus.SERVICE_UNAVAILABLE,
       'DEPENDENCY_UNAVAILABLE',
       'A required service is temporarily unavailable.',
+    );
+  }
+}
+
+export class OrderNotFoundException extends ApiException {
+  constructor() {
+    super(HttpStatus.NOT_FOUND, 'ORDER_NOT_FOUND', 'Order not found.');
+  }
+}
+
+// §9.1 — the estimate endpoint's rendering of a rejection. Unknown symbols are
+// 404; every other rejection is 422, a well-formed request refused by a domain
+// rule. Order submission never throws these: it persists them (§6.2).
+const REJECTION_MESSAGES: Record<OrderRejectionCode, string> = {
+  INSUFFICIENT_CASH: 'Portfolio does not have enough cash for this order.',
+  INSUFFICIENT_HOLDINGS: 'Portfolio does not hold enough of this security.',
+  TRANSACTION_LIMIT_EXCEEDED:
+    'Order value exceeds the maximum supported transaction value.',
+  SECURITY_NOT_FOUND: 'Security not found.',
+  SECURITY_NOT_TRADABLE: 'Security is not currently tradable.',
+  PRICE_UNAVAILABLE: 'No usable price is available for this security.',
+  STALE_PRICE: 'The latest price for this security is out of date.',
+};
+
+export class OrderRejectedException extends ApiException {
+  constructor(code: OrderRejectionCode) {
+    super(
+      code === 'SECURITY_NOT_FOUND'
+        ? HttpStatus.NOT_FOUND
+        : HttpStatus.UNPROCESSABLE_ENTITY,
+      code,
+      REJECTION_MESSAGES[code],
     );
   }
 }
