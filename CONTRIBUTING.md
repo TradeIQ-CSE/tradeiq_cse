@@ -122,6 +122,11 @@ https://linear.app/nimeshk-personal/issue/TIQ-40
 ## Monorepo Ground Rules
 
 - Feature-branch workflow under PR review (SRS 3.5.1). No direct pushes to main.
+- `dev` is the default branch and where all feature PRs land. `main` is the
+  deployment branch: `dev` is squash-merged into it when cutting a release.
+- CodeRabbit reviews PRs into `dev` only. Commits reaching `main` were already
+  reviewed on their way into `dev`, so release PRs are left alone — see
+  `.coderabbit.yaml`.
 - CI must be green before merge: install, lint, typecheck, build, test.
 - TypeScript/Node changes: use `pnpm` from the repo root (workspace-managed).
 - Python changes (`services/ml-prediction`, `pipeline/data-ingestion`): use `uv`.
