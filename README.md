@@ -65,8 +65,8 @@ This starts:
 - `market-trading`, `identity-auth` — the Nest API services. Each applies its
   own TypeORM migrations at startup (`migrationsRun: true`) before accepting
   traffic, so the schema is always up to date on a fresh `up`. `identity-auth`
-  calls `market-trading` over REST (`MARKET_TRADING_URL`) to price paper
-  orders; it never connects to `market_data` itself
+  is pointed at `market-trading` via `MARKET_TRADING_URL`, the only route by
+  which it reads market data — it never connects to `market_data` itself
 - `ml-prediction-migrate` — one-shot job applying the Alembic migrations;
   `ml-prediction` starts only after it completes
 - `market-data-seed` — one-shot job that seeds `market_data` from a cse-dataset

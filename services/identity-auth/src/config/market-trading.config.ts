@@ -7,5 +7,9 @@ export default registerAs('marketTrading', () => ({
   // A paper order blocks on this call, so the timeout has to be short enough
   // that a stalled dependency surfaces as 503 DEPENDENCY_UNAVAILABLE rather
   // than hanging the request.
-  timeoutMs: parseInt(process.env.MARKET_TRADING_TIMEOUT_MS ?? '3000', 10),
+  // Number(), not parseInt(): env.validation coerces this the same way, and
+  // parseInt('1e3') is 1 where Number('1e3') is 1000 — the two would disagree
+  // on a value validation had already accepted, silently yielding a 1ms
+  // timeout that fails every order.
+  timeoutMs: Number(process.env.MARKET_TRADING_TIMEOUT_MS ?? 3000),
 }));

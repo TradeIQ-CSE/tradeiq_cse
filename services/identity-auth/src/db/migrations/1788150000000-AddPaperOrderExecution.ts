@@ -121,6 +121,10 @@ export class AddPaperOrderExecution1788150000000 implements MigrationInterface {
     );
   }
 
+  // Reverting is only possible while these tables are empty, which they are
+  // today. Once orders exist, `down` cannot succeed: it re-adds NOT NULL
+  // columns whose values (the market-data uuids) were deliberately discarded
+  // by `up` and cannot be recovered from a symbol. Roll forward instead.
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP INDEX auth.idx_orders_portfolio_placed`);
 

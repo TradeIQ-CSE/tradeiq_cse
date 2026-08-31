@@ -118,6 +118,18 @@ export class MarketTradingClient {
       throw new DependencyUnavailableException();
     }
 
+    // Guard against being handed another security's quote — a stale cache, a
+    // misrouted proxy or a bug upstream. Pricing an order on the wrong stock
+    // would move real cash and lots with nothing to flag it afterwards, so a
+    // mismatch is a broken dependency rather than a tradable quote. Case may
+    // differ: the caller sends what the user typed, the response is canonical.
+    if (data.symbol.toUpperCase() !== symbol.toUpperCase()) {
+      this.logger.error(
+        `market-trading returned a quote for a different symbol than requested`,
+      );
+      throw new DependencyUnavailableException();
+    }
+
     return { found: true, quote: data };
   }
 

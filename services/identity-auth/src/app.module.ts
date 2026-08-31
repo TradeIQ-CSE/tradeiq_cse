@@ -9,6 +9,7 @@ import marketTradingConfig from './config/market-trading.config';
 import { validate } from './config/env.validation';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
+import { MarketTradingModule } from './market-trading/market-trading.module';
 import { PortfoliosModule } from './portfolios/portfolios.module';
 
 @Module({
@@ -39,6 +40,7 @@ import { PortfoliosModule } from './portfolios/portfolios.module';
     }),
     AuthModule,
     HealthModule,
+    MarketTradingModule,
     PortfoliosModule,
   ],
 })

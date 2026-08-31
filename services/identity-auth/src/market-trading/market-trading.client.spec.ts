@@ -184,6 +184,25 @@ describe('MarketTradingClient', () => {
     });
   });
 
+  it('accepts a canonical symbol that differs only in case from the request', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(200, { data: QUOTE }));
+
+    await expect(client.getQuote('comb.n0000')).resolves.toEqual({
+      found: true,
+      quote: QUOTE,
+    });
+  });
+
+  // Pricing an order against another security would move cash and lots with
+  // nothing to flag it afterwards, so this must fail loudly.
+  it('throws when the quote is for a different symbol than requested', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(200, { data: QUOTE }));
+
+    await expect(client.getQuote('HNB.N0000')).rejects.toBeInstanceOf(
+      DependencyUnavailableException,
+    );
+  });
+
   it('passes an abort signal so a stalled dependency cannot hang the request', async () => {
     fetchMock.mockResolvedValue(jsonResponse(200, { data: QUOTE }));
 
