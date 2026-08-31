@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { ApiErrorCode, ApiException } from '../errors/api-exception';
+import { BacktestApiError } from '../../backtest-runs/errors/backtest-api-error';
 
 // Renders every non-2xx response as the structured envelope in
 // docs/api/error-envelope.md. Unknown errors never leak internals — they
@@ -22,6 +23,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const traceId = crypto.randomUUID();
+
+    if (exception instanceof BacktestApiError) {
+      response.status(exception.getStatus()).json(exception.getResponse());
+      return;
+    }
 
     let status: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR;
     let code: ApiErrorCode = 'INTERNAL';

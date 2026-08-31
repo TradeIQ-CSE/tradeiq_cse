@@ -1,25 +1,5 @@
 import { join } from 'path';
 import { Module } from '@nestjs/common';
-<<<<<<< HEAD
-import { TypeOrmModule } from '@nestjs/typeorm';
-import * as dotenv from 'dotenv';
-import { HealthModule } from './health/health.module';
-import { BacktestRunsModule } from './backtest-runs/backtest-runs.module';
-
-dotenv.config();
-
-@Module({
-  imports: [
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      url: process.env.MARKET_DATA_DATABASE_URL,
-      autoLoadEntities: true,
-      synchronize: false,
-      logging: false,
-    }),
-    HealthModule,
-    BacktestRunsModule,
-=======
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import appConfig from './config/app.config';
@@ -29,6 +9,7 @@ import { HealthModule } from './health/health.module';
 import { MarketOverviewModule } from './market-overview/market-overview.module';
 import { PaperTradingQuotesModule } from './paper-trading-quotes/paper-trading-quotes.module';
 import { SecuritiesModule } from './securities/securities.module';
+import { BacktestRunsModule } from './backtest-runs/backtest-runs.module';
 
 @Module({
   imports: [
@@ -60,7 +41,7 @@ import { SecuritiesModule } from './securities/securities.module';
     MarketOverviewModule,
     PaperTradingQuotesModule,
     SecuritiesModule,
->>>>>>> origin/dev
+    BacktestRunsModule,
   ],
 })
 export class AppModule {}

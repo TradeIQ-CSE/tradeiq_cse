@@ -1,30 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { AppModule } from '../src/app.module';
+import { BacktestRunsController } from '../src/backtest-runs/backtest-runs.controller';
+import { BacktestRunsService } from '../src/backtest-runs/backtest-runs.service';
 import { BacktestRunsRepository } from '../src/backtest-runs/backtest-runs.repository';
-
-jest.mock('@nestjs/typeorm', () => {
-  const original = jest.requireActual('@nestjs/typeorm');
-  return {
-    ...original,
-    TypeOrmModule: {
-      forRoot: jest.fn().mockReturnValue({
-        module: class DummyRootModule {},
-        providers: [
-          { provide: original.getEntityManagerToken(), useValue: {} },
-          { provide: original.getDataSourceToken(), useValue: {} },
-        ],
-        exports: [original.getEntityManagerToken(), original.getDataSourceToken()],
-      }),
-      forFeature: jest.fn().mockReturnValue({
-        module: class DummyFeatureModule {},
-        providers: [],
-        exports: [],
-      }),
-    },
-  };
-});
+import { configureMarketTradingApp } from '../src/app.setup';
 
 describe('Backtest Runs (e2e)', () => {
   let app: INestApplication;
@@ -90,13 +70,18 @@ describe('Backtest Runs (e2e)', () => {
     };
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    })
-      .overrideProvider(BacktestRunsRepository)
-      .useValue(mockRepo)
-      .compile();
+      controllers: [BacktestRunsController],
+      providers: [
+        BacktestRunsService,
+        {
+          provide: BacktestRunsRepository,
+          useValue: mockRepo,
+        },
+      ],
+    }).compile();
 
     app = moduleFixture.createNestApplication();
+    configureMarketTradingApp(app);
     await app.init();
   });
 

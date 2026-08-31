@@ -1,19 +1,19 @@
+process.env.MARKET_DATA_DATABASE_URL =
+  process.env.MARKET_DATA_DATABASE_URL ||
+  'postgresql://market_data:changeme@localhost:5432/market_data';
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-<<<<<<< HEAD
-import { HealthModule } from '../src/health/health.module';
-=======
 import { AppModule } from '../src/app.module';
 import { configureMarketTradingApp } from '../src/app.setup';
->>>>>>> origin/dev
 
 describe('HealthModule (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [HealthModule],
+      imports: [AppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
