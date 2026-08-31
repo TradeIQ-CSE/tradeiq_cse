@@ -23,6 +23,12 @@ export class InvalidDateRangeError extends BacktestError {
   }
 }
 
+export class InvalidCapitalError extends BacktestError {
+  constructor(message: string) {
+    super(message, 'INVALID_CAPITAL');
+  }
+}
+
 export class MissingPriceHistoryError extends BacktestError {
   constructor(message: string) {
     super(message, 'MISSING_PRICE_HISTORY');

@@ -10,6 +10,7 @@ import {
   MissingPriceHistoryError,
   InsufficientWarmupDataError,
   InvalidBarDataError,
+  InvalidCapitalError,
 } from '../domain/errors';
 import { round4 } from '../domain/rounding';
 import { validateRule } from '../rules/validateRule';
@@ -33,7 +34,9 @@ export function runBacktest(input: BacktestInput): BacktestResult {
     throw new InvalidDateRangeError('Invalid date range.');
   }
   if (input.initialCapital <= 0) {
-    throw new InvalidDateRangeError('initialCapital must be greater than 0.');
+    // Its own code: a caller branching on INVALID_DATE_RANGE would otherwise
+    // be told the dates are wrong when the capital is.
+    throw new InvalidCapitalError('initialCapital must be greater than 0.');
   }
   if (!Array.isArray(input.bars)) {
     throw new MissingPriceHistoryError('Missing historical bars.');
@@ -158,10 +161,13 @@ export function runBacktest(input: BacktestInput): BacktestResult {
 
         let q =
           sz.type === 'fixed_quantity'
-            ? Math.min(
-                Math.floor(sz.value ?? 0),
-                Math.floor(cash / (sig.price * (1 + feeRate))),
-              )
+            ? // Ask for exactly what was requested. The affordability estimate
+              // below divides by an unrounded fee rate, so floating-point can
+              // land a hair under a whole share and buy one fewer than the
+              // caller asked for even when the cash covers it. The loop that
+              // follows already trims to what is affordable, using the same
+              // rounded arithmetic the transaction itself uses.
+              Math.floor(sz.value ?? 0)
             : Math.floor(alloc / (sig.price * (1 + feeRate)));
 
         let tx = transaction(q, sig.price, 'BUY');
@@ -258,6 +264,37 @@ export function runBacktest(input: BacktestInput): BacktestResult {
       positionMarketValue: val,
       totalEquity: round4(cash + val),
     });
+  }
+
+  // A buy on the final bar leaves the position open: the sell branch is an
+  // `else if`, so it cannot run on the bar that opened the position, and there
+  // is no later bar to force the exit on. Close it here so every run ends flat
+  // and finalCash agrees with finalEquity.
+  if (qty > 0) {
+    const last = sim[sim.length - 1];
+    const tx = transaction(qty, last.close, 'SELL');
+    cash = round4(cash + tx.cashFlow);
+    trades.push({
+      id: trades.length + 1,
+      date: last.date,
+      type: 'SELL',
+      executionPrice: last.close,
+      quantity: qty,
+      grossValue: tx.grossValue,
+      fees: tx.fees,
+      netCashFlow: tx.cashFlow,
+      reason: 'end_of_period',
+    });
+    qty = 0;
+    entryPrice = 0;
+    completed = true;
+
+    // The last curve point was recorded while the position was still open.
+    const point = curve[curve.length - 1];
+    point.cash = cash;
+    point.positionQuantity = 0;
+    point.positionMarketValue = 0;
+    point.totalEquity = cash;
   }
 
   return {
