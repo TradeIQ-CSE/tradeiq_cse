@@ -227,6 +227,13 @@ describe('Auth (e2e)', () => {
       await api().post('/auth/refresh').set('Cookie', rotated).expect(401);
     });
 
+    // NOTE: the family-lock behaviour in AuthService.refresh has no test here.
+    // Catching it needs a revocation to commit between another request's read
+    // and its insert, and that interleaving cannot be forced through HTTP
+    // without putting test hooks in production code. Two attempts at it passed
+    // against a deliberately broken version, so they were removed rather than
+    // left behind as false assurance.
+
     it('rejects a request with no cookie', async () => {
       const response = await api().post('/auth/refresh').expect(401);
       expect(response.body.error.code).toBe('REFRESH_TOKEN_INVALID');

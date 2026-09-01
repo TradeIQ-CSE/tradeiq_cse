@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomBytes, randomUUID } from 'crypto';
-import { DataSource, IsNull, Repository } from 'typeorm';
+import { DataSource, EntityManager, IsNull, Repository } from 'typeorm';
 import { EmailCipher } from '../common/crypto/email-cipher';
 import { hashPassword, verifyPassword } from '../common/crypto/password';
 import {
@@ -26,7 +26,7 @@ export interface SessionUser {
 // once it leaves the transaction.
 type RefreshOutcome =
   | { kind: 'reuse'; familyId: string }
-  | { kind: 'rotate'; user: User; familyId: string };
+  | { kind: 'rotate'; session: IssuedSession };
 
 // What the controller needs to answer a request: the JSON body, plus the
 // refresh token it must put in a cookie. The refresh token never enters the
@@ -103,9 +103,10 @@ export class AuthService {
     return this.issueSession(user, randomUUID());
   }
 
-  // docs/api/auth-v1.md §3. Rotation and reuse detection are one transaction:
-  // between reading a token and marking it used, a second request holding the
-  // same value must not also succeed.
+  // docs/api/auth-v1.md §3. Everything that touches a family — checking a
+  // token, spending it, and inserting its successor — happens inside one
+  // transaction holding a lock on the whole family, so a rotation and a
+  // revocation can never interleave.
   async refresh(presented: string | undefined): Promise<IssuedSession> {
     if (!presented) {
       throw new RefreshTokenInvalidException();
@@ -120,15 +121,16 @@ export class AuthService {
       async (manager) => {
         const tokens = manager.getRepository(RefreshToken);
 
-        // Locked for the duration: concurrent refreshes with the same token
-        // serialise here, so the second one sees used_at already set and is
-        // correctly treated as a replay rather than racing to a second session.
-        const row = await tokens
-          .createQueryBuilder('t')
-          .setLock('pessimistic_write')
-          .where('t.token_hash = :tokenHash', { tokenHash })
-          .getOne();
+        const found = await tokens.findOne({ where: { tokenHash } });
+        if (!found) {
+          throw new RefreshTokenInvalidException();
+        }
 
+        await lockFamily(tokens, found.familyId);
+
+        // Re-read under the lock. Whatever we waited behind may have spent this
+        // token or revoked the family, and the copy read above predates that.
+        const row = await tokens.findOne({ where: { tokenHash } });
         if (!row) {
           throw new RefreshTokenInvalidException();
         }
@@ -146,24 +148,27 @@ export class AuthService {
 
         await tokens.update({ tokenId: row.tokenId }, { usedAt: new Date() });
 
-        const found = await manager.getRepository(User).findOne({
+        const user = await manager.getRepository(User).findOne({
           where: { userId: row.userId, deletedAt: IsNull() },
         });
-        if (!found) {
+        if (!user) {
           throw new RefreshTokenInvalidException();
         }
 
-        return { kind: 'rotate', user: found, familyId: row.familyId };
+        // Inserted while the family lock is still held, so a revocation
+        // running concurrently either waits and then covers this row, or has
+        // already committed and made the re-read above reject the request.
+        const session = await this.issueSession(user, row.familyId, manager);
+        return { kind: 'rotate', session };
       },
     );
 
     if (outcome.kind === 'reuse') {
-      await revokeFamily(this.refreshTokens, outcome.familyId);
+      await this.revokeFamily(outcome.familyId);
       throw new RefreshTokenInvalidException();
     }
 
-    // Same family: the new token continues the session rather than starting one.
-    return this.issueSession(outcome.user, outcome.familyId);
+    return outcome.session;
   }
 
   // Idempotent by design (§4.4): logging out with a token that is already gone
@@ -177,8 +182,23 @@ export class AuthService {
       where: { tokenHash: hashToken(presented) },
     });
     if (row) {
-      await revokeFamily(this.refreshTokens, row.familyId);
+      await this.revokeFamily(row.familyId);
     }
+  }
+
+  // Takes the same family lock rotation does, so a successor cannot be
+  // inserted between this reading the family and updating it.
+  private async revokeFamily(familyId: string): Promise<void> {
+    await this.dataSource.transaction(async (manager) => {
+      const tokens = manager.getRepository(RefreshToken);
+      await lockFamily(tokens, familyId);
+      await tokens
+        .createQueryBuilder()
+        .update()
+        .set({ revokedAt: new Date() })
+        .where('family_id = :familyId AND revoked_at IS NULL', { familyId })
+        .execute();
+    });
   }
 
   async findActiveUser(userId: string): Promise<User | null> {
@@ -189,10 +209,16 @@ export class AuthService {
     return this.email.decrypt(user.emailEncrypted);
   }
 
+  // `manager` lets a caller enrol the insert in its own transaction; refresh
+  // relies on that to keep the successor under the family lock.
   private async issueSession(
     user: User,
     familyId: string,
+    manager?: EntityManager,
   ): Promise<IssuedSession> {
+    const tokens = manager
+      ? manager.getRepository(RefreshToken)
+      : this.refreshTokens;
     const accessTtl = this.config.getOrThrow<string>('auth.accessTokenTtl');
 
     const accessToken = await this.jwt.signAsync(
@@ -203,7 +229,7 @@ export class AuthService {
     const refreshToken = randomBytes(32).toString('base64url');
     const issuedAt = new Date();
 
-    await this.refreshTokens.insert({
+    await tokens.insert({
       tokenId: randomUUID(),
       userId: user.userId,
       tokenHash: hashToken(refreshToken),
@@ -244,16 +270,18 @@ function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
-function revokeFamily(
+// SELECT ... FOR UPDATE over every row of one family. Rotation and revocation
+// both take it before touching the family, so they serialise instead of one
+// slipping a fresh token past the other.
+function lockFamily(
   tokens: Repository<RefreshToken>,
   familyId: string,
-): Promise<unknown> {
+): Promise<RefreshToken[]> {
   return tokens
-    .createQueryBuilder()
-    .update()
-    .set({ revokedAt: new Date() })
-    .where('family_id = :familyId AND revoked_at IS NULL', { familyId })
-    .execute();
+    .createQueryBuilder('t')
+    .setLock('pessimistic_write')
+    .where('t.family_id = :familyId', { familyId })
+    .getMany();
 }
 
 // Postgres unique_violation. Matched on the code rather than the message so it
@@ -272,13 +300,14 @@ const UNIT_SECONDS: Record<string, number> = {
   y: 31557600,
 };
 
-// The same "120", "5m", "15d" grammar jsonwebtoken accepts, so expires_in and
-// the cookie Max-Age cannot drift from the token's real lifetime. Validated at
-// boot by env.validation.ts, so a bad value never reaches here.
+// Must agree exactly with DURATION in env.validation.ts, including requiring
+// the unit. Reading a bare "300" as seconds here while jsonwebtoken reads it as
+// milliseconds is what makes expires_in disagree with the token's real
+// lifetime, so this refuses the ambiguous form rather than guessing.
 export function durationToSeconds(value: string): number {
-  const match = /^(\d+)(ms|s|m|h|d|w|y)?$/.exec(value);
+  const match = /^([1-9]\d*)(ms|s|m|h|d|w|y)$/.exec(value);
   if (!match) {
     throw new Error(`Unsupported duration: ${value}`);
   }
-  return Math.round(Number(match[1]) * UNIT_SECONDS[match[2] ?? 's']);
+  return Math.round(Number(match[1]) * UNIT_SECONDS[match[2]]);
 }

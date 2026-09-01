@@ -137,7 +137,7 @@ describe('config', () => {
       ).toThrow('Invalid environment configuration');
     });
 
-    it.each(['5m', '15d', '300s', '900'])('accepts the ttl %s', (ttl) => {
+    it.each(['5m', '15d', '300s', '1ms', '2w'])('accepts the ttl %s', (ttl) => {
       const validated = validate({
         ...REQUIRED,
         AUTH_ACCESS_TOKEN_TTL: ttl,
@@ -145,11 +145,24 @@ describe('config', () => {
       expect(validated.AUTH_ACCESS_TOKEN_TTL).toBe(ttl);
     });
 
-    // "5min" is not a jsonwebtoken unit; it parses as 5 milliseconds and would
-    // expire every access token on issue. Catch it at boot, not in production.
-    it.each(['5min', 'forever', '', '5 m'])('rejects the ttl %s', (ttl) => {
+    // jsonwebtoken passes a bare string to ms(), so each of these means
+    // something other than what an operator writing it would expect, and the
+    // token silently dies while expires_in still reports the intended number:
+    //   "900" is 0.9s, "5min" is 0.005s, "0"/"0s" expire on issue.
+    it.each(['900', '5min', 'forever', '', '5 m', '0', '0s', '0ms', '007'])(
+      'rejects the ttl %s',
+      (ttl) => {
+        expect(() =>
+          validate({ ...REQUIRED, AUTH_ACCESS_TOKEN_TTL: ttl }),
+        ).toThrow('Invalid environment configuration');
+      },
+    );
+
+    // The refresh lifetime goes through the same validator; a zero here also
+    // makes expires_at equal issued_at and trips the table's check constraint.
+    it.each(['0', '900', '5min'])('rejects the refresh ttl %s', (ttl) => {
       expect(() =>
-        validate({ ...REQUIRED, AUTH_ACCESS_TOKEN_TTL: ttl }),
+        validate({ ...REQUIRED, AUTH_REFRESH_TOKEN_TTL: ttl }),
       ).toThrow('Invalid environment configuration');
     });
 

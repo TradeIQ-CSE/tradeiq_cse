@@ -14,10 +14,19 @@ import {
   validateSync,
 } from 'class-validator';
 
-// docs/api/auth-v1.md §8 — a jsonwebtoken duration: digits with an optional
-// unit. Rejected early because a typo like "5min" is silently read as 5
-// milliseconds, which would expire every token the instant it is issued.
-const DURATION = /^\d+(ms|s|m|h|d|w|y)?$/;
+// docs/api/auth-v1.md §8 — a token lifetime. The unit is required and the
+// value must be positive, because jsonwebtoken hands a bare string to `ms()`:
+//
+//   "5m"   -> 300 seconds        as intended
+//   "300"  -> 0.3 seconds        read as milliseconds, so the token is dead
+//   "5min" -> 0.005 seconds      "min" is not a unit ms knows
+//   "0"    -> 0 seconds          expires at the instant it is issued
+//
+// Every one of those passes a laxer check and then fails silently at runtime,
+// with `expires_in` still reporting the number the operator meant. A zero
+// refresh lifetime is worse still: expires_at equals issued_at, which trips
+// refresh_tokens_expiry_chk and turns signup into a 500.
+const DURATION = /^[1-9]\d*(ms|s|m|h|d|w|y)$/;
 
 class EnvironmentVariables {
   @IsOptional()

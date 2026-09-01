@@ -177,7 +177,10 @@ on a guarded route — and is what `JwtAuthGuard` raises.
 
 ## 7. Worked examples
 
-These are the test vectors; `test/auth.e2e-spec.ts` asserts against them.
+These are the test vectors; `test/auth.e2e-spec.ts` asserts against them. They
+are transcribed from a local run, so the cookies below carry no `Secure` — the
+tests set `AUTH_REFRESH_COOKIE_SECURE=false` because a Secure cookie is dropped
+over plain HTTP. Every deployed environment sends it, as in §2.2.
 
 ### 7.1 Signup then use the session
 
@@ -243,6 +246,12 @@ Byte-identical to the response for a real account with the wrong password.
 | `JWT_SECRET` | — | Required. Already used for signing and verification. |
 | `AUTH_ACCESS_TOKEN_TTL` | `5m` | `expiresIn` on issued access tokens. |
 | `AUTH_REFRESH_TOKEN_TTL` | `15d` | Refresh row lifetime and cookie `Max-Age`. |
+
+Both lifetimes must carry a unit (`ms`, `s`, `m`, `h`, `d`, `w`, `y`) and be
+greater than zero; the service refuses to start otherwise. A bare number is
+rejected on purpose: `jsonwebtoken` reads `"300"` as 300 **milliseconds**, so a
+token written as five minutes would die instantly while the response still
+advertised 300 seconds.
 | `AUTH_EMAIL_ENCRYPTION_KEY` | — | Required. 32 bytes, base64. Rotating it orphans existing rows. |
 | `AUTH_REFRESH_COOKIE_SECURE` | `true` | Set `false` only for local HTTP development. |
 
