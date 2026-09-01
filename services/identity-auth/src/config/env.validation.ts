@@ -31,7 +31,12 @@ import {
 // expires_at equal issued_at and trips refresh_tokens_expiry_chk — signup
 // answers 500. Nobody wants a sub-second session, and allowing the unit only
 // re-opens the millisecond confusion this rule exists to prevent.
-const DURATION = /^[1-9]\d*(s|m|h|d|w|y)$/;
+//
+// Five digits is also the ceiling, so the far end cannot overflow. 99999y is
+// 3.2e15 ms, inside the 8.6e15 ms a Date can hold; an unbounded run of digits
+// becomes Infinity and yields an Invalid Date expiry, failing at the first
+// signup instead of here at boot. Nothing legitimate needs more.
+const DURATION = /^[1-9]\d{0,4}(s|m|h|d|w|y)$/;
 
 class EnvironmentVariables {
   @IsOptional()

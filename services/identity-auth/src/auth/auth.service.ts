@@ -3,7 +3,13 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomBytes, randomUUID } from 'crypto';
-import { DataSource, EntityManager, IsNull, Repository } from 'typeorm';
+import {
+  DataSource,
+  EntityManager,
+  IsNull,
+  Repository,
+  UpdateResult,
+} from 'typeorm';
 import { EmailCipher } from '../common/crypto/email-cipher';
 import { hashPassword, verifyPassword } from '../common/crypto/password';
 import {
@@ -25,8 +31,7 @@ export interface SessionUser {
 // Discriminated so the reuse path cannot be mistaken for a successful rotation
 // once it leaves the transaction.
 type RefreshOutcome =
-  | { kind: 'reuse'; familyId: string }
-  | { kind: 'rotate'; session: IssuedSession };
+  { kind: 'reuse' } | { kind: 'rotate'; session: IssuedSession };
 
 // What the controller needs to answer a request: the JSON body, plus the
 // refresh token it must put in a cookie. The refresh token never enters the
@@ -114,9 +119,10 @@ export class AuthService {
 
     const tokenHash = hashToken(presented);
 
-    // The reuse case reports its family instead of throwing from inside the
-    // transaction. Throwing there would roll the revocation back with it,
-    // leaving the stolen session alive — the exact opposite of the intent.
+    // The reuse case revokes inside the transaction and reports that it did,
+    // instead of throwing from within it. Throwing there would roll the
+    // revocation back, leaving the stolen session alive — the exact opposite
+    // of the intent.
     const outcome = await this.dataSource.transaction<RefreshOutcome>(
       async (manager) => {
         const tokens = manager.getRepository(RefreshToken);
@@ -138,8 +144,16 @@ export class AuthService {
         // The credential was presented twice, so two parties hold it. There is
         // no way to tell the thief from the real client, so end the session for
         // both rather than hand either one a fresh token.
+        //
+        // Revoked here, under the lock this transaction already holds, rather
+        // than after it commits. The live successor is still usable until the
+        // revocation lands, so revoking afterwards leaves a gap in which a
+        // concurrent refresh of that successor takes the lock first and leaves
+        // with a fresh access token — valid for its full lifetime, and by then
+        // unrevokable.
         if (row.usedAt) {
-          return { kind: 'reuse', familyId: row.familyId };
+          await revokeFamilyRows(tokens, row.familyId);
+          return { kind: 'reuse' };
         }
 
         if (row.revokedAt || row.expiresAt.getTime() <= Date.now()) {
@@ -164,7 +178,6 @@ export class AuthService {
     );
 
     if (outcome.kind === 'reuse') {
-      await this.revokeFamily(outcome.familyId);
       throw new RefreshTokenInvalidException();
     }
 
@@ -192,12 +205,7 @@ export class AuthService {
     await this.dataSource.transaction(async (manager) => {
       const tokens = manager.getRepository(RefreshToken);
       await lockFamily(tokens, familyId);
-      await tokens
-        .createQueryBuilder()
-        .update()
-        .set({ revokedAt: new Date() })
-        .where('family_id = :familyId AND revoked_at IS NULL', { familyId })
-        .execute();
+      await revokeFamilyRows(tokens, familyId);
     });
   }
 
@@ -284,6 +292,22 @@ function lockFamily(
     .getMany();
 }
 
+// Revokes every live row of one family through whatever transaction `tokens`
+// belongs to, so the caller chooses the atomicity. Both callers hold the family
+// lock first; without it a rotation could insert a successor between the read
+// and the update and survive the revocation.
+function revokeFamilyRows(
+  tokens: Repository<RefreshToken>,
+  familyId: string,
+): Promise<UpdateResult> {
+  return tokens
+    .createQueryBuilder()
+    .update()
+    .set({ revokedAt: new Date() })
+    .where('family_id = :familyId AND revoked_at IS NULL', { familyId })
+    .execute();
+}
+
 // Postgres unique_violation. Matched on the code rather than the message so it
 // survives a locale or wording change in the server.
 function isUniqueViolation(error: unknown): boolean {
@@ -299,13 +323,14 @@ const UNIT_SECONDS: Record<string, number> = {
   y: 31557600,
 };
 
-// Must agree exactly with DURATION in env.validation.ts. Reading a bare "300"
-// as seconds here while jsonwebtoken reads it as milliseconds is what makes
-// expires_in disagree with the token's real lifetime, so this refuses the
-// ambiguous form rather than guessing, and every accepted value is a whole
-// number of seconds or more.
+// Must agree exactly with DURATION in env.validation.ts, digit ceiling
+// included. Reading a bare "300" as seconds here while jsonwebtoken reads it as
+// milliseconds is what makes expires_in disagree with the token's real
+// lifetime, so this refuses the ambiguous form rather than guessing, and every
+// accepted value is a whole number of seconds or more and small enough to stay
+// a safe integer.
 export function durationToSeconds(value: string): number {
-  const match = /^([1-9]\d*)(s|m|h|d|w|y)$/.exec(value);
+  const match = /^([1-9]\d{0,4})(s|m|h|d|w|y)$/.exec(value);
   if (!match) {
     throw new Error(`Unsupported duration: ${value}`);
   }

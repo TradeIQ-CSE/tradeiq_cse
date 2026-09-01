@@ -78,6 +78,10 @@ so it revokes **the entire family** and forces re-login. A stolen refresh token 
 therefore usable at most once, and its use permanently locks out the session it
 came from, which the real user notices immediately.
 
+Detection and revocation happen in one transaction, holding a lock on the family.
+Otherwise a refresh of the still-live successor could slip in between the two and
+collect an access token that outlives the revocation by its full lifetime.
+
 This is the answer to "what if a token is stolen": the access token expires within
 five minutes, and the refresh token self-destructs on the second use.
 
@@ -248,13 +252,16 @@ Byte-identical to the response for a real account with the wrong password.
 | `AUTH_REFRESH_TOKEN_TTL` | `15d` | Refresh row lifetime and cookie `Max-Age`. |
 
 Both lifetimes must carry a unit of a second or longer (`s`, `m`, `h`, `d`,
-`w`, `y`) and be greater than zero; the service refuses to start otherwise.
+`w`, `y`), be greater than zero and be at most five digits; the service refuses
+to start otherwise.
 
 A bare number is rejected on purpose: `jsonwebtoken` reads `"300"` as 300
 **milliseconds**, so a token written as five minutes would die instantly while
 the response still advertised 300 seconds. `ms` is rejected for the same
 reason — a sub-second refresh lifetime makes `expires_at` equal `issued_at`,
-which the table's check constraint refuses.
+which the table's check constraint refuses. The digit ceiling covers the other
+end: a longer run of digits overflows into an expiry no `Date` can represent,
+and failing at startup beats failing at the first signup.
 | `AUTH_EMAIL_ENCRYPTION_KEY` | — | Required. 32 bytes, base64. Rotating it orphans existing rows. |
 | `AUTH_REFRESH_COOKIE_SECURE` | `true` | Set `false` only for local HTTP development. |
 

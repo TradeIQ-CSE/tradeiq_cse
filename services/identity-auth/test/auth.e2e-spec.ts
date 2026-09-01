@@ -227,12 +227,16 @@ describe('Auth (e2e)', () => {
       await api().post('/auth/refresh').set('Cookie', rotated).expect(401);
     });
 
-    // NOTE: the family-lock behaviour in AuthService.refresh has no test here.
-    // Catching it needs a revocation to commit between another request's read
-    // and its insert, and that interleaving cannot be forced through HTTP
-    // without putting test hooks in production code. Two attempts at it passed
-    // against a deliberately broken version, so they were removed rather than
-    // left behind as false assurance.
+    // NOTE: the test above covers that reuse revokes the family and that the
+    // revocation survives the request's own rollback — drop the revoke from
+    // AuthService.refresh, or throw from inside the transaction instead of
+    // returning, and its last assertion fails.
+    //
+    // What it does not cover is the concurrency the family lock exists for:
+    // two refreshes interleaving on one family. Forcing that ordering needs a
+    // pause inside the transaction, which means test hooks in production code.
+    // Two attempts at it passed against a deliberately broken version, so they
+    // were removed rather than left behind as false assurance.
 
     it('rejects a request with no cookie', async () => {
       const response = await api().post('/auth/refresh').expect(401);

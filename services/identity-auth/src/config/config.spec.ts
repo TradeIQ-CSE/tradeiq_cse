@@ -138,13 +138,18 @@ describe('config', () => {
       ).toThrow('Invalid environment configuration');
     });
 
-    it.each(['5m', '15d', '300s', '1s', '2w'])('accepts the ttl %s', (ttl) => {
-      const validated = validate({
-        ...REQUIRED,
-        AUTH_ACCESS_TOKEN_TTL: ttl,
-      });
-      expect(validated.AUTH_ACCESS_TOKEN_TTL).toBe(ttl);
-    });
+    // 99999y is the largest value the digit ceiling allows; it is here to pin
+    // that the ceiling itself is still accepted, not just values below it.
+    it.each(['5m', '15d', '300s', '1s', '2w', '99999y'])(
+      'accepts the ttl %s',
+      (ttl) => {
+        const validated = validate({
+          ...REQUIRED,
+          AUTH_ACCESS_TOKEN_TTL: ttl,
+        });
+        expect(validated.AUTH_ACCESS_TOKEN_TTL).toBe(ttl);
+      },
+    );
 
     // jsonwebtoken passes a bare string to ms(), so each of these means
     // something other than what an operator writing it would expect, and the
@@ -152,6 +157,9 @@ describe('config', () => {
     //   "900" is 0.9s, "5min" is 0.005s, "0"/"0s" expire on issue.
     // Millisecond units are out entirely: anything under 500ms is a
     // zero-second lifetime once converted.
+    // The long digit runs are the other end: '9'.repeat(400) converts to
+    // Infinity and 10^9 days overflows the range a Date can represent, both of
+    // which produce an Invalid Date expiry and a failed insert at signup.
     it.each([
       '900',
       '5min',
@@ -164,6 +172,9 @@ describe('config', () => {
       '499ms',
       '5000ms',
       '007',
+      `${'9'.repeat(400)}s`,
+      '1000000000d',
+      '100000y',
     ])('rejects the ttl %s', (ttl) => {
       expect(() =>
         validate({ ...REQUIRED, AUTH_ACCESS_TOKEN_TTL: ttl }),
@@ -183,12 +194,17 @@ describe('config', () => {
     );
 
     // Whatever the validator lets through must convert to a lifetime the
-    // refresh_tokens check constraint accepts, i.e. at least one second.
-    it.each(['1s', '300s', '5m', '15d', '2w', '1y'])(
-      'converts the accepted ttl %s to a positive number of seconds',
+    // refresh_tokens check constraint accepts — at least one second — and must
+    // still be a usable expiry date at the top of the range.
+    it.each(['1s', '300s', '5m', '15d', '2w', '1y', '99999y'])(
+      'converts the accepted ttl %s to a usable expiry',
       (ttl) => {
         validate({ ...REQUIRED, AUTH_REFRESH_TOKEN_TTL: ttl });
-        expect(durationToSeconds(ttl)).toBeGreaterThanOrEqual(1);
+        const seconds = durationToSeconds(ttl);
+
+        expect(seconds).toBeGreaterThanOrEqual(1);
+        expect(Number.isSafeInteger(seconds)).toBe(true);
+        expect(new Date(Date.now() + seconds * 1000).getTime()).not.toBeNaN();
       },
     );
 
