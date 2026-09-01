@@ -1,7 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
-import { Public } from '../auth/public.decorator';
 
-@Public()
+// Deliberately unguarded: liveness has to answer before a caller has a token.
 @Controller('health')
 export class HealthController {
   @Get()
