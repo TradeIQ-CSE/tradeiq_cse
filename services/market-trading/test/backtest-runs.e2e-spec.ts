@@ -206,7 +206,7 @@ describe('Backtest Runs (e2e)', () => {
       .expect(404);
 
     expect(res.body).toHaveProperty('error');
-    expect(res.body.error.code).toBe('NOT_FOUND');
+    expect(res.body.error.code).toBe('BACKTEST_NOT_FOUND');
     expect(res.body.error).toHaveProperty('trace_id');
   });
 });

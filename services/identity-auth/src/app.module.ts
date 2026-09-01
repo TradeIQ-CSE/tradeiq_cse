@@ -26,8 +26,8 @@ import { PortfoliosModule } from './portfolios/portfolios.module';
         entities: [],
         autoLoadEntities: true,
         // Compiled output mirrors src/, so this resolves to
-        // dist/db/migrations/*.js at runtime.
-        migrations: [join(__dirname, 'db', 'migrations', '*.js')],
+        // dist/db/migrations/*.js at runtime or src/db/migrations/*.ts in tests/ts-node.
+        migrations: [join(__dirname, 'db', 'migrations', '*.{js,ts}')],
         // Pin the tracking table to public: once the auth schema exists, the
         // auth user's default search_path ("$user", public) would otherwise
         // resolve an unqualified "migrations" to that schema.
