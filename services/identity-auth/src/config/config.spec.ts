@@ -5,6 +5,15 @@ import marketTradingConfig from './market-trading.config';
 import { validate } from './env.validation';
 
 const VALID_URL = 'postgresql://u:p@h:5432/db';
+const VALID_KEY = Buffer.alloc(32, 7).toString('base64');
+
+// The three variables with no default. Spread into a case that is meant to
+// pass, so a test only fails for the reason it is testing.
+const REQUIRED = {
+  AUTH_DATABASE_URL: VALID_URL,
+  JWT_SECRET: 'test-secret',
+  AUTH_EMAIL_ENCRYPTION_KEY: VALID_KEY,
+};
 
 describe('config', () => {
   const env = process.env;
@@ -41,6 +50,37 @@ describe('config', () => {
       process.env.JWT_SECRET = 'test-secret';
       expect(authConfig().jwtSecret).toBe('test-secret');
     });
+
+    it('defaults the token lifetimes to docs/api/auth-v1.md §2', () => {
+      delete process.env.AUTH_ACCESS_TOKEN_TTL;
+      delete process.env.AUTH_REFRESH_TOKEN_TTL;
+      expect(authConfig().accessTokenTtl).toBe('5m');
+      expect(authConfig().refreshTokenTtl).toBe('15d');
+    });
+
+    it('reads configured token lifetimes', () => {
+      process.env.AUTH_ACCESS_TOKEN_TTL = '90s';
+      process.env.AUTH_REFRESH_TOKEN_TTL = '2d';
+      expect(authConfig().accessTokenTtl).toBe('90s');
+      expect(authConfig().refreshTokenTtl).toBe('2d');
+    });
+
+    // A secure cookie is dropped over plain HTTP, so the opt-out has to work —
+    // but only for the exact string 'false', never by accident.
+    it.each([
+      [undefined, true],
+      ['true', true],
+      ['', true],
+      ['FALSE', true],
+      ['false', false],
+    ])('maps AUTH_REFRESH_COOKIE_SECURE=%s to %s', (value, expected) => {
+      if (value === undefined) {
+        delete process.env.AUTH_REFRESH_COOKIE_SECURE;
+      } else {
+        process.env.AUTH_REFRESH_COOKIE_SECURE = value;
+      }
+      expect(authConfig().refreshCookieSecure).toBe(expected);
+    });
   });
 
   describe('marketTradingConfig', () => {
@@ -66,8 +106,7 @@ describe('config', () => {
   describe('validate', () => {
     it('accepts a minimal valid environment', () => {
       const validated = validate({
-        AUTH_DATABASE_URL: VALID_URL,
-        JWT_SECRET: 'test-secret',
+        ...REQUIRED,
       });
       expect(validated.AUTH_DATABASE_URL).toBe(VALID_URL);
       expect(validated.JWT_SECRET).toBe('test-secret');
@@ -75,30 +114,46 @@ describe('config', () => {
 
     it('coerces a numeric port string to a number', () => {
       const validated = validate({
-        AUTH_DATABASE_URL: VALID_URL,
-        JWT_SECRET: 'test-secret',
+        ...REQUIRED,
         IDENTITY_AUTH_PORT: '3002',
       });
       expect(validated.IDENTITY_AUTH_PORT).toBe(3002);
     });
 
-    it('throws when the database url is missing', () => {
-      expect(() => validate({ JWT_SECRET: 'test-secret' })).toThrow(
-        'Invalid environment configuration',
-      );
+    it.each(['AUTH_DATABASE_URL', 'JWT_SECRET', 'AUTH_EMAIL_ENCRYPTION_KEY'])(
+      'throws when %s is missing',
+      (key) => {
+        const { [key]: _omitted, ...rest } = REQUIRED as Record<string, string>;
+        expect(() => validate(rest)).toThrow('Invalid environment configuration');
+      },
+    );
+
+    it('rejects an encryption key that is not base64', () => {
+      expect(() =>
+        validate({ ...REQUIRED, AUTH_EMAIL_ENCRYPTION_KEY: 'not base64!!' }),
+      ).toThrow('Invalid environment configuration');
     });
 
-    it('throws when the jwt secret is missing', () => {
-      expect(() => validate({ AUTH_DATABASE_URL: VALID_URL })).toThrow(
-        'Invalid environment configuration',
-      );
+    it.each(['5m', '15d', '300s', '900'])('accepts the ttl %s', (ttl) => {
+      const validated = validate({
+        ...REQUIRED,
+        AUTH_ACCESS_TOKEN_TTL: ttl,
+      });
+      expect(validated.AUTH_ACCESS_TOKEN_TTL).toBe(ttl);
+    });
+
+    // "5min" is not a jsonwebtoken unit; it parses as 5 milliseconds and would
+    // expire every access token on issue. Catch it at boot, not in production.
+    it.each(['5min', 'forever', '', '5 m'])('rejects the ttl %s', (ttl) => {
+      expect(() =>
+        validate({ ...REQUIRED, AUTH_ACCESS_TOKEN_TTL: ttl }),
+      ).toThrow('Invalid environment configuration');
     });
 
     it('throws when the port is not an integer', () => {
       expect(() =>
         validate({
-          AUTH_DATABASE_URL: VALID_URL,
-          JWT_SECRET: 'test-secret',
+          ...REQUIRED,
           IDENTITY_AUTH_PORT: 'not-a-port',
         }),
       ).toThrow('Invalid environment configuration');
@@ -108,8 +163,7 @@ describe('config', () => {
       // http://market-trading:3001 is what compose injects; it has no TLD, so
       // the validator must not insist on one.
       const validated = validate({
-        AUTH_DATABASE_URL: VALID_URL,
-        JWT_SECRET: 'test-secret',
+        ...REQUIRED,
         MARKET_TRADING_URL: 'http://market-trading:3001',
       });
       expect(validated.MARKET_TRADING_URL).toBe('http://market-trading:3001');
@@ -118,8 +172,7 @@ describe('config', () => {
     it('throws when the market-trading url is not a url', () => {
       expect(() =>
         validate({
-          AUTH_DATABASE_URL: VALID_URL,
-          JWT_SECRET: 'test-secret',
+          ...REQUIRED,
           MARKET_TRADING_URL: 'not a url',
         }),
       ).toThrow('Invalid environment configuration');
@@ -128,8 +181,7 @@ describe('config', () => {
     it('throws when the market-trading timeout is not an integer', () => {
       expect(() =>
         validate({
-          AUTH_DATABASE_URL: VALID_URL,
-          JWT_SECRET: 'test-secret',
+          ...REQUIRED,
           MARKET_TRADING_TIMEOUT_MS: 'soon',
         }),
       ).toThrow('Invalid environment configuration');
@@ -138,8 +190,7 @@ describe('config', () => {
     it('throws on an unknown NODE_ENV', () => {
       expect(() =>
         validate({
-          AUTH_DATABASE_URL: VALID_URL,
-          JWT_SECRET: 'test-secret',
+          ...REQUIRED,
           NODE_ENV: 'staging',
         }),
       ).toThrow('Invalid environment configuration');

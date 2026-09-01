@@ -1,15 +1,23 @@
 import { plainToInstance } from 'class-transformer';
 import {
+  IsBase64,
+  IsBoolean,
   IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUrl,
+  Matches,
   Max,
   Min,
   validateSync,
 } from 'class-validator';
+
+// docs/api/auth-v1.md §8 — a jsonwebtoken duration: digits with an optional
+// unit. Rejected early because a typo like "5min" is silently read as 5
+// milliseconds, which would expire every token the instant it is issued.
+const DURATION = /^\d+(ms|s|m|h|d|w|y)?$/;
 
 class EnvironmentVariables {
   @IsOptional()
@@ -29,6 +37,23 @@ class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   JWT_SECRET!: string;
+
+  @IsOptional()
+  @Matches(DURATION)
+  AUTH_ACCESS_TOKEN_TTL?: string;
+
+  @IsOptional()
+  @Matches(DURATION)
+  AUTH_REFRESH_TOKEN_TTL?: string;
+
+  // 32 raw bytes, base64 encoded: the AES-256-GCM key for auth.users
+  // .email_encrypted and the HMAC key behind email_hash (docs/api/auth-v1.md §5).
+  @IsBase64()
+  AUTH_EMAIL_ENCRYPTION_KEY!: string;
+
+  @IsOptional()
+  @IsBoolean()
+  AUTH_REFRESH_COOKIE_SECURE?: boolean;
 
   //: Base URL of the market-trading service, used for execution quotes.
   @IsOptional()
