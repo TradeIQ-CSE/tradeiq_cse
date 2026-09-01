@@ -1,11 +1,9 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { isUUID } from 'class-validator';
 import { Request } from 'express';
 import { UnauthenticatedException } from '../common/errors/api-exception';
 import { AuthenticatedUser } from './authenticated-user';
-import { PUBLIC_ROUTE_KEY } from './public.decorator';
 
 type AuthenticatedRequest = Request & { user?: AuthenticatedUser };
 
@@ -13,22 +11,14 @@ interface AccessTokenPayload {
   sub?: unknown;
 }
 
+// Applied per controller with @UseGuards, never globally: a controller that
+// needs no authentication simply does not list this guard, so a route's auth
+// policy is readable from the controller itself.
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(
-    private readonly jwtService: JwtService,
-    private readonly reflector: Reflector,
-  ) {}
+  constructor(private readonly jwtService: JwtService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const isPublic = this.reflector.getAllAndOverride<boolean>(
-      PUBLIC_ROUTE_KEY,
-      [context.getHandler(), context.getClass()],
-    );
-    if (isPublic) {
-      return true;
-    }
-
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const token = this.extractBearerToken(request);
 

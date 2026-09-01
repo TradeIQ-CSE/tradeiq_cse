@@ -9,10 +9,12 @@ import {
   Post,
   Query,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { AuthenticatedUser } from '../auth/authenticated-user';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ListFillsQueryDto } from './dto/list-fills-query.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { OrderParamsDto, PortfolioIdParamDto } from './dto/order-params.dto';
@@ -20,8 +22,9 @@ import { SubmitOrderDto } from './dto/submit-order.dto';
 import { OrdersService } from './orders.service';
 
 // docs/api/paper-trading-v1.md §6 — order submission, retrieval and fills.
-// Authenticated by the global JwtAuthGuard; ownership is enforced in the
-// service from the verified user id, never from the path.
+// Every route here is authenticated by the guard below; ownership is enforced
+// in the service from the verified user id, never from the path.
+@UseGuards(JwtAuthGuard)
 @Controller('portfolios/:portfolioId')
 export class OrdersController {
   constructor(private readonly orders: OrdersService) {}

@@ -1,5 +1,4 @@
 import { ExecutionContext } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { UnauthenticatedException } from '../common/errors/api-exception';
@@ -10,30 +9,17 @@ type TestRequest = Request & { user?: AuthenticatedUser };
 
 function createContext(request: TestRequest): ExecutionContext {
   return {
-    getHandler: () => createContext,
-    getClass: () => JwtAuthGuard,
     switchToHttp: () => ({ getRequest: () => request }),
   } as unknown as ExecutionContext;
 }
 
 describe('JwtAuthGuard', () => {
   const verifyAsync = jest.fn();
-  const getAllAndOverride = jest.fn();
   const jwtService = { verifyAsync } as unknown as JwtService;
-  const reflector = { getAllAndOverride } as unknown as Reflector;
-  const guard = new JwtAuthGuard(jwtService, reflector);
+  const guard = new JwtAuthGuard(jwtService);
 
   beforeEach(() => {
     jest.clearAllMocks();
-    getAllAndOverride.mockReturnValue(false);
-  });
-
-  it('allows routes marked public without reading a token', async () => {
-    getAllAndOverride.mockReturnValue(true);
-    const request = { headers: {} } as TestRequest;
-
-    await expect(guard.canActivate(createContext(request))).resolves.toBe(true);
-    expect(verifyAsync).not.toHaveBeenCalled();
   });
 
   it('sets the current user from a verified UUID subject', async () => {

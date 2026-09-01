@@ -1,6 +1,5 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
@@ -17,7 +16,10 @@ import { JwtAuthGuard } from './jwt-auth.guard';
       }),
     }),
   ],
-  providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],
-  exports: [JwtModule],
+  // Exported rather than registered as an APP_GUARD so controllers opt in with
+  // @UseGuards. Global so the guard resolves in every feature module without
+  // each one importing AuthModule.
+  providers: [JwtAuthGuard],
+  exports: [JwtModule, JwtAuthGuard],
 })
 export class AuthModule {}

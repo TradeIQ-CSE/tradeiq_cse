@@ -1,4 +1,4 @@
-import { Controller, Get, INestApplication } from '@nestjs/common';
+import { Controller, Get, INestApplication, UseGuards } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
@@ -6,9 +6,21 @@ import { AppModule } from '../src/app.module';
 import { configureIdentityAuthApp } from '../src/app.setup';
 import { AuthenticatedUser } from '../src/auth/authenticated-user';
 import { CurrentUser } from '../src/auth/current-user.decorator';
+import { JwtAuthGuard } from '../src/auth/jwt-auth.guard';
 
+@UseGuards(JwtAuthGuard)
 @Controller('test/protected')
 class ProtectedTestController {
+  @Get()
+  getCurrentUser(@CurrentUser() user: AuthenticatedUser) {
+    return user;
+  }
+}
+
+// Stands in for a controller that reads the current user but forgets its
+// guard. Guards are opt-in per controller, so this mistake has to fail closed.
+@Controller('test/unguarded')
+class UnguardedTestController {
   @Get()
   getCurrentUser(@CurrentUser() user: AuthenticatedUser) {
     return user;
@@ -22,7 +34,7 @@ describe('AppModule (e2e)', () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-      controllers: [ProtectedTestController],
+      controllers: [ProtectedTestController, UnguardedTestController],
     }).compile();
 
     app = moduleFixture.createNestApplication();
@@ -54,6 +66,17 @@ describe('AppModule (e2e)', () => {
       },
     });
     expect(response.body.error.trace_id).toEqual(expect.any(String));
+  });
+
+  it('rejects a route that reads the current user without a guard', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/test/unguarded')
+      .expect(401);
+
+    expect(response.body.error).toMatchObject({
+      code: 'UNAUTHENTICATED',
+      message: 'Authentication is required.',
+    });
   });
 
   it('returns the verified token subject as the current user', async () => {
