@@ -7,14 +7,7 @@ export class BacktestApiError extends HttpException {
     public readonly details?: unknown,
     status: HttpStatus = HttpStatus.BAD_REQUEST,
   ) {
-    super(
-      {
-        code,
-        message,
-        ...(details ? { details } : {}),
-      },
-      status,
-    );
+    super(message, status);
   }
 }
 

@@ -304,7 +304,7 @@ export class BacktestRunsService {
 
       const bars = allPrices.map((p) => ({
         date: p.tradeDate,
-        open: p.open ? parseFloat(p.open) : 0,
+        open: p.open ? parseFloat(p.open) : parseFloat(p.close),
         high: parseFloat(p.high),
         low: parseFloat(p.low),
         close: parseFloat(p.close),

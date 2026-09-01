@@ -24,17 +24,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const traceId = crypto.randomUUID();
 
-    if (exception instanceof BacktestApiError) {
-      response.status(exception.getStatus()).json(exception.getResponse());
-      return;
-    }
-
     let status: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR;
     let code: ApiErrorCode = 'INTERNAL';
     let message = 'An unexpected error occurred.';
     let fields: { field: string; reason: string }[] | undefined;
 
-    if (exception instanceof ApiException) {
+    if (exception instanceof BacktestApiError) {
+      status = exception.getStatus();
+      code = exception.code as ApiErrorCode;
+      message = exception.message;
+    } else if (exception instanceof ApiException) {
       status = exception.getStatus();
       code = exception.code;
       message = exception.message;
@@ -44,14 +43,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
       code = status === HttpStatus.NOT_FOUND ? 'NOT_FOUND' : 'INTERNAL';
       message =
         status < HttpStatus.INTERNAL_SERVER_ERROR ? exception.message : message;
-    } else {
+    }
+
+    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.error(
         `Unhandled exception [trace_id=${traceId}]`,
         exception instanceof Error ? exception.stack : String(exception),
       );
-    }
-
-    if (status === HttpStatus.INTERNAL_SERVER_ERROR) {
       code = 'INTERNAL';
       message = 'An unexpected error occurred.';
       fields = undefined;

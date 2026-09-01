@@ -173,9 +173,40 @@ describe('Backtest Runs (e2e)', () => {
       .send(invalidDto)
       .expect(400)
       .expect((res) => {
-        expect(res.body.code).toBe('INVALID_STARTING_CAPITAL');
+        expect(res.body.error.code).toBe('VALIDATION_FAILED');
+        expect(res.body.error.fields).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ field: 'startingCapital' }),
+          ]),
+        );
       });
 
     expect(runsStore.size).toBe(initialCount);
+  });
+
+  it('should return structured error envelope with trace_id on unknown symbol', async () => {
+    const unknownSymbolDto = { ...validDto, symbol: 'NONEXISTENT' };
+
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/backtests')
+      .set('x-user-id', 'test-user-1')
+      .send(unknownSymbolDto)
+      .expect(400);
+
+    expect(res.body).toHaveProperty('error');
+    expect(res.body.error.code).toBe('INVALID_SYMBOL');
+    expect(res.body.error.message).toContain('NONEXISTENT');
+    expect(res.body.error).toHaveProperty('trace_id');
+  });
+
+  it('should return structured error envelope with trace_id on run not found', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/backtests/00000000-0000-0000-0000-000000000099')
+      .set('x-user-id', 'test-user-1')
+      .expect(404);
+
+    expect(res.body).toHaveProperty('error');
+    expect(res.body.error.code).toBe('NOT_FOUND');
+    expect(res.body.error).toHaveProperty('trace_id');
   });
 });
