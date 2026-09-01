@@ -250,6 +250,8 @@ Byte-identical to the response for a real account with the wrong password.
 | `JWT_SECRET` | — | Required. Already used for signing and verification. |
 | `AUTH_ACCESS_TOKEN_TTL` | `5m` | `expiresIn` on issued access tokens. |
 | `AUTH_REFRESH_TOKEN_TTL` | `15d` | Refresh row lifetime and cookie `Max-Age`. |
+| `AUTH_EMAIL_ENCRYPTION_KEY` | — | Required. 32 bytes, base64. Rotating it orphans existing rows. |
+| `AUTH_REFRESH_COOKIE_SECURE` | `true` | Set `false` only for local HTTP development. |
 
 Both lifetimes must carry a unit of a second or longer (`s`, `m`, `h`, `d`,
 `w`, `y`), be greater than zero and be at most five digits; the service refuses
@@ -262,8 +264,6 @@ reason — a sub-second refresh lifetime makes `expires_at` equal `issued_at`,
 which the table's check constraint refuses. The digit ceiling covers the other
 end: a longer run of digits overflows into an expiry no `Date` can represent,
 and failing at startup beats failing at the first signup.
-| `AUTH_EMAIL_ENCRYPTION_KEY` | — | Required. 32 bytes, base64. Rotating it orphans existing rows. |
-| `AUTH_REFRESH_COOKIE_SECURE` | `true` | Set `false` only for local HTTP development. |
 
 ## 9. Consequences
 
