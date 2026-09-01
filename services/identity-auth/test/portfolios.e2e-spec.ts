@@ -1,20 +1,17 @@
 import { randomUUID } from 'crypto';
 import { INestApplication } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureIdentityAuthApp } from '../src/app.setup';
 
-// docs/api/paper-trading-v1.md §5 — no signup endpoint exists yet, so a test
-// user is inserted directly into auth.users to satisfy the FK on
-// virtual_portfolios, and a JWT is minted the same way app.e2e-spec.ts does.
+// docs/api/paper-trading-v1.md §5. Test users come from the real signup
+// endpoint (docs/api/auth-v1.md §4.1), so these tests exercise the same token
+// path a browser does rather than a hand-minted one.
 describe('Portfolios (e2e)', () => {
   let app: INestApplication;
-  let jwtService: JwtService;
   let dataSource: DataSource;
-  let userId: string;
   let token: string;
 
   beforeAll(async () => {
@@ -25,7 +22,6 @@ describe('Portfolios (e2e)', () => {
     app = moduleFixture.createNestApplication();
     configureIdentityAuthApp(app);
     await app.init();
-    jwtService = app.get(JwtService);
     dataSource = app.get(DataSource);
   });
 
@@ -33,22 +29,27 @@ describe('Portfolios (e2e)', () => {
     await app.close();
   });
 
-  async function createUser(): Promise<string> {
-    const id = randomUUID();
-    await dataSource.query(
-      `INSERT INTO auth.users (user_id, email_encrypted, email_hash, password_hash, display_name)
-       VALUES ($1, 'enc', $2, 'hash', 'Test User')`,
-      [id, `hash-${id}`],
-    );
-    return id;
+  async function createUser(): Promise<{ userId: string; token: string }> {
+    const response = await request(app.getHttpServer())
+      .post('/auth/signup')
+      .send({
+        email: `${randomUUID()}@example.lk`,
+        password: 'correct horse battery staple',
+        display_name: 'Test User',
+      })
+      .expect(201);
+
+    return {
+      userId: response.body.data.user.user_id,
+      token: response.body.data.access_token,
+    };
   }
 
   beforeEach(async () => {
     await dataSource.query(
       'TRUNCATE auth.idempotency_records, auth.cash_transactions, auth.virtual_portfolios, auth.users CASCADE',
     );
-    userId = await createUser();
-    token = await jwtService.signAsync({ sub: userId }, { expiresIn: '5m' });
+    ({ token } = await createUser());
   });
 
   it('creates a portfolio atomically with one opening cash transaction', async () => {
@@ -154,11 +155,7 @@ describe('Portfolios (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(404);
 
-    const otherUserId = await createUser();
-    const otherToken = await jwtService.signAsync(
-      { sub: otherUserId },
-      { expiresIn: '5m' },
-    );
+    const { token: otherToken } = await createUser();
 
     const otherCreated = await request(app.getHttpServer())
       .post('/portfolios')

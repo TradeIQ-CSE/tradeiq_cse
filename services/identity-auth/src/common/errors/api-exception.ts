@@ -7,6 +7,9 @@ export type ApiErrorCode =
   | 'UNAUTHENTICATED'
   | 'NOT_FOUND'
   | 'VALIDATION_FAILED'
+  | 'INVALID_CREDENTIALS'
+  | 'REFRESH_TOKEN_INVALID'
+  | 'EMAIL_ALREADY_REGISTERED'
   | 'PORTFOLIO_NOT_FOUND'
   | 'IDEMPOTENCY_KEY_REUSED'
   | 'ORDER_NOT_FOUND'
@@ -56,6 +59,44 @@ export class UnauthenticatedException extends ApiException {
       HttpStatus.UNAUTHORIZED,
       'UNAUTHENTICATED',
       'Authentication is required.',
+    );
+  }
+}
+
+// docs/api/auth-v1.md §4.2 — one response for "no such account" and "wrong
+// password". Distinguishing them would turn the login endpoint into an oracle
+// for which addresses are registered.
+export class InvalidCredentialsException extends ApiException {
+  constructor() {
+    super(
+      HttpStatus.UNAUTHORIZED,
+      'INVALID_CREDENTIALS',
+      'Email or password is incorrect.',
+    );
+  }
+}
+
+// docs/api/auth-v1.md §4.3 — missing, expired, revoked, unknown and replayed
+// refresh tokens are reported identically, so the response never tells a
+// caller which of those a token they hold happens to be.
+export class RefreshTokenInvalidException extends ApiException {
+  constructor() {
+    super(
+      HttpStatus.UNAUTHORIZED,
+      'REFRESH_TOKEN_INVALID',
+      'Refresh token is not valid.',
+    );
+  }
+}
+
+// docs/api/auth-v1.md §4.1. This does disclose that an address is registered,
+// which signup cannot avoid — it has to say why it refused.
+export class EmailAlreadyRegisteredException extends ApiException {
+  constructor() {
+    super(
+      HttpStatus.CONFLICT,
+      'EMAIL_ALREADY_REGISTERED',
+      'An account already exists for this email address.',
     );
   }
 }

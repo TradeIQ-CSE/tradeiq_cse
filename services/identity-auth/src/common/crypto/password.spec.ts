@@ -36,7 +36,10 @@ describe('password', () => {
     ['empty', ''],
     ['not a hash', 'plainly-not-a-hash'],
     ['truncated', '$argon2id$v=19$m=19456,t=2,p=1$truncated'],
-  ])('returns false rather than throwing on a %s stored hash', async (_l, h) => {
-    await expect(verifyPassword(h, PASSWORD)).resolves.toBe(false);
-  });
+  ])(
+    'returns false rather than throwing on a %s stored hash',
+    async (_l, h) => {
+      await expect(verifyPassword(h, PASSWORD)).resolves.toBe(false);
+    },
+  );
 });

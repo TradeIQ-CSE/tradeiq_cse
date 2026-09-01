@@ -68,7 +68,10 @@ describe('EmailCipher', () => {
     it.each([
       ['no separators', 'notevenclose'],
       ['too few parts', 'aaaa:bbbb'],
-      ['short iv', `${Buffer.alloc(4).toString('base64')}:${Buffer.alloc(16).toString('base64')}:AAAA`],
+      [
+        'short iv',
+        `${Buffer.alloc(4).toString('base64')}:${Buffer.alloc(16).toString('base64')}:AAAA`,
+      ],
     ])('rejects a stored value with %s', (_label, stored) => {
       expect(() => cipher.decrypt(stored)).toThrow();
     });
@@ -100,11 +103,15 @@ describe('EmailCipher', () => {
 
   describe('matches', () => {
     it('accepts the address the hash came from', () => {
-      expect(cipher.matches(cipher.hash(EMAIL), '  AMA@Example.LK ')).toBe(true);
+      expect(cipher.matches(cipher.hash(EMAIL), '  AMA@Example.LK ')).toBe(
+        true,
+      );
     });
 
     it('rejects a different address', () => {
-      expect(cipher.matches(cipher.hash(EMAIL), 'other@example.lk')).toBe(false);
+      expect(cipher.matches(cipher.hash(EMAIL), 'other@example.lk')).toBe(
+        false,
+      );
     });
 
     it('rejects a stored hash of the wrong length without throwing', () => {

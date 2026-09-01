@@ -9,6 +9,7 @@ type AuthenticatedRequest = Request & { user?: AuthenticatedUser };
 
 interface AccessTokenPayload {
   sub?: unknown;
+  exp?: unknown;
 }
 
 // Applied per controller with @UseGuards, never globally: a controller that
@@ -29,6 +30,15 @@ export class JwtAuthGuard implements CanActivate {
     try {
       const payload =
         await this.jwtService.verifyAsync<AccessTokenPayload>(token);
+
+      // A token with no exp is rejected rather than honoured forever
+      // (docs/api/auth-v1.md §2.1). verifyAsync only enforces exp when the
+      // claim is present, so a token signed without one would otherwise
+      // authenticate indefinitely.
+      if (typeof payload.exp !== 'number') {
+        throw new UnauthenticatedException();
+      }
+
       if (typeof payload.sub !== 'string' || !isUUID(payload.sub)) {
         throw new UnauthenticatedException();
       }

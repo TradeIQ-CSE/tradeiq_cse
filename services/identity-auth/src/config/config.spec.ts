@@ -123,8 +123,11 @@ describe('config', () => {
     it.each(['AUTH_DATABASE_URL', 'JWT_SECRET', 'AUTH_EMAIL_ENCRYPTION_KEY'])(
       'throws when %s is missing',
       (key) => {
-        const { [key]: _omitted, ...rest } = REQUIRED as Record<string, string>;
-        expect(() => validate(rest)).toThrow('Invalid environment configuration');
+        const rest = { ...(REQUIRED as Record<string, string>) };
+        delete rest[key];
+        expect(() => validate(rest)).toThrow(
+          'Invalid environment configuration',
+        );
       },
     );
 
