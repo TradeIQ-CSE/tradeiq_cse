@@ -2,6 +2,7 @@ import appConfig from './app.config';
 import authConfig from './auth.config';
 import databaseConfig from './database.config';
 import marketTradingConfig from './market-trading.config';
+import { durationToSeconds } from '../auth/auth.service';
 import { validate } from './env.validation';
 
 const VALID_URL = 'postgresql://u:p@h:5432/db';
@@ -137,7 +138,7 @@ describe('config', () => {
       ).toThrow('Invalid environment configuration');
     });
 
-    it.each(['5m', '15d', '300s', '1ms', '2w'])('accepts the ttl %s', (ttl) => {
+    it.each(['5m', '15d', '300s', '1s', '2w'])('accepts the ttl %s', (ttl) => {
       const validated = validate({
         ...REQUIRED,
         AUTH_ACCESS_TOKEN_TTL: ttl,
@@ -149,22 +150,47 @@ describe('config', () => {
     // something other than what an operator writing it would expect, and the
     // token silently dies while expires_in still reports the intended number:
     //   "900" is 0.9s, "5min" is 0.005s, "0"/"0s" expire on issue.
-    it.each(['900', '5min', 'forever', '', '5 m', '0', '0s', '0ms', '007'])(
-      'rejects the ttl %s',
+    // Millisecond units are out entirely: anything under 500ms is a
+    // zero-second lifetime once converted.
+    it.each([
+      '900',
+      '5min',
+      'forever',
+      '',
+      '5 m',
+      '0',
+      '0s',
+      '1ms',
+      '499ms',
+      '5000ms',
+      '007',
+    ])('rejects the ttl %s', (ttl) => {
+      expect(() =>
+        validate({ ...REQUIRED, AUTH_ACCESS_TOKEN_TTL: ttl }),
+      ).toThrow('Invalid environment configuration');
+    });
+
+    // The refresh lifetime goes through the same validator. A value that
+    // converts to zero seconds makes expires_at equal issued_at, which trips
+    // refresh_tokens_expiry_chk and turns signup into a 500.
+    it.each(['0', '900', '5min', '1ms', '499ms'])(
+      'rejects the refresh ttl %s',
       (ttl) => {
         expect(() =>
-          validate({ ...REQUIRED, AUTH_ACCESS_TOKEN_TTL: ttl }),
+          validate({ ...REQUIRED, AUTH_REFRESH_TOKEN_TTL: ttl }),
         ).toThrow('Invalid environment configuration');
       },
     );
 
-    // The refresh lifetime goes through the same validator; a zero here also
-    // makes expires_at equal issued_at and trips the table's check constraint.
-    it.each(['0', '900', '5min'])('rejects the refresh ttl %s', (ttl) => {
-      expect(() =>
-        validate({ ...REQUIRED, AUTH_REFRESH_TOKEN_TTL: ttl }),
-      ).toThrow('Invalid environment configuration');
-    });
+    // Whatever the validator lets through must convert to a lifetime the
+    // refresh_tokens check constraint accepts, i.e. at least one second.
+    it.each(['1s', '300s', '5m', '15d', '2w', '1y'])(
+      'converts the accepted ttl %s to a positive number of seconds',
+      (ttl) => {
+        validate({ ...REQUIRED, AUTH_REFRESH_TOKEN_TTL: ttl });
+        expect(durationToSeconds(ttl)).toBeGreaterThanOrEqual(1);
+      },
+    );
 
     it('throws when the port is not an integer', () => {
       expect(() =>

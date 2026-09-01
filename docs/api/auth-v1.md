@@ -247,11 +247,14 @@ Byte-identical to the response for a real account with the wrong password.
 | `AUTH_ACCESS_TOKEN_TTL` | `5m` | `expiresIn` on issued access tokens. |
 | `AUTH_REFRESH_TOKEN_TTL` | `15d` | Refresh row lifetime and cookie `Max-Age`. |
 
-Both lifetimes must carry a unit (`ms`, `s`, `m`, `h`, `d`, `w`, `y`) and be
-greater than zero; the service refuses to start otherwise. A bare number is
-rejected on purpose: `jsonwebtoken` reads `"300"` as 300 **milliseconds**, so a
-token written as five minutes would die instantly while the response still
-advertised 300 seconds.
+Both lifetimes must carry a unit of a second or longer (`s`, `m`, `h`, `d`,
+`w`, `y`) and be greater than zero; the service refuses to start otherwise.
+
+A bare number is rejected on purpose: `jsonwebtoken` reads `"300"` as 300
+**milliseconds**, so a token written as five minutes would die instantly while
+the response still advertised 300 seconds. `ms` is rejected for the same
+reason — a sub-second refresh lifetime makes `expires_at` equal `issued_at`,
+which the table's check constraint refuses.
 | `AUTH_EMAIL_ENCRYPTION_KEY` | — | Required. 32 bytes, base64. Rotating it orphans existing rows. |
 | `AUTH_REFRESH_COOKIE_SECURE` | `true` | Set `false` only for local HTTP development. |
 

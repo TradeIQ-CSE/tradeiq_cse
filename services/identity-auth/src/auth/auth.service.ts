@@ -291,7 +291,6 @@ function isUniqueViolation(error: unknown): boolean {
 }
 
 const UNIT_SECONDS: Record<string, number> = {
-  ms: 0.001,
   s: 1,
   m: 60,
   h: 3600,
@@ -300,14 +299,15 @@ const UNIT_SECONDS: Record<string, number> = {
   y: 31557600,
 };
 
-// Must agree exactly with DURATION in env.validation.ts, including requiring
-// the unit. Reading a bare "300" as seconds here while jsonwebtoken reads it as
-// milliseconds is what makes expires_in disagree with the token's real
-// lifetime, so this refuses the ambiguous form rather than guessing.
+// Must agree exactly with DURATION in env.validation.ts. Reading a bare "300"
+// as seconds here while jsonwebtoken reads it as milliseconds is what makes
+// expires_in disagree with the token's real lifetime, so this refuses the
+// ambiguous form rather than guessing, and every accepted value is a whole
+// number of seconds or more.
 export function durationToSeconds(value: string): number {
-  const match = /^([1-9]\d*)(ms|s|m|h|d|w|y)$/.exec(value);
+  const match = /^([1-9]\d*)(s|m|h|d|w|y)$/.exec(value);
   if (!match) {
     throw new Error(`Unsupported duration: ${value}`);
   }
-  return Math.round(Number(match[1]) * UNIT_SECONDS[match[2]]);
+  return Number(match[1]) * UNIT_SECONDS[match[2]];
 }
