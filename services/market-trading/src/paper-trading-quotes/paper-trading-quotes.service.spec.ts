@@ -1,7 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Security } from '../entities/security.entity';
-import { SecurityNotFoundException } from '../common/errors/api-exception';
+import {
+  SecurityNotFoundException,
+  ValidationFailedException,
+} from '../common/errors/api-exception';
 import { PaperTradingQuotesService } from './paper-trading-quotes.service';
 
 interface QuoteRowOverrides {
@@ -162,6 +165,159 @@ describe('PaperTradingQuotesService', () => {
       price_as_of: null,
       close: null,
       settlement_date: null,
+    });
+  });
+  // docs/api/paper-trading-v1.md §2.4.
+  //
+  // resolveMarketDate issues the bounds query, then a settled-session query
+  // only when an explicit as_of was supplied. The valuation lookup follows.
+  describe('getValuations', () => {
+    const bounds = (to = '2025-01-10') =>
+      managerQuery.mockResolvedValueOnce([{ from: '2017-01-02', to }]);
+    const settlesTo = (date: string | null) =>
+      managerQuery.mockResolvedValueOnce([{ trade_date: date }]);
+    const priced = (rows: { symbol: string; close: string | null }[]) =>
+      managerQuery.mockResolvedValueOnce(rows);
+
+    it('prices every requested symbol at one shared session', async () => {
+      bounds();
+      priced([
+        { symbol: 'COMB.N0000', close: '120.0000' },
+        { symbol: 'JKH.N0000', close: '95.5000' },
+      ]);
+
+      await expect(
+        service.getValuations(['JKH.N0000', 'COMB.N0000']),
+      ).resolves.toEqual({
+        as_of: '2025-01-10',
+        prices: [
+          { symbol: 'COMB.N0000', close: 120 },
+          { symbol: 'JKH.N0000', close: 95.5 },
+        ],
+      });
+    });
+
+    // The rule that separates this from §2.3. The quote endpoint would carry
+    // an earlier close forward; §3.4 forbids that here, because a response
+    // must not mix dates across positions.
+    it('returns null for a symbol that did not trade on the session', async () => {
+      bounds();
+      // The LEFT JOIN is pinned to trade_date = as_of, so a security with only
+      // older prices comes back with a null close rather than a stale one.
+      priced([{ symbol: 'THIN.N0000', close: null }]);
+
+      await expect(service.getValuations(['THIN.N0000'])).resolves.toEqual({
+        as_of: '2025-01-10',
+        prices: [{ symbol: 'THIN.N0000', close: null }],
+      });
+
+      expect(managerQuery.mock.calls[1][0]).toContain(
+        'p.trade_date = $2::date',
+      );
+      expect(managerQuery.mock.calls[1][1]).toEqual([
+        ['THIN.N0000'],
+        '2025-01-10',
+      ]);
+    });
+
+    // §2.4: unknown and unpriced are the same outcome, because §7 has no
+    // SECURITY_NOT_FOUND. Unlike getQuote, this must not throw.
+    it('returns null for an unknown symbol instead of throwing', async () => {
+      bounds();
+      priced([]);
+
+      await expect(service.getValuations(['NOPE.X0000'])).resolves.toEqual({
+        as_of: '2025-01-10',
+        prices: [{ symbol: 'NOPE.X0000', close: null }],
+      });
+    });
+
+    it('matches case-insensitively and echoes the canonical stored symbol', async () => {
+      bounds();
+      priced([{ symbol: 'COMB.N0000', close: '120.0000' }]);
+
+      const result = await service.getValuations(['comb.n0000']);
+
+      expect(result.prices).toEqual([{ symbol: 'COMB.N0000', close: 120 }]);
+      expect(managerQuery.mock.calls[1][1][0]).toEqual(['COMB.N0000']);
+    });
+
+    it('collapses a repeated symbol to one entry', async () => {
+      bounds();
+      priced([{ symbol: 'COMB.N0000', close: '120.0000' }]);
+
+      await expect(
+        service.getValuations(['COMB.N0000', 'comb.n0000']),
+      ).resolves.toMatchObject({
+        prices: [{ symbol: 'COMB.N0000', close: 120 }],
+      });
+    });
+
+    it('settles a weekend as_of back to the preceding session', async () => {
+      // Bounds must reach past the requested Saturday, otherwise the range
+      // check rejects it before settling is ever reached.
+      bounds('2025-01-13');
+      settlesTo('2025-01-10'); // 2025-01-11 is a Saturday
+      priced([{ symbol: 'COMB.N0000', close: '120.0000' }]);
+
+      const result = await service.getValuations(['COMB.N0000'], '2025-01-11');
+
+      expect(result.as_of).toBe('2025-01-10');
+      // The settled session, not the requested date, prices the row.
+      expect(managerQuery.mock.calls[2][1][1]).toBe('2025-01-10');
+    });
+
+    it('rejects an as_of outside the available range', async () => {
+      bounds();
+
+      await expect(
+        service.getValuations(['COMB.N0000'], '2030-01-01'),
+      ).rejects.toBeInstanceOf(ValidationFailedException);
+    });
+
+    // An empty portfolio still needs a session to report as meta.as_of.
+    it('returns the session with no prices when no symbols are requested', async () => {
+      bounds();
+
+      await expect(service.getValuations([])).resolves.toEqual({
+        as_of: '2025-01-10',
+        prices: [],
+      });
+      // Nothing to look up, so no second query is issued.
+      expect(managerQuery).toHaveBeenCalledTimes(1);
+    });
+
+    // Still validates as_of before short-circuiting, so an empty portfolio and
+    // a held one answer a bad date the same way.
+    it('still rejects a bad as_of when no symbols are requested', async () => {
+      bounds();
+
+      await expect(
+        service.getValuations([], '2030-01-01'),
+      ).rejects.toBeInstanceOf(ValidationFailedException);
+    });
+
+    it('reports a null session and null closes when no price data exists', async () => {
+      managerQuery.mockResolvedValueOnce([{ from: null, to: null }]);
+
+      await expect(service.getValuations(['COMB.N0000'])).resolves.toEqual({
+        as_of: null,
+        prices: [{ symbol: 'COMB.N0000', close: null }],
+      });
+      expect(managerQuery).toHaveBeenCalledTimes(1);
+    });
+
+    // §2.2 keeps "missing or zero" on identity-auth's side, so a zero close is
+    // a fact this endpoint reports rather than folds into null.
+    it('passes a zero close through untouched', async () => {
+      bounds();
+      priced([{ symbol: 'COMB.N0000', close: '0.0000' }]);
+
+      await expect(
+        service.getValuations(['COMB.N0000']),
+      ).resolves.toMatchObject({
+        prices: [{ symbol: 'COMB.N0000', close: 0 }],
+      });
     });
   });
 });
