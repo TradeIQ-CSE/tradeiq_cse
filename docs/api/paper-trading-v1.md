@@ -97,6 +97,48 @@ usable price returns `200` with nullable `price_as_of`, `close` and
 Unexpected market-data failures return `503 DEPENDENCY_UNAVAILABLE` to the
 calling service.
 
+### 2.4 Valuation boundary
+
+The second `market-trading` service endpoint, used to price the §7 position and
+summary views. Also read-only and free of user data.
+
+`GET /internal/paper-trading/valuations?symbols=COMB.N0000,JKH.N0000&as_of=2025-01-12`
+
+```json
+{
+  "data": {
+    "as_of": "2025-01-10",
+    "prices": [
+      { "symbol": "COMB.N0000", "close": 120 },
+      { "symbol": "JKH.N0000", "close": null }
+    ]
+  }
+}
+```
+
+This is deliberately not the §2.3 quote. An execution quote answers "what is the
+latest price at or before this session", which is right for filling an order.
+Valuation asks "what did this security close at *on* this session", because
+§3.4 requires every position in one response to share one date, and carrying a
+previous day's close forward for a thinly traded symbol would mix dates across
+positions without saying so. The two questions have different answers on exactly
+the days it matters, so they get different endpoints.
+
+- `symbols` is optional. Absent or empty returns the session with an empty
+  `prices` array, which is how a portfolio holding nothing still reports an
+  `as_of`. At most 200 symbols per request.
+- `as_of` is optional and follows the market-data bounds contract: a date
+  outside the available range is `400 VALIDATION_FAILED`, and a weekend or
+  holiday settles back to the preceding session. Omitted means the latest
+  session.
+- `as_of` is `null` when no price data exists at all.
+- `prices` carries one entry per requested symbol, ordered by symbol ascending.
+  `close` is `null` when the symbol is unknown or did not trade on the effective
+  session. Both are the same outcome to the caller — §7 has no
+  `SECURITY_NOT_FOUND` — so this endpoint does not distinguish them.
+
+Unexpected market-data failures return `503 DEPENDENCY_UNAVAILABLE`, as in §2.3.
+
 ## 3. Precision, rounding and fees
 
 ### 3.1 Decimal rules
@@ -546,7 +588,11 @@ Errors: `400 VALIDATION_FAILED`, `401 UNAUTHENTICATED`,
 `GET /portfolios/{portfolio_id}/positions?as_of=2025-01-12`
 
 `as_of` is optional and follows the market-data bounds contract. It exists for
-reproducible viewing only and does not affect order execution.
+reproducible viewing only and does not affect order execution. It moves prices
+alone: cash, open lots and realized P/L are always current state.
+
+Prices come from the §2.4 valuation boundary, in one call, so every position in
+a response is priced at the same session.
 
 `200 OK`
 
