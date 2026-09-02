@@ -9,6 +9,7 @@ import { HealthModule } from './health/health.module';
 import { MarketOverviewModule } from './market-overview/market-overview.module';
 import { PaperTradingQuotesModule } from './paper-trading-quotes/paper-trading-quotes.module';
 import { SecuritiesModule } from './securities/securities.module';
+import { BacktestRunsModule } from './backtest-runs/backtest-runs.module';
 
 @Module({
   imports: [
@@ -26,8 +27,8 @@ import { SecuritiesModule } from './securities/securities.module';
         entities: [],
         autoLoadEntities: true,
         // Compiled output mirrors src/, so this resolves to
-        // dist/db/migrations/*.js at runtime.
-        migrations: [join(__dirname, 'db', 'migrations', '*.js')],
+        // dist/db/migrations/*.js at runtime or src/db/migrations/*.ts in tests/ts-node.
+        migrations: [join(__dirname, 'db', 'migrations', '*.{js,ts}')],
         // Pin the tracking table to public: once the market_data schema exists,
         // the market_data user's default search_path ("$user", public) would
         // otherwise resolve an unqualified "migrations" to that schema.
@@ -40,6 +41,7 @@ import { SecuritiesModule } from './securities/securities.module';
     MarketOverviewModule,
     PaperTradingQuotesModule,
     SecuritiesModule,
+    BacktestRunsModule,
   ],
 })
 export class AppModule {}
