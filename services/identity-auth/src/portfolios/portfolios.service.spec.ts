@@ -7,6 +7,7 @@ import {
   PortfolioNotFoundException,
   ValidationFailedException,
 } from '../common/errors/api-exception';
+import { MarketTradingClient } from '../market-trading/market-trading.client';
 import { PortfoliosService } from './portfolios.service';
 
 describe('PortfoliosService', () => {
@@ -14,6 +15,7 @@ describe('PortfoliosService', () => {
   let repoManagerQuery: jest.Mock;
   let txManagerQuery: jest.Mock;
   let dataSourceTransaction: jest.Mock;
+  let getValuations: jest.Mock;
 
   const userId = 'a1a1a1a1-1111-4111-8111-111111111111';
   const portfolioId = 'b2b2b2b2-2222-4222-8222-222222222222';
@@ -24,6 +26,7 @@ describe('PortfoliosService', () => {
     dataSourceTransaction = jest.fn((cb: (manager: unknown) => unknown) =>
       cb({ query: txManagerQuery }),
     );
+    getValuations = jest.fn();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -35,6 +38,10 @@ describe('PortfoliosService', () => {
         {
           provide: DataSource,
           useValue: { transaction: dataSourceTransaction },
+        },
+        {
+          provide: MarketTradingClient,
+          useValue: { getValuations },
         },
       ],
     }).compile();

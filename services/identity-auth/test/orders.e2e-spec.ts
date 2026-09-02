@@ -27,6 +27,7 @@ describe('Orders (e2e)', () => {
   let token: string;
   let portfolioId: string;
   let quote: jest.Mock;
+  let valuations: jest.Mock;
 
   const LISTED: ExecutionQuote = {
     symbol: 'COMB.N0000',
@@ -39,11 +40,12 @@ describe('Orders (e2e)', () => {
 
   beforeAll(async () => {
     quote = jest.fn();
+    valuations = jest.fn();
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
       .overrideProvider(MarketTradingClient)
-      .useValue({ getQuote: quote })
+      .useValue({ getQuote: quote, getValuations: valuations })
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -94,6 +96,7 @@ describe('Orders (e2e)', () => {
     token = await jwtService.signAsync({ sub: userId }, { expiresIn: '5m' });
     quote.mockReset();
     quote.mockResolvedValue({ found: true, quote: LISTED } as QuoteResult);
+    valuations.mockReset();
 
     const created = await api()
       .post('/portfolios')
@@ -619,6 +622,154 @@ describe('Orders (e2e)', () => {
         .expect(404);
 
       expect(envelope(missing.body).code).toBe('ORDER_NOT_FOUND');
+    });
+  });
+  // docs/api/paper-trading-v1.md §7. The §7.1 and §7.2 sample responses are the
+  // §8.1 buy followed by the §8.2 sell, so this runs both through the real
+  // order path and checks the views report exactly what the contract prints.
+  describe('positions and summary after the §8 worked example', () => {
+    beforeEach(async () => {
+      await submit(
+        { symbol: 'COMB.N0000', side: 'buy', quantity: 1000 },
+        'valuation-buy-01',
+      ).expect(201);
+      quote.mockResolvedValue({
+        found: true,
+        quote: { ...LISTED, close: 120 },
+      } as QuoteResult);
+      await submit(
+        { symbol: 'COMB.N0000', side: 'sell', quantity: 400 },
+        'valuation-sell-01',
+      ).expect(201);
+
+      valuations.mockResolvedValue({
+        as_of: '2025-01-10',
+        prices: [{ symbol: 'COMB.N0000', close: 120 }],
+      });
+    });
+
+    it('reports the position exactly as §7.1 prints it', async () => {
+      const response = await api()
+        .get(`/portfolios/${portfolioId}/positions`)
+        .set(auth())
+        .expect(200);
+
+      expect(response.body).toEqual({
+        data: [
+          {
+            symbol: 'COMB.N0000',
+            quantity: 600,
+            cost_basis: 60672,
+            average_cost: 101.12,
+            price: 120,
+            market_value: 72000,
+            unrealized_pnl: 11328,
+            unrealized_return_pct: 18.67,
+          },
+        ],
+        meta: { as_of: '2025-01-10', total: 1 },
+      });
+
+      // Only the symbols actually held are priced.
+      expect(valuations).toHaveBeenCalledWith(['COMB.N0000'], undefined);
+    });
+
+    it('reports the summary exactly as §7.2 prints it', async () => {
+      const response = await api()
+        .get(`/portfolios/${portfolioId}/summary`)
+        .set(auth())
+        .expect(200);
+
+      expect(response.body.data).toEqual({
+        portfolio_id: portfolioId,
+        currency: 'LKR',
+        as_of: '2025-01-10',
+        starting_capital: 1000000,
+        cash_balance: 946342.4,
+        holdings_value: 72000,
+        total_equity: 1018342.4,
+        realized_pnl: 7014.4,
+        unrealized_pnl: 11328,
+        total_pnl: 18342.4,
+        total_return_pct: 1.83,
+      });
+    });
+
+    it('keeps cash plus holdings equal to equity in the figures it returns', async () => {
+      const { body } = await api()
+        .get(`/portfolios/${portfolioId}/summary`)
+        .set(auth())
+        .expect(200);
+
+      expect(body.data.cash_balance + body.data.holdings_value).toBe(
+        body.data.total_equity,
+      );
+    });
+
+    // §3.4: an unpriced holding "never treats the position as worth zero".
+    it('returns 422 naming the holding with no close on the session', async () => {
+      valuations.mockResolvedValue({
+        as_of: '2025-01-10',
+        prices: [{ symbol: 'COMB.N0000', close: null }],
+      });
+
+      for (const path of ['positions', 'summary']) {
+        const response = await api()
+          .get(`/portfolios/${portfolioId}/${path}`)
+          .set(auth())
+          .expect(422);
+
+        expect(envelope(response.body)).toEqual({
+          code: 'PRICE_UNAVAILABLE',
+          message:
+            'No price is available for COMB.N0000 on the requested session.',
+        });
+      }
+    });
+
+    // The order path already refuses a non-positive close (§2.2); valuation has
+    // to agree, or a stored 0.0000 would report the holding as worth nothing —
+    // exactly the "position worth zero" §3.4 rules out.
+    it.each([0, -1])(
+      'returns 422 for a close of %s rather than valuing it',
+      async (close) => {
+        valuations.mockResolvedValue({
+          as_of: '2025-01-10',
+          prices: [{ symbol: 'COMB.N0000', close }],
+        });
+
+        const response = await api()
+          .get(`/portfolios/${portfolioId}/summary`)
+          .set(auth())
+          .expect(422);
+
+        expect(response.body.error.code).toBe('PRICE_UNAVAILABLE');
+      },
+    );
+
+    it('drops a position once the whole holding is sold', async () => {
+      await submit(
+        { symbol: 'COMB.N0000', side: 'sell', quantity: 600 },
+        'valuation-sell-02',
+      ).expect(201);
+      valuations.mockResolvedValue({ as_of: '2025-01-10', prices: [] });
+
+      const positions = await api()
+        .get(`/portfolios/${portfolioId}/positions`)
+        .set(auth())
+        .expect(200);
+      expect(positions.body.data).toEqual([]);
+
+      // The realized P/L of both sells survives the position closing.
+      const summary = await api()
+        .get(`/portfolios/${portfolioId}/summary`)
+        .set(auth())
+        .expect(200);
+      expect(summary.body.data.holdings_value).toBe(0);
+      expect(summary.body.data.realized_pnl).toBeGreaterThan(7014.4);
+      expect(summary.body.data.total_equity).toBe(
+        summary.body.data.cash_balance,
+      );
     });
   });
 });

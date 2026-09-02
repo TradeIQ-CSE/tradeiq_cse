@@ -210,4 +210,169 @@ describe('MarketTradingClient', () => {
 
     expect(fetchMock.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
   });
+  // docs/api/paper-trading-v1.md §2.4.
+  describe('getValuations', () => {
+    const PRICES = {
+      as_of: '2025-01-10',
+      prices: [
+        { symbol: 'COMB.N0000', close: 120 },
+        { symbol: 'JKH.N0000', close: null },
+      ],
+    };
+
+    it('returns the valuations on 200', async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, { data: PRICES }));
+
+      await expect(
+        client.getValuations(['COMB.N0000', 'JKH.N0000']),
+      ).resolves.toEqual(PRICES);
+    });
+
+    it('sends the symbols and as_of as query params', async () => {
+      fetchMock.mockResolvedValue(jsonResponse(200, { data: PRICES }));
+
+      await client.getValuations(['COMB.N0000', 'JKH.N0000'], '2025-01-12');
+
+      const url = fetchMock.mock.calls[0][0] as URL;
+      expect(url.pathname).toBe('/internal/paper-trading/valuations');
+      expect(url.searchParams.get('symbols')).toBe('COMB.N0000,JKH.N0000');
+      expect(url.searchParams.get('as_of')).toBe('2025-01-12');
+    });
+
+    it('omits both params when nothing is held and no date was asked for', async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse(200, { data: { as_of: '2025-01-10', prices: [] } }),
+      );
+
+      await client.getValuations([]);
+
+      const url = fetchMock.mock.calls[0][0] as URL;
+      expect(url.searchParams.has('symbols')).toBe(false);
+      expect(url.searchParams.has('as_of')).toBe(false);
+    });
+
+    // An out-of-range as_of is the user's mistake, not a broken dependency, so
+    // it must reach them as a 400 naming the field rather than a 503 they would
+    // retry forever.
+    it('translates a VALIDATION_FAILED envelope into a 400 with its fields', async () => {
+      const fields = [
+        {
+          field: 'as_of',
+          reason: 'must fall between 2017-01-02 and 2025-01-10',
+        },
+      ];
+      fetchMock.mockResolvedValue(
+        jsonResponse(400, {
+          error: { code: 'VALIDATION_FAILED', message: '…', fields },
+        }),
+      );
+
+      await expect(
+        client.getValuations(['COMB.N0000'], '2030-01-01'),
+      ).rejects.toMatchObject({ code: 'VALIDATION_FAILED', fields });
+    });
+
+    // §2.4 caps symbols at 200. A portfolio past that is our problem, not the
+    // user's: `symbols` is not a §7 parameter, so telling them to fix it would
+    // name a field they never sent and cannot change.
+    it('does not forward a validation failure about a field the user never sent', async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse(400, {
+          error: {
+            code: 'VALIDATION_FAILED',
+            fields: [{ field: 'symbols', reason: 'must contain at most 200' }],
+          },
+        }),
+      );
+
+      await expect(client.getValuations(['COMB.N0000'])).rejects.toBeInstanceOf(
+        DependencyUnavailableException,
+      );
+    });
+
+    it('does not forward a VALIDATION_FAILED envelope carrying no fields', async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse(400, { error: { code: 'VALIDATION_FAILED' } }),
+      );
+
+      await expect(
+        client.getValuations(['COMB.N0000'], '2030-01-01'),
+      ).rejects.toBeInstanceOf(DependencyUnavailableException);
+    });
+
+    // A bare 400 from a misrouted proxy is not the user's fault; blaming their
+    // input would hide a configuration fault.
+    it('treats a 400 without a VALIDATION_FAILED envelope as a dependency failure', async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse(400, { error: { code: 'NOPE' } }),
+      );
+
+      await expect(client.getValuations(['COMB.N0000'])).rejects.toBeInstanceOf(
+        DependencyUnavailableException,
+      );
+    });
+
+    it.each([
+      ['a non-2xx status', jsonResponse(500, {})],
+      ['a payload that is not §2.4', jsonResponse(200, { data: { as_of: 1 } })],
+      [
+        'a price entry with a non-numeric close',
+        jsonResponse(200, {
+          data: {
+            as_of: '2025-01-10',
+            prices: [{ symbol: 'X', close: '120' }],
+          },
+        }),
+      ],
+    ])('reports %s as a dependency failure', async (_label, response) => {
+      fetchMock.mockResolvedValue(response);
+
+      await expect(client.getValuations(['X'])).rejects.toBeInstanceOf(
+        DependencyUnavailableException,
+      );
+    });
+
+    it('reports a timeout as a dependency failure', async () => {
+      fetchMock.mockRejectedValue(new Error('The operation timed out.'));
+
+      await expect(client.getValuations(['COMB.N0000'])).rejects.toBeInstanceOf(
+        DependencyUnavailableException,
+      );
+    });
+
+    // Valuing a portfolio on another security's closes would be silent and
+    // wrong, so a mismatched symbol set is a broken dependency, not data.
+    it.each([
+      ['a symbol that was never requested', ['COMB.N0000', 'HNB.N0000']],
+      ['a missing symbol', ['COMB.N0000']],
+    ])('rejects a response carrying %s', async (_label, symbols) => {
+      fetchMock.mockResolvedValue(
+        jsonResponse(200, {
+          data: {
+            as_of: '2025-01-10',
+            prices: symbols.map((symbol) => ({ symbol, close: 1 })),
+          },
+        }),
+      );
+
+      await expect(
+        client.getValuations(['COMB.N0000', 'JKH.N0000']),
+      ).rejects.toBeInstanceOf(DependencyUnavailableException);
+    });
+
+    it('accepts a canonical symbol echoed back in a different case', async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse(200, {
+          data: {
+            as_of: '2025-01-10',
+            prices: [{ symbol: 'COMB.N0000', close: 120 }],
+          },
+        }),
+      );
+
+      await expect(client.getValuations(['comb.n0000'])).resolves.toMatchObject(
+        { as_of: '2025-01-10' },
+      );
+    });
+  });
 });

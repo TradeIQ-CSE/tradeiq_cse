@@ -153,6 +153,26 @@ export class OrderNotFoundException extends ApiException {
   }
 }
 
+// docs/api/paper-trading-v1.md §3.4 — a held security with no close on the
+// effective session leaves the portfolio unvaluable, and §7 answers 422 rather
+// than pricing the position at zero or mixing dates across positions.
+//
+// Separate from OrderRejectedException('PRICE_UNAVAILABLE') despite sharing the
+// code: that one is an order the service refused to fill, this one is a view it
+// cannot compute. Nothing is persisted here.
+export class PriceUnavailableException extends ApiException {
+  constructor(symbols: readonly string[]) {
+    super(
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      'PRICE_UNAVAILABLE',
+      // Naming the symbols is what makes this actionable: the user can see
+      // which holding is unpriced instead of being told the whole portfolio
+      // failed. They are the user's own holdings, so this discloses nothing.
+      `No price is available for ${symbols.join(', ')} on the requested session.`,
+    );
+  }
+}
+
 // §9.1 — the estimate endpoint's rendering of a rejection. Unknown symbols are
 // 404; every other rejection is 422, a well-formed request refused by a domain
 // rule. Order submission never throws these: it persists them (§6.2).
