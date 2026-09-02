@@ -20,6 +20,7 @@ import { CreatePortfolioDto } from './dto/create-portfolio.dto';
 import { ListCashTransactionsQueryDto } from './dto/list-cash-transactions-query.dto';
 import { ListPortfoliosQueryDto } from './dto/list-portfolios-query.dto';
 import { PortfolioIdParamDto } from './dto/portfolio-id-param.dto';
+import { ValuationQueryDto } from './dto/valuation-query.dto';
 import { PortfoliosService } from './portfolios.service';
 
 // docs/api/paper-trading-v1.md §5 — virtual portfolios and cash-ledger
@@ -72,6 +73,28 @@ export class PortfoliosController {
     @Param() { portfolioId }: PortfolioIdParamDto,
   ) {
     return this.portfolios.remove(user.userId, portfolioId);
+  }
+
+  // docs/api/paper-trading-v1.md §7.1
+  @Get(':portfolioId/positions')
+  getPositions(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param() { portfolioId }: PortfolioIdParamDto,
+    @Query() query: ValuationQueryDto,
+  ) {
+    return this.portfolios.getPositions(user.userId, portfolioId, query);
+  }
+
+  // docs/api/paper-trading-v1.md §7.2
+  @Get(':portfolioId/summary')
+  async getSummary(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param() { portfolioId }: PortfolioIdParamDto,
+    @Query() query: ValuationQueryDto,
+  ) {
+    return {
+      data: await this.portfolios.getSummary(user.userId, portfolioId, query),
+    };
   }
 
   @Get(':portfolioId/cash-transactions')
