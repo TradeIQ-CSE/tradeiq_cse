@@ -209,4 +209,47 @@ describe('HealthModule (e2e)', () => {
       expect(second.body).toEqual(first.body);
     });
   });
+  // docs/api/paper-trading-v1.md §2.4. The service unit tests mock
+  // manager.query, so this is the only place the valuation SQL actually runs.
+  it('/internal/paper-trading/valuations (GET) prices a set of symbols at one session', async () => {
+    const response = await request(app.getHttpServer())
+      .get(
+        '/internal/paper-trading/valuations' +
+          '?symbols=JKH.N0000,comb.n0000,NOPE.X0000&as_of=2025-01-05',
+      )
+      .expect(200);
+
+    expect(response.body.data).toEqual({
+      // 2025-01-05 is a Sunday; it settles back to the seeded session.
+      as_of: '2025-01-03',
+      prices: [
+        // Case-folded on the way in, canonical on the way out.
+        { symbol: 'COMB.N0000', close: 147.15 },
+        { symbol: 'JKH.N0000', close: 22.32 },
+        // Unknown and unpriced are the same outcome here (§2.4).
+        { symbol: 'NOPE.X0000', close: null },
+      ],
+    });
+  });
+
+  it('/internal/paper-trading/valuations (GET) returns the session with no symbols', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/internal/paper-trading/valuations?as_of=2025-01-05')
+      .expect(200);
+
+    expect(response.body.data).toEqual({ as_of: '2025-01-03', prices: [] });
+  });
+
+  it('/internal/paper-trading/valuations (GET) rejects an as_of outside the data', async () => {
+    const response = await request(app.getHttpServer())
+      .get(
+        '/internal/paper-trading/valuations?symbols=JKH.N0000&as_of=2030-01-01',
+      )
+      .expect(400);
+
+    expect(response.body.error.code).toBe('VALIDATION_FAILED');
+    expect(response.body.error.fields).toEqual([
+      expect.objectContaining({ field: 'as_of' }),
+    ]);
+  });
 });
