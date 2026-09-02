@@ -81,6 +81,9 @@ jobs:
       MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@localhost:5432/market_data
       AUTH_DATABASE_URL: postgresql://auth:changeme@localhost:5432/auth
       JWT_SECRET: test-only-ci-secret
+      # 32 zero bytes, base64. Test-only: CI never stores a real address.
+      AUTH_EMAIL_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      AUTH_REFRESH_COOKIE_SECURE: "false"
       ML_DATABASE_URL: postgresql://ml:changeme@localhost:5432/ml
     steps:
       - uses: actions/checkout@v4
