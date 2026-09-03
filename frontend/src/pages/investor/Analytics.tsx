@@ -1,10 +1,12 @@
 import React from 'react';
-import { Button, Typography, Space, Card, Spin } from 'antd';
-import { ReloadOutlined, ExperimentOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import { Button, Typography, Space, Card } from 'antd';
+import { ExperimentOutlined } from '@ant-design/icons';
 
 const { Title, Text, Paragraph } = Typography;
 
 export const Analytics: React.FC = () => {
+  const navigate = useNavigate();
   return (
     <div style={{ color: '#e2e8f0' }}>
       <div style={{ marginBottom: '24px' }}>
@@ -26,13 +28,17 @@ export const Analytics: React.FC = () => {
           Simulation Engine
         </Title>
         <Paragraph style={{ color: '#64748b' }}>
-          Initialize a backtesting run using local parameters, or trigger pre-run scenario analyses.
+          Configure a price-rule backtesting workflow across Sri Lanka Colombo Stock Exchange historical market data.
         </Paragraph>
         
         <div style={{ padding: '30px 0', display: 'flex', justifyContent: 'center', margin: '20px 0', border: '1px dashed rgba(255,255,255,0.06)', borderRadius: '6px' }}>
           <Space direction="vertical" align="center" size={12}>
-            <Spin size="small" />
-            <Text style={{ color: '#64748b', fontSize: '12px' }}>Waiting for analytics parameter load...</Text>
+            <Text style={{ color: '#a78bfa', fontSize: '13px', fontWeight: 500 }}>
+              Ready to configure a v1 price-rule backtest strategy
+            </Text>
+            <Text style={{ color: '#64748b', fontSize: '12px' }}>
+              Guided 7-step wizard: Security · Period · Rules · Execution · Portfolio · Metrics · Review
+            </Text>
           </Space>
         </div>
 
@@ -41,17 +47,9 @@ export const Analytics: React.FC = () => {
             type="primary"
             icon={<ExperimentOutlined />}
             style={{ backgroundColor: '#722ed1', borderColor: '#722ed1' }}
-            disabled
+            onClick={() => navigate('/backtests/new/security')}
           >
             Start Strategy Backtest
-          </Button>
-          <Button
-            type="dashed"
-            icon={<ReloadOutlined />}
-            style={{ color: '#e2e8f0', borderColor: 'rgba(255,255,255,0.1)' }}
-            disabled
-          >
-            Reset Parameters
           </Button>
         </Space>
       </Card>

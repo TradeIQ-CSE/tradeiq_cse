@@ -18,6 +18,16 @@ const Portfolio = lazy(() => import('../pages/investor/Portfolio'));
 const Orders = lazy(() => import('../pages/investor/Orders'));
 const Analytics = lazy(() => import('../pages/investor/Analytics'));
 const AdminHome = lazy(() => import('../pages/admin/AdminHome'));
+const BacktestWizard = lazy(() =>
+  import('../features/backtesting/components/BacktestWizard').then((module) => ({
+    default: module.BacktestWizard,
+  })),
+);
+const StatusStep = lazy(() =>
+  import('../features/backtesting/components/StatusStep').then((module) => ({
+    default: module.StatusStep,
+  })),
+);
 
 function LoadingFallback() {
   return (
@@ -117,6 +127,24 @@ export function AppRoutes() {
           element={
             <ConsoleRoute>
               <AdminHome />
+            </ConsoleRoute>
+          }
+        />
+        <Route path="/backtests" element={<Navigate to="/backtests/new/security" replace />} />
+        <Route path="/backtests/new" element={<Navigate to="/backtests/new/security" replace />} />
+        <Route
+          path="/backtests/new/:step"
+          element={
+            <ConsoleRoute>
+              <BacktestWizard />
+            </ConsoleRoute>
+          }
+        />
+        <Route
+          path="/backtests/:runId/status"
+          element={
+            <ConsoleRoute>
+              <StatusStep />
             </ConsoleRoute>
           }
         />
