@@ -2,7 +2,7 @@ import '@testing-library/jest-dom/vitest';
 // i18next initialises synchronously on import, and main.tsx renders with no
 // I18nextProvider — components reach the singleton directly. Importing it
 // once here mirrors production.
-import '../i18n';
+import i18n, { DEFAULT_LANGUAGE } from '../i18n';
 import { afterAll, afterEach, beforeAll } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import { server } from './server';
@@ -100,10 +100,17 @@ afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 // --- per-test cleanup ---------------------------------------------------------
-afterEach(() => {
+afterEach(async () => {
   cleanup();
-  // i18n writes tradeiq.language on every languageChanged event; clear it so
-  // language selection doesn't leak between tests.
+  // Vitest isolates each test file, so the i18next singleton does not survive
+  // a file boundary. Within a file it does: Sidebar and LandingNav render
+  // language buttons wired to changeLanguage, so a test that clicks one would
+  // otherwise carry that language into the next test.
+  if (i18n.language !== DEFAULT_LANGUAGE.code) {
+    await i18n.changeLanguage(DEFAULT_LANGUAGE.code);
+  }
+  // i18n writes tradeiq.language on every languageChanged event, so clear
+  // storage after resetting the language, not before.
   localStorage.clear();
   setDesktopViewport();
 });

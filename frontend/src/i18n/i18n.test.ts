@@ -1,21 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import i18n, { STORAGE_KEY, SUPPORTED_LANGUAGES } from './index';
+import { describe, expect, it, vi } from 'vitest';
+import i18n, { DEFAULT_LANGUAGE, STORAGE_KEY, SUPPORTED_LANGUAGES } from './index';
 
-// src/test/setup.ts clears localStorage between tests but does not reset
-// the i18next singleton's language, so changeLanguage() here would
-// otherwise leak into other test files (including stage 3's page tests).
-// Restore whatever language was active before each test explicitly.
-let languageBeforeTest: string;
-
-beforeEach(() => {
-  languageBeforeTest = i18n.language;
-});
-
-afterEach(async () => {
-  if (i18n.language !== languageBeforeTest) {
-    await i18n.changeLanguage(languageBeforeTest);
-  }
-});
+// src/test/setup.ts restores the singleton's language after every test, so
+// changeLanguage() here needs no cleanup of its own.
 
 describe('i18n', () => {
   it('resolves "en" to real strings from the catalogue', async () => {
@@ -24,6 +11,20 @@ describe('i18n', () => {
     expect(i18n.t('app.name')).toBe('TradeIQ CSE');
     expect(i18n.t('dashboard')).toBe('Dashboard');
     expect(i18n.t('nav.items.markets')).toBe('Markets');
+  });
+
+  // This pair proves the shared cleanup in src/test/setup.ts works: the first
+  // test leaves a non-default language set, the second asserts it was put back.
+  // Nothing else in the suite changes the language yet, so without these the
+  // guard would be untested.
+  it('can be switched away from the default', async () => {
+    await i18n.changeLanguage('si');
+
+    expect(i18n.language).toBe('si');
+  });
+
+  it('is restored to the default by the shared cleanup', () => {
+    expect(i18n.language).toBe(DEFAULT_LANGUAGE.code);
   });
 
   it('lists si and ta as unavailable, and en as available', () => {
