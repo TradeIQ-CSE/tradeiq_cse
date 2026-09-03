@@ -26,4 +26,23 @@ describe('AppRoutes', () => {
       screen.getByText('This interface is planned and is not available in the current build.'),
     ).toBeInTheDocument();
   });
+
+  it('redirects a guarded route to /login while anonymous', async () => {
+    renderWithProviders(<AppRoutes />, {
+      initialEntries: ['/paper-trading'],
+      auth: { status: 'anonymous' },
+    });
+
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Paper Trading' })).not.toBeInTheDocument();
+  });
+
+  it('still renders /markets while anonymous', async () => {
+    renderWithProviders(<AppRoutes />, {
+      initialEntries: ['/markets'],
+      auth: { status: 'anonymous' },
+    });
+
+    expect(await screen.findByRole('heading', { name: t('markets.title') })).toBeInTheDocument();
+  });
 });

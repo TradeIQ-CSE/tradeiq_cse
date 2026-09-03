@@ -1,6 +1,8 @@
 import { lazy, ReactNode, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from '../components/layout/AppShell';
+import { RequireAuth } from '../auth/RequireAuth';
+import { useAuth } from '../auth/useAuth';
 
 const LandingPage = lazy(() =>
   import('../features/landing/LandingPage').then((module) => ({
@@ -10,6 +12,16 @@ const LandingPage = lazy(() =>
 const MarketsPage = lazy(() =>
   import('../features/markets/MarketsPage').then((module) => ({
     default: module.MarketsPage,
+  })),
+);
+const LoginPage = lazy(() =>
+  import('../features/auth/LoginPage').then((module) => ({
+    default: module.LoginPage,
+  })),
+);
+const SignupPage = lazy(() =>
+  import('../features/auth/SignupPage').then((module) => ({
+    default: module.SignupPage,
   })),
 );
 const Dashboard = lazy(() => import('../pages/investor/Dashboard'));
@@ -27,8 +39,32 @@ function LoadingFallback() {
   );
 }
 
+// Every console route needs a live session, so the guard lives here once
+// rather than being repeated at each <Route> below.
+//
+// An anonymous visitor gets the redirect without the shell: mounting AppShell
+// around it would flash the sidebar and topbar of a signed-in console at
+// someone who is on their way to /login. While restoring, the shell does mount
+// — that visitor most likely has a valid refresh cookie, and keeping it
+// mounted across restoring -> authenticated avoids tearing it down and
+// rebuilding it a moment later.
+//
+// Not covered by a test: <Navigate> redirects from an effect, and RTL's
+// render() flushes effects inside act(), so the shell is already gone before
+// any assertion can run. The frame this avoids exists only in a real browser,
+// which paints between commit and effect.
 function ConsoleRoute({ children }: { children: ReactNode }) {
-  return <AppShell>{children}</AppShell>;
+  const { status } = useAuth();
+
+  if (status === 'anonymous') {
+    return <RequireAuth>{children}</RequireAuth>;
+  }
+
+  return (
+    <AppShell>
+      <RequireAuth>{children}</RequireAuth>
+    </AppShell>
+  );
 }
 
 function PlannedFeature({ title }: { title: string }) {
@@ -48,6 +84,8 @@ export function AppRoutes() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/markets" element={<MarketsPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
         <Route
           path="/dashboard"
           element={
