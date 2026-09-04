@@ -26,7 +26,7 @@ async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>) {
 describe('LoginPage', () => {
   it('signs in and goes to /markets', async () => {
     navigate.mockClear();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const login = vi.fn().mockResolvedValue(undefined);
 
     renderWithProviders(<LoginPage />, { auth: { status: 'anonymous', login } });
@@ -41,7 +41,7 @@ describe('LoginPage', () => {
 
   it('returns to the page the guard bounced the user from', async () => {
     navigate.mockClear();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     renderWithProviders(<LoginPage />, {
       auth: { status: 'anonymous', login: vi.fn().mockResolvedValue(undefined) },
@@ -54,7 +54,7 @@ describe('LoginPage', () => {
   });
 
   it('shows one message on a 401 that names neither field', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const login = vi.fn().mockRejectedValue(apiError('INVALID_CREDENTIALS'));
 
     renderWithProviders(<LoginPage />, { auth: { status: 'anonymous', login } });
@@ -78,7 +78,7 @@ describe('LoginPage', () => {
   });
 
   it('disables submit while the request is in flight', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     let release: () => void = () => {};
     const login = vi.fn().mockReturnValue(new Promise<void>((resolve) => {
       release = resolve;

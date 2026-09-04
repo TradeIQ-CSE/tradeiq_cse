@@ -29,7 +29,7 @@ describe('SignupPage', () => {
   });
 
   it('shows a 409 on the email field', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const signup = vi
       .fn()
       .mockRejectedValue(
@@ -46,7 +46,7 @@ describe('SignupPage', () => {
   });
 
   it('maps every entry of a 400, including two for the same field', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const signup = vi.fn().mockRejectedValue(
       new ApiError({
         code: 'VALIDATION_FAILED',
