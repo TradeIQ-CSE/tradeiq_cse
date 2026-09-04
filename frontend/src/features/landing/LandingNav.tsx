@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SUPPORTED_LANGUAGES } from '../../i18n';
 import logoIcon from '../../assets/icons/logo.svg';
@@ -37,13 +38,13 @@ export function LandingNav() {
           <span>{t('topbar.searchPlaceholder')}</span>
         </div>
 
-        <button type="button" className="landing-nav__cta">
+        <Link to="/signup" className="landing-nav__cta">
           {t('landing.nav.openAccount')}
-        </button>
-        <button type="button" className="landing-nav__signin">
+        </Link>
+        <Link to="/login" className="landing-nav__signin">
           <img src={signInIcon} alt="" width={13} height={13} />
           {t('landing.nav.signIn')}
-        </button>
+        </Link>
 
         <div className="landing-nav__lang">
           {SUPPORTED_LANGUAGES.map((language) => (

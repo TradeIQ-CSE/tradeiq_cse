@@ -1,6 +1,7 @@
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SUPPORTED_LANGUAGES } from '../../i18n';
+import { useAuth } from '../../auth/useAuth';
 import aiInsightsIcon from '../../assets/icons/ai-insights.svg';
 import backtestingIcon from '../../assets/icons/backtesting.svg';
 import logoIcon from '../../assets/icons/logo.svg';
@@ -13,6 +14,10 @@ import signInIcon from '../../assets/icons/sign-in.svg';
 import tradesIcon from '../../assets/icons/trades.svg';
 import watchlistIcon from '../../assets/icons/watchlist.svg';
 import './sidebar.css';
+
+function initialOf(displayName: string): string {
+  return displayName.trim().charAt(0).toUpperCase() || 'U';
+}
 
 interface SidebarProps {
   isMobile?: boolean;
@@ -34,6 +39,7 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { t, i18n } = useTranslation();
+  const { user, logout } = useAuth();
 
   const navigation: NavigationSection[] = [
     {
@@ -164,14 +170,29 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
           </div>
         </div>
 
-        <button type="button" className="sidebar__profile" disabled>
-          <span className="sidebar__avatar">G</span>
-          <span className="sidebar__profile-copy">
-            <strong>Guest</strong>
-            <small>Not signed in</small>
-          </span>
-          <img src={signInIcon} alt="" width={13} height={13} />
-        </button>
+        {user ? (
+          <button
+            type="button"
+            className="sidebar__profile"
+            onClick={() => void logout()}
+          >
+            <span className="sidebar__avatar">{initialOf(user.display_name)}</span>
+            <span className="sidebar__profile-copy">
+              <strong>{user.display_name}</strong>
+              <small>{t('auth.signOut')}</small>
+            </span>
+            <img src={signInIcon} alt="" width={13} height={13} />
+          </button>
+        ) : (
+          <Link to="/login" className="sidebar__profile">
+            <span className="sidebar__avatar">G</span>
+            <span className="sidebar__profile-copy">
+              <strong>{t('auth.login.title')}</strong>
+              <small>{t('auth.signedOut')}</small>
+            </span>
+            <img src={signInIcon} alt="" width={13} height={13} />
+          </Link>
+        )}
       </footer>
     </aside>
   );

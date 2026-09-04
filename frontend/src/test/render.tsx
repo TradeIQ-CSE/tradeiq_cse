@@ -1,6 +1,6 @@
 import { ReactElement, ReactNode } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { Location, MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ConfigProvider } from 'antd';
 import { darkTheme } from '../theme/theme';
@@ -62,7 +62,12 @@ export function createTestAuthContext(overrides: AuthOverrides = {}): AuthContex
 }
 
 export interface RenderWithProvidersOptions extends Omit<RenderOptions, 'wrapper'> {
-  initialEntries?: string[];
+  // Not just string[]: a test exercising the guard's `state: { from }`
+  // redirect has to seed router state, not only a path. This is
+  // MemoryRouter's InitialEntry, which react-router-dom v6 does not
+  // re-export, so it is spelled out rather than reached for through a
+  // transitive @remix-run/router import.
+  initialEntries?: (string | Partial<Location>)[];
   queryClient?: QueryClient;
   auth?: AuthOverrides;
 }

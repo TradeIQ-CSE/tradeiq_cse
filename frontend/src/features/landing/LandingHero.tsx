@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import clockIcon from '../../assets/icons/clock.svg';
 import { LandingHeroMockup } from './LandingHeroMockup';
@@ -15,12 +16,12 @@ export function LandingHero() {
         </h1>
         <p className="landing-hero__subtitle">{t('landing.hero.subtitle')}</p>
         <div className="landing-hero__actions">
-          <button type="button" className="landing-hero__cta-primary">
+          <Link to="/signup" className="landing-hero__cta-primary">
             {t('landing.hero.getStarted')}
-          </button>
-          <button type="button" className="landing-hero__cta-secondary">
+          </Link>
+          <Link to="/login" className="landing-hero__cta-secondary">
             {t('landing.hero.signIn')}
-          </button>
+          </Link>
         </div>
       </div>
 
