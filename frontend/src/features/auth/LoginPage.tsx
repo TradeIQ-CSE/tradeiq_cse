@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Alert, Button, Form, Input } from 'antd';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Location, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/useAuth';
 import { ApiError } from '../../lib/api';
@@ -13,7 +13,9 @@ interface LoginFormValues {
 }
 
 interface LocationState {
-  from?: { pathname?: string };
+  // RequireAuth stores the whole Location, so search and hash survive: a user
+  // sent away from /portfolio?tab=fills comes back to that, not to /portfolio.
+  from?: Partial<Location>;
 }
 
 export function LoginPage() {
@@ -27,7 +29,7 @@ export function LoginPage() {
 
   // Where the guard bounced the user from, if it did. Anything else lands on
   // /markets, the only screen wired to a live API.
-  const from = (location.state as LocationState | null)?.from?.pathname ?? '/markets';
+  const from = (location.state as LocationState | null)?.from ?? { pathname: '/markets' };
 
   async function onFinish(values: LoginFormValues) {
     setPending(true);
@@ -59,7 +61,7 @@ export function LoginPage() {
       subtitle={t('auth.login.subtitle')}
       footer={
         <>
-          {t('auth.login.noAccount')} <Link to="/signup">{t('auth.login.createOne')}</Link>
+          {t('auth.login.noAccount')} <Link to="/signup" state={location.state}>{t('auth.login.createOne')}</Link>
         </>
       }
     >

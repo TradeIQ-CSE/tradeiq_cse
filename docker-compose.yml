@@ -82,7 +82,10 @@ services:
       AUTH_EMAIL_ENCRYPTION_KEY: ${AUTH_EMAIL_ENCRYPTION_KEY:-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaShouldChange=}
       # Compose serves plain HTTP, where a Secure cookie never reaches the app.
       AUTH_REFRESH_COOKIE_SECURE: ${AUTH_REFRESH_COOKIE_SECURE:-false}
-      IDENTITY_AUTH_CORS_ORIGINS: ${IDENTITY_AUTH_CORS_ORIGINS:-http://localhost:5173}
+      # Derived from FRONTEND_PORT so moving the frontend does not silently
+      # break every browser call: credentials: true forbids a wildcard origin,
+      # so this list has to name the real one.
+      IDENTITY_AUTH_CORS_ORIGINS: ${IDENTITY_AUTH_CORS_ORIGINS:-http://localhost:${FRONTEND_PORT:-5173}}
       # Paper-order execution prices against market-trading over REST; there is
       # no direct market_data access (SRS 3.6.2).
       MARKET_TRADING_URL: http://market-trading:3001

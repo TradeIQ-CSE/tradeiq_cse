@@ -36,7 +36,7 @@ describe('LoginPage', () => {
       email: 'ama@example.lk',
       password: 'correct horse battery',
     }));
-    expect(navigate).toHaveBeenCalledWith('/markets', { replace: true });
+    expect(navigate).toHaveBeenCalledWith({ pathname: '/markets' }, { replace: true });
   });
 
   it('returns to the page the guard bounced the user from', async () => {
@@ -50,7 +50,34 @@ describe('LoginPage', () => {
     });
     await fillAndSubmit(user);
 
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/portfolio', { replace: true }));
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith({ pathname: '/portfolio' }, { replace: true }),
+    );
+  });
+
+  it('returns to the full URL, keeping its query and fragment', async () => {
+    navigate.mockClear();
+    const user = userEvent.setup({ delay: null });
+
+    renderWithProviders(<LoginPage />, {
+      auth: { status: 'anonymous', login: vi.fn().mockResolvedValue(undefined) },
+      initialEntries: [
+        {
+          pathname: '/login',
+          // RequireAuth stores the whole Location it bounced from. Keeping only
+          // its pathname would drop the tab the user was actually looking at.
+          state: { from: { pathname: '/portfolio', search: '?tab=fills', hash: '#row-3' } },
+        },
+      ],
+    });
+    await fillAndSubmit(user);
+
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith(
+        { pathname: '/portfolio', search: '?tab=fills', hash: '#row-3' },
+        { replace: true },
+      ),
+    );
   });
 
   it('shows one message on a 401 that names neither field', async () => {

@@ -118,3 +118,48 @@ describe('AuthProvider', () => {
     expect(screen.getByTestId('user')).toHaveTextContent('none');
   });
 });
+
+// /login is public, so a user can sign in before the restore that started on
+// first paint has settled. Its result must not then overwrite theirs.
+describe('AuthProvider restore races', () => {
+  function LoginProbe() {
+    const { status, login } = useAuth();
+    return (
+      <div>
+        <div data-testid="status">{status}</div>
+        <button onClick={() => void login({ email: 'a@b.lk', password: 'x' })}>sign in</button>
+      </div>
+    );
+  }
+
+  it('keeps the user signed in when a slower restore then fails', async () => {
+    let failRestore: () => void = () => {};
+    server.use(
+      http.post(`${AUTH_ORIGIN}/auth/refresh`, async () => {
+        await new Promise<void>((resolve) => {
+          failRestore = resolve;
+        });
+        return HttpResponse.json(
+          { error: { code: 'REFRESH_TOKEN_INVALID', message: 'no', trace_id: 't' } },
+          { status: 401 },
+        );
+      }),
+      http.post(`${AUTH_ORIGIN}/auth/login`, () => HttpResponse.json({ data: sessionBody() })),
+    );
+
+    render(
+      <AuthProvider>
+        <LoginProbe />
+      </AuthProvider>,
+    );
+
+    screen.getByText('sign in').click();
+    await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('authenticated'));
+
+    // Now let the restore that was already in flight fail.
+    failRestore();
+
+    await waitFor(() => expect(getToken()).toBe('restored-token'));
+    expect(screen.getByTestId('status')).toHaveTextContent('authenticated');
+  });
+});

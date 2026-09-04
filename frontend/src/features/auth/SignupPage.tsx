@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Alert, Button, Form, Input } from 'antd';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Location, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/useAuth';
 import { ApiError } from '../../lib/api';
@@ -18,7 +18,9 @@ interface SignupFormValues {
 }
 
 interface LocationState {
-  from?: { pathname?: string };
+  // RequireAuth stores the whole Location, so search and hash survive: a user
+  // sent away from /portfolio?tab=fills comes back to that, not to /portfolio.
+  from?: Partial<Location>;
 }
 
 export function SignupPage() {
@@ -30,7 +32,7 @@ export function SignupPage() {
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const from = (location.state as LocationState | null)?.from?.pathname ?? '/markets';
+  const from = (location.state as LocationState | null)?.from ?? { pathname: '/markets' };
 
   async function onFinish(values: SignupFormValues) {
     setPending(true);
@@ -59,7 +61,7 @@ export function SignupPage() {
       subtitle={t('auth.signup.subtitle')}
       footer={
         <>
-          {t('auth.signup.haveAccount')} <Link to="/login">{t('auth.signup.signIn')}</Link>
+          {t('auth.signup.haveAccount')} <Link to="/login" state={location.state}>{t('auth.signup.signIn')}</Link>
         </>
       }
     >
