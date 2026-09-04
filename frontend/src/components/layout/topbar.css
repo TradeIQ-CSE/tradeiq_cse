@@ -71,30 +71,6 @@
   box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
-.topbar__assistant {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5.25px;
-  height: 27.5px;
-  padding: 0 10.5px;
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: var(--accent);
-  color: white;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.topbar__assistant:hover {
-  background: #6d28d9;
-}
-
-.topbar__assistant img {
-  display: block;
-}
-
 @media (max-width: 520px) {
   .topbar__search {
     width: min(62vw, 240px);
