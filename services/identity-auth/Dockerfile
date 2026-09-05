@@ -3,6 +3,10 @@ WORKDIR /app
 RUN corepack enable
 
 FROM base AS deps
+# argon2 falls back to node-gyp when a prebuilt binary is unavailable.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 make g++ \
+    && rm -rf /var/lib/apt/lists/*
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY services/identity-auth/package.json ./services/identity-auth/package.json
 RUN pnpm install --frozen-lockfile --filter @tradeiq/identity-auth...
