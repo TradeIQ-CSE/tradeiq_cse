@@ -169,5 +169,39 @@
       "terms": "Terms",
       "contact": "Contact"
     }
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "subtitle": "Sign in to your TradeIQ CSE account.",
+      "submit": "Sign in",
+      "noAccount": "No account yet?",
+      "createOne": "Create one",
+      "failed": "Email or password is incorrect."
+    },
+    "signup": {
+      "title": "Create an account",
+      "subtitle": "Paper trading, signals and portfolio analytics for Sri Lankan investors.",
+      "submit": "Create account",
+      "haveAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "emailTaken": "An account already exists for this email address."
+    },
+    "fields": {
+      "displayName": "Display name",
+      "email": "Email",
+      "password": "Password",
+      "passwordHint": "At least 12 characters"
+    },
+    "validation": {
+      "displayNameRequired": "Enter a display name",
+      "emailRequired": "Enter your email address",
+      "emailInvalid": "Enter a valid email address",
+      "passwordRequired": "Enter your password",
+      "passwordTooShort": "Use at least 12 characters"
+    },
+    "unavailable": "Something went wrong. Please try again.",
+    "signOut": "Sign out",
+    "signedOut": "Not signed in"
   }
 }

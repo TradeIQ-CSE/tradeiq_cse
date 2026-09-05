@@ -1,7 +1,5 @@
 import { MenuOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import boltIcon from '../../assets/icons/bolt.svg';
 import searchIcon from '../../assets/icons/search.svg';
 import './topbar.css';
 
@@ -18,7 +16,6 @@ export function Topbar({
   search,
   onSearchChange,
 }: TopbarProps) {
-  const navigate = useNavigate();
   const { t } = useTranslation();
   const hasSearch = search !== undefined && onSearchChange !== undefined;
 
@@ -48,15 +45,6 @@ export function Topbar({
           </label>
         )}
       </div>
-
-      <button
-        type="button"
-        className="topbar__assistant"
-        onClick={() => navigate('/ai-insights')}
-      >
-        <img src={boltIcon} alt="" width={11} height={11} />
-        {!isMobile && <span>AI Assistant</span>}
-      </button>
     </header>
   );
 }

@@ -11,6 +11,7 @@ import {
   YAxis,
 } from 'recharts';
 import { OHLCPoint } from '../../data/fixtures/ohlc';
+import { candleBody, candleColor, candleWick } from './candlestick';
 
 interface CandlestickChartProps {
   data: readonly OHLCPoint[];
@@ -23,21 +24,6 @@ interface TooltipPayloadItem {
 interface CandlestickTooltipProps
   extends Omit<TooltipProps<number, string>, 'payload'> {
   payload?: TooltipPayloadItem[];
-}
-
-function candleBody(point: OHLCPoint): [number, number] {
-  return [Math.min(point.open, point.close), Math.max(point.open, point.close)];
-}
-
-function candleWick(point: OHLCPoint): [number, number] {
-  const bodyHigh = Math.max(point.open, point.close);
-  return [bodyHigh - point.low, point.high - bodyHigh];
-}
-
-function candleColor(point: OHLCPoint): string {
-  if (point.close > point.open) return '#00d492';
-  if (point.close < point.open) return '#ff6467';
-  return '#90a1b9';
 }
 
 function CandlestickTooltip({ active, payload }: CandlestickTooltipProps) {

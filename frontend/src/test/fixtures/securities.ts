@@ -1,0 +1,43 @@
+import { SecurityListItem } from '../../features/markets/types';
+
+export const securitiesFixture: SecurityListItem[] = [
+  {
+    symbol: 'JKH.N0000',
+    company_name: 'John Keells Holdings PLC',
+    sector: { gics_code: '2530', name: 'Consumer Discretionary' },
+    shares_outstanding: 871_355_047,
+    data_from: '2020-01-02',
+    data_to: '2026-09-02',
+    price: 198.5,
+    change: 2.25,
+    change_pct: 1.15,
+    volume: 452_311,
+    pe_ratio: 14.2,
+  },
+  {
+    symbol: 'COMB.N0000',
+    company_name: 'Commercial Bank of Ceylon PLC',
+    sector: { gics_code: '4010', name: 'Banks' },
+    shares_outstanding: 1_014_663_970,
+    data_from: '2020-01-02',
+    data_to: '2026-09-02',
+    price: 112.75,
+    change: -1.5,
+    change_pct: -1.31,
+    volume: 318_204,
+    pe_ratio: 6.8,
+  },
+  {
+    symbol: 'DIAL.N0000',
+    company_name: 'Dialog Axiata PLC',
+    sector: { gics_code: '5010', name: 'Telecommunication Services' },
+    shares_outstanding: 8_014_654_293,
+    data_from: '2020-01-02',
+    data_to: '2026-09-02',
+    price: 11.9,
+    change: 0,
+    change_pct: 0,
+    volume: 1_204_552,
+    pe_ratio: null,
+  },
+];
