@@ -79,7 +79,7 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
       items: [
         {
           label: t('nav.items.backtesting'),
-          path: '/analytics',
+          path: '/backtests',
           icon: backtestingIcon,
         },
         {
