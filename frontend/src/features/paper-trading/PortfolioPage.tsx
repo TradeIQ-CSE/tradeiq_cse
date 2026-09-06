@@ -4,6 +4,7 @@ import { CashLedger } from './CashLedger';
 import { PortfolioScope } from './PortfolioScope';
 import { PositionsTable } from './PositionsTable';
 import { SummaryCards } from './SummaryCards';
+import { useTradingDateBounds } from './useTradingDateBounds';
 import './paper-trading.css';
 
 export function PortfolioPage() {
@@ -12,6 +13,7 @@ export function PortfolioPage() {
   // MarketsPage.tsx's trading-date control and useSecurities' `|| undefined`
   // normalization — an empty as_of must never reach the API as `?as_of=`.
   const [selectedAsOf, setSelectedAsOf] = useState<string>('');
+  const { availableFrom, availableTo } = useTradingDateBounds();
 
   // No AppShell here: AppRoutes' ConsoleRoute already wraps every console page
   // in it, and mounting a second one would nest the sidebar inside itself.
@@ -25,6 +27,8 @@ export function PortfolioPage() {
             type="date"
             className="portfolio-select"
             value={selectedAsOf}
+            min={availableFrom}
+            max={availableTo}
             onChange={(event) => setSelectedAsOf(event.target.value)}
           />
         </label>

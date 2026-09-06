@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../lib/api';
+import { readErrorText } from './error-text';
 import { localeFor } from '../../i18n';
 import { formatMoney, formatQuantity, formatSignedMoney } from './format';
 import { useCashTransactions } from './usePortfolios';
@@ -39,7 +40,7 @@ export function CashLedger({ portfolioId }: CashLedgerProps) {
     }
     return (
       <div className="paper-trading-card paper-trading-card--error">
-        {error instanceof ApiError ? error.body.message : t('portfolio.cashLedger.unreachable')}
+        {readErrorText(error, t('portfolio.cashLedger.unreachable'))}
       </div>
     );
   }

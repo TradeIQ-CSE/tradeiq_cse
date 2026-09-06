@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../lib/api';
+import { readErrorText } from './error-text';
 import { localeFor } from '../../i18n';
 import { changeDirection, formatMoney, formatPercent, formatSignedMoney } from './format';
 import { usePortfolioSummary } from './usePortfolios';
@@ -41,7 +42,7 @@ export function SummaryCards({ portfolioId, asOf }: SummaryCardsProps) {
     }
     return (
       <div className="paper-trading-card paper-trading-card--error">
-        {error instanceof ApiError ? error.body.message : t('portfolio.summary.unreachable')}
+        {readErrorText(error, t('portfolio.summary.unreachable'))}
       </div>
     );
   }

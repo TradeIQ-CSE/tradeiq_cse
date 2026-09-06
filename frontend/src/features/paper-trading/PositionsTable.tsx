@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../lib/api';
+import { readErrorText } from './error-text';
 import { localeFor } from '../../i18n';
 import { changeDirection, formatMoney, formatPercent, formatQuantity, formatSignedMoney } from './format';
 import { usePositions } from './usePortfolios';
@@ -47,7 +48,7 @@ export function PositionsTable({ portfolioId, asOf }: PositionsTableProps) {
     }
     return (
       <div className="paper-trading-card paper-trading-card--error">
-        {error instanceof ApiError ? error.body.message : t('portfolio.positions.unreachable')}
+        {readErrorText(error, t('portfolio.positions.unreachable'))}
       </div>
     );
   }

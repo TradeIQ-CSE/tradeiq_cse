@@ -235,6 +235,37 @@ describe('PortfolioPage', () => {
     expect(screen.queryByText(t('portfolio.positions.empty'))).not.toBeInTheDocument();
   });
 
+  // Found by running against the real stack: an as_of outside the seeded price
+  // range answers 400 VALIDATION_FAILED whose `message` is only "Request
+  // validation failed." — the range that would work is in `fields[]`. Showing
+  // just the message leaves the reader with nothing to act on.
+  it('shows the field reason for a rejected valuation date, not the generic message', async () => {
+    server.use(
+      http.get('*/portfolios/:portfolioId/positions', () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: 'VALIDATION_FAILED',
+              message: 'Request validation failed.',
+              fields: [
+                { field: 'as_of', reason: 'must fall between 2025-01-02 and 2025-01-10' },
+              ],
+              trace_id: 'test-trace',
+            },
+          },
+          { status: 400 },
+        ),
+      ),
+    );
+
+    renderPage();
+
+    expect(
+      await screen.findByText('must fall between 2025-01-02 and 2025-01-10'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Request validation failed.')).not.toBeInTheDocument();
+  });
+
   it('recovers from a selected portfolio id that no longer exists', async () => {
     const staleId = '99999999-9999-4999-8999-999999999999';
     server.use(
