@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { createHash } from 'crypto';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module';
@@ -232,11 +233,131 @@ describe('Auth (e2e)', () => {
     // AuthService.refresh, or throw from inside the transaction instead of
     // returning, and its last assertion fails.
     //
-    // What it does not cover is the concurrency the family lock exists for:
-    // two refreshes interleaving on one family. Forcing that ordering needs a
-    // pause inside the transaction, which means test hooks in production code.
-    // Two attempts at it passed against a deliberately broken version, so they
-    // were removed rather than left behind as false assurance.
+    // The test below covers the concurrency the family lock exists for. Two
+    // earlier attempts raced two concurrent refreshes against each other and
+    // hoped the interleaving would exercise the lock; both were deleted
+    // because they passed against a deliberately broken lockFamily() — a
+    // racing test proves nothing when it cannot force the ordering it claims
+    // to cover, and that false assurance is worse than no test at all.
+    //
+    // This version does not race anything. It takes the family lock itself,
+    // on a dedicated connection, before the request under test is ever
+    // fired — so the ordering is fixed by the test, not by luck. Only after
+    // the test marks the token used and commits does the blocked request get
+    // to proceed, so it reaches lockFamily() and re-reads the row *after*
+    // that update is visible. Remove the lock and the request races the
+    // test's own transaction instead of waiting for it, reads the row before
+    // the update lands, and the assertions below fail.
+    it('revokes the family when the presented token is spent while a concurrent transaction holds the family lock', async () => {
+      const token = cookie.split('=')[1];
+      // Only the hash is ever stored (docs/api/auth-v1.md §2.2), so the row
+      // has to be found by hashing the raw token the same way the service
+      // does, not by looking the token up directly.
+      const tokenHash = createHash('sha256').update(token).digest('hex');
+
+      const [{ family_id: familyId }] = await dataSource.query(
+        'SELECT family_id FROM auth.refresh_tokens WHERE token_hash = $1',
+        [tokenHash],
+      );
+
+      // A separate connection checked out of the same pool behind
+      // `dataSource` (createQueryRunner() does not open a new pool of its
+      // own) — that is what lets this transaction hold the lock on one
+      // connection while the request under test runs its own transaction on
+      // another. It relies on the pool having room for both; nothing in
+      // src/config/database.config.ts lowers pg's default max of 10.
+      const runner = dataSource.createQueryRunner();
+
+      try {
+        await runner.connect();
+        await runner.startTransaction();
+
+        // The same row lock lockFamily() takes inside AuthService.refresh.
+        // Holding it here means the request fired below cannot get past
+        // lockFamily() until this transaction commits or rolls back.
+        await runner.query(
+          'SELECT token_id FROM auth.refresh_tokens WHERE family_id = $1 FOR UPDATE',
+          [familyId],
+        );
+
+        // Not awaited: the point is that this has to block inside
+        // lockFamily() until the transaction above releases it. Built with
+        // .end() rather than the usual `await api()...` chain: superagent's
+        // request objects are lazy thenables that only dispatch on .then()
+        // or .end(), so an unawaited `await`-style chain sends nothing until
+        // something awaits it — the wait below would then elapse with no
+        // request in flight, the row would already show used_at by the time
+        // the request actually goes out, and this would pass on the ordinary
+        // reuse path with or without the lock. .end() forces the request onto
+        // the wire now, so it is genuinely blocked in lockFamily() while the
+        // transaction above still holds the row.
+        const refreshPromise = new Promise<request.Response>(
+          (resolve, reject) => {
+            api()
+              .post('/auth/refresh')
+              .set('Cookie', cookie)
+              .end((err, res) => (res ? resolve(res) : reject(err)));
+          },
+        );
+
+        // The request must be genuinely parked in lockFamily() before the row
+        // is spent below; otherwise it would take the ordinary reuse path and
+        // pass even with the lock removed. A fixed sleep cannot tell the
+        // difference — under load the request might not have reached
+        // lockFamily() yet when the sleep ends, so the UPDATE+COMMIT would
+        // land first and every assertion would still pass with no lock at
+        // all. Poll Postgres for an actual blocked waiter instead, and fail
+        // outright if one never appears.
+        const deadline = Date.now() + 5000;
+        let blocked = 0;
+        while (Date.now() < deadline) {
+          const [{ waiting }] = await dataSource.query(
+            `SELECT count(*)::int AS waiting
+               FROM pg_stat_activity
+              WHERE datname = current_database()
+                AND wait_event_type = 'Lock'
+                AND state = 'active'
+                AND pid <> pg_backend_pid()`,
+          );
+          blocked = waiting;
+          if (blocked > 0) break;
+          await new Promise((resolve) => setTimeout(resolve, 25));
+        }
+        expect(blocked).toBeGreaterThan(0);
+
+        // Stand in for the concurrent rotation that won the lock first: spend
+        // the presented row, then let the blocked request through.
+        await runner.query(
+          'UPDATE auth.refresh_tokens SET used_at = now() WHERE token_hash = $1',
+          [tokenHash],
+        );
+        await runner.commitTransaction();
+
+        // superagent's end() callback treats any non-2xx as `err`, and 401 is
+        // the expected outcome here, so the status is asserted directly
+        // rather than relying on `.expect(401)`, which end() bypasses.
+        const response = await refreshPromise;
+        expect(response.status).toBe(401);
+        expect(response.body.error.code).toBe('REFRESH_TOKEN_INVALID');
+
+        const rows: { revoked_at: string | null }[] = await dataSource.query(
+          'SELECT revoked_at FROM auth.refresh_tokens WHERE family_id = $1',
+          [familyId],
+        );
+        expect(rows.length).toBeGreaterThan(0);
+        for (const row of rows) {
+          expect(row.revoked_at).not.toBeNull();
+        }
+      } finally {
+        // A wedged runner would break every later test, so this always
+        // leaves it clean, whether or not the assertions above already
+        // committed the transaction.
+        if (runner.isTransactionActive) {
+          await runner.rollbackTransaction();
+        }
+        await runner.release();
+      }
+    });
 
     it('rejects a request with no cookie', async () => {
       const response = await api().post('/auth/refresh').expect(401);
