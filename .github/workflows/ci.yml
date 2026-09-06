@@ -79,6 +79,7 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@localhost:5432/market_data
+      MARKET_INGESTION_TOKEN: test-only-market-ingestion-token
       AUTH_DATABASE_URL: postgresql://auth:changeme@localhost:5432/auth
       JWT_SECRET: test-only-ci-secret
       # 32 zero bytes, base64. Test-only: CI never stores a real address.

@@ -62,6 +62,14 @@ describe('config', () => {
       expect(validated.MARKET_DATA_DATABASE_URL).toBe(VALID_URL);
     });
 
+    it('allows an empty ingestion token so the write API can be disabled', () => {
+      const validated = validate({
+        MARKET_DATA_DATABASE_URL: VALID_URL,
+        MARKET_INGESTION_TOKEN: '',
+      });
+      expect(validated.MARKET_INGESTION_TOKEN).toBe('');
+    });
+
     it('coerces a numeric port string to a number', () => {
       const validated = validate({
         MARKET_DATA_DATABASE_URL: VALID_URL,

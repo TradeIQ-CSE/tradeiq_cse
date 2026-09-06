@@ -1,22 +1,25 @@
 process.env.MARKET_DATA_DATABASE_URL =
   process.env.MARKET_DATA_DATABASE_URL ||
   'postgresql://market_data:changeme@localhost:5432/market_data';
+process.env.MARKET_INGESTION_TOKEN = 'test-market-ingestion-token';
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureMarketTradingApp } from '../src/app.setup';
+import { DataSource } from 'typeorm';
+import { calculateMarketDigest } from '../src/eod-ingestion/eod-ingestion.validation';
 
 describe('HealthModule (e2e)', () => {
-  let app: INestApplication;
+  let app: NestExpressApplication;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication<NestExpressApplication>();
     // Same pipeline main.ts installs, so error-envelope assertions below test
     // what actually ships rather than Nest's default exception rendering.
     configureMarketTradingApp(app);
@@ -251,5 +254,122 @@ describe('HealthModule (e2e)', () => {
     expect(response.body.error.fields).toEqual([
       expect.objectContaining({ field: 'as_of' }),
     ]);
+  });
+
+  describe('/internal/v1/ingestions/eod', () => {
+    const symbol = 'TEST.N0000';
+    const tradeDate = '2025-01-13';
+    const batchId = 'a'.repeat(64);
+    const prices = [
+      {
+        symbol,
+        open: '10.0000',
+        high: '12.0000',
+        low: '9.5000',
+        close: '11.2500',
+        volume: '1234',
+        validation_warnings: [],
+        ohlc_repaired: false,
+      },
+    ];
+    const body = {
+      contract_version: '1',
+      batch_id: batchId,
+      trade_date: tradeDate,
+      source: {
+        name: 'contract_fixture',
+        captured_at: '2025-01-13T09:20:00Z',
+        source_date_method: 'fixture_date',
+        raw_payload_hash: 'b'.repeat(64),
+      },
+      calendar: {
+        is_trading_day: true,
+        source: 'e2e fixture',
+        verified_at: '2025-01-01T00:00:00Z',
+      },
+      validation: { processed: 1, accepted: 1, rejected: 0, repaired: 0 },
+      securities: [{ symbol, company_name: 'Test Security PLC' }],
+      prices,
+      market_digest: calculateMarketDigest(tradeDate, prices),
+    };
+
+    afterAll(async () => {
+      const db = app.get(DataSource);
+      await db.query(
+        `DELETE FROM market_data.price_aggregates
+         WHERE security_id IN (
+           SELECT security_id FROM market_data.securities WHERE symbol = $1
+         )`,
+        [symbol],
+      );
+      await db.query(
+        `DELETE FROM market_data.daily_prices
+         WHERE security_id IN (
+           SELECT security_id FROM market_data.securities WHERE symbol = $1
+         )`,
+        [symbol],
+      );
+      await db.query(`DELETE FROM market_data.securities WHERE symbol = $1`, [
+        symbol,
+      ]);
+      await db.query(
+        `DELETE FROM market_data.ingestion_runs WHERE batch_id = $1`,
+        [batchId],
+      );
+      await db.query(
+        `DELETE FROM market_data.trading_calendar WHERE trade_date = $1::date`,
+        [tradeDate],
+      );
+    });
+
+    it('requires the machine bearer token', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/internal/v1/ingestions/eod')
+        .send(body)
+        .expect(401);
+      expect(response.body.error.code).toBe('UNAUTHENTICATED');
+    });
+
+    it('commits a batch atomically and exposes it through trading quotes', async () => {
+      const created = await request(app.getHttpServer())
+        .post('/internal/v1/ingestions/eod')
+        .set('Authorization', `Bearer ${process.env.MARKET_INGESTION_TOKEN}`)
+        .send(body)
+        .expect(201);
+
+      expect(created.body.data).toEqual(
+        expect.objectContaining({
+          batch_id: batchId,
+          trade_date: tradeDate,
+          records_accepted: 1,
+          replayed: false,
+        }),
+      );
+
+      const quote = await request(app.getHttpServer())
+        .get(`/internal/paper-trading/quotes/${symbol}`)
+        .expect(200);
+      expect(quote.body.data).toEqual(
+        expect.objectContaining({
+          symbol,
+          market_as_of: tradeDate,
+          price_as_of: tradeDate,
+          close: 11.25,
+        }),
+      );
+
+      const replay = await request(app.getHttpServer())
+        .post('/internal/v1/ingestions/eod')
+        .set('Authorization', `Bearer ${process.env.MARKET_INGESTION_TOKEN}`)
+        .send(body)
+        .expect(201);
+      expect(replay.body.data.replayed).toBe(true);
+
+      const latest = await request(app.getHttpServer())
+        .get('/internal/v1/ingestions/eod/latest')
+        .set('Authorization', `Bearer ${process.env.MARKET_INGESTION_TOKEN}`)
+        .expect(200);
+      expect(latest.body.data.batch_id).toBe(batchId);
+    });
   });
 });

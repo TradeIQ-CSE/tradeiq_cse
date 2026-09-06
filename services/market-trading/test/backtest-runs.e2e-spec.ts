@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { BacktestRunsController } from '../src/backtest-runs/backtest-runs.controller';
 import { BacktestRunsService } from '../src/backtest-runs/backtest-runs.service';
@@ -9,7 +9,7 @@ import { BacktestResult } from '../src/backtest-runs/backtest-result.entity';
 import { configureMarketTradingApp } from '../src/app.setup';
 
 describe('Backtest Runs (e2e)', () => {
-  let app: INestApplication;
+  let app: NestExpressApplication;
   let mockRepo: Partial<Record<keyof BacktestRunsRepository, jest.Mock>>;
 
   const validDto = {
@@ -119,7 +119,7 @@ describe('Backtest Runs (e2e)', () => {
       ],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication<NestExpressApplication>();
     configureMarketTradingApp(app);
     await app.init();
   });
