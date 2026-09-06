@@ -248,6 +248,11 @@ describe('Auth (e2e)', () => {
     // that update is visible. Remove the lock and the request races the
     // test's own transaction instead of waiting for it, reads the row before
     // the update lands, and the assertions below fail.
+    // Raised from jest's 5000ms default: the blocked-waiter poll below can
+    // alone spend up to 5s, on top of signup, connect, startTransaction and
+    // the FOR UPDATE. Hitting jest's default budget would abandon the test
+    // before the finally below can release the query runner, leaving its
+    // FOR UPDATE lock held and deadlocking whatever test runs next.
     it('revokes the family when the presented token is spent while a concurrent transaction holds the family lock', async () => {
       const token = cookie.split('=')[1];
       // Only the hash is ever stored (docs/api/auth-v1.md §2.2), so the row
@@ -299,6 +304,12 @@ describe('Auth (e2e)', () => {
               .end((err, res) => (res ? resolve(res) : reject(err)));
           },
         );
+        // If an assertion below fails before this is awaited, the request can
+        // still settle on its own. Attaching a handler here keeps a
+        // transport-level failure from surfacing as an unhandled rejection
+        // against an unrelated test; `await refreshPromise` below still
+        // throws normally.
+        refreshPromise.catch(() => {});
 
         // The request must be genuinely parked in lockFamily() before the row
         // is spent below; otherwise it would take the ordinary reuse path and
@@ -357,7 +368,7 @@ describe('Auth (e2e)', () => {
         }
         await runner.release();
       }
-    });
+    }, 20000);
 
     it('rejects a request with no cookie', async () => {
       const response = await api().post('/auth/refresh').expect(401);
