@@ -35,7 +35,7 @@ function validRequest(): EodIngestionRequest {
     validation: { processed: 1, accepted: 1, rejected: 0, repaired: 0 },
     securities: [{ symbol: 'TEST.N0000', company_name: 'Test PLC' }],
     prices,
-    market_digest: calculateMarketDigest('2026-09-04', prices),
+    market_digest: calculateMarketDigest(prices),
   };
 }
 
@@ -80,8 +80,22 @@ describe('parseEodIngestionRequest', () => {
   it('makes the digest independent of row order', () => {
     const first = validRequest().prices[0];
     const second = { ...first, symbol: 'ZZZZ.N0000' };
-    expect(calculateMarketDigest('2026-09-04', [first, second])).toBe(
-      calculateMarketDigest('2026-09-04', [second, first]),
+    expect(calculateMarketDigest([first, second])).toBe(
+      calculateMarketDigest([second, first]),
+    );
+  });
+
+  it('makes the digest independent of the trading date', () => {
+    const firstDate = validRequest();
+    const secondDate = { ...firstDate, trade_date: '2026-09-05' };
+
+    const firstResult = parseEodIngestionRequest(firstDate);
+    const secondResult = parseEodIngestionRequest(secondDate);
+
+    expect(firstResult.fields).toEqual([]);
+    expect(secondResult.fields).toEqual([]);
+    expect(secondResult.request?.market_digest).toBe(
+      firstResult.request?.market_digest,
     );
   });
 });

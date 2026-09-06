@@ -54,6 +54,25 @@ const RUN_COLUMNS = `
   records_processed, records_accepted, records_quarantined,
   started_at, completed_at
 `;
+const SERIALIZATION_FAILURE = '40001';
+const MAX_SERIALIZATION_ATTEMPTS = 3;
+const SERIALIZATION_RETRY_DELAY_MS = 25;
+
+function postgresErrorCode(error: unknown): string | undefined {
+  if (!error || typeof error !== 'object') return undefined;
+  const value = error as Record<string, unknown>;
+  if (typeof value.code === 'string') return value.code;
+  const driverError = value.driverError;
+  if (driverError && typeof driverError === 'object') {
+    const code = (driverError as Record<string, unknown>).code;
+    if (typeof code === 'string') return code;
+  }
+  return undefined;
+}
+
+function wait(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
 
 @Injectable()
 export class EodIngestionService {
@@ -80,6 +99,25 @@ export class EodIngestionService {
   }
 
   async ingest(input: EodIngestionRequest): Promise<EodIngestionReceipt> {
+    for (let attempt = 0; attempt < MAX_SERIALIZATION_ATTEMPTS; attempt += 1) {
+      try {
+        return await this.ingestAttempt(input);
+      } catch (error) {
+        if (
+          postgresErrorCode(error) !== SERIALIZATION_FAILURE ||
+          attempt === MAX_SERIALIZATION_ATTEMPTS - 1
+        ) {
+          throw error;
+        }
+        await wait(SERIALIZATION_RETRY_DELAY_MS * 2 ** attempt);
+      }
+    }
+    throw new Error('EOD ingestion retry loop exhausted');
+  }
+
+  private async ingestAttempt(
+    input: EodIngestionRequest,
+  ): Promise<EodIngestionReceipt> {
     const existing = await this.findRun(input.batch_id);
     if (existing) {
       if (existing.market_digest !== input.market_digest) {
@@ -116,8 +154,8 @@ export class EodIngestionService {
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
-    await queryRunner.startTransaction('SERIALIZABLE');
     try {
+      await queryRunner.startTransaction('SERIALIZABLE');
       // One daily batch changes the shared latest-market boundary. Serialise
       // competing deliveries so two dates cannot both pass the stale/date
       // checks against the same pre-commit state.
@@ -396,7 +434,7 @@ export class EodIngestionService {
          $1, now(), 'scheduled', 'cse-dataset', $2, 0, $2, 'failed',
          $3, $4, $5::date, $6, $7::timestamptz, $8, $9, $10, $11, $12,
          $13::jsonb, $14::jsonb
-       ) ON CONFLICT (batch_id) DO NOTHING`,
+       ) ON CONFLICT (batch_id) WHERE batch_id IS NOT NULL DO NOTHING`,
       [
         randomUUID(),
         input.validation.processed,

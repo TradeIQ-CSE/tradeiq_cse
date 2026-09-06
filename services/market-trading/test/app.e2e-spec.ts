@@ -260,6 +260,7 @@ describe('HealthModule (e2e)', () => {
     const symbol = 'TEST.N0000';
     const tradeDate = '2025-01-13';
     const batchId = 'a'.repeat(64);
+    const staleBatchId = 'c'.repeat(64);
     const prices = [
       {
         symbol,
@@ -290,7 +291,7 @@ describe('HealthModule (e2e)', () => {
       validation: { processed: 1, accepted: 1, rejected: 0, repaired: 0 },
       securities: [{ symbol, company_name: 'Test Security PLC' }],
       prices,
-      market_digest: calculateMarketDigest(tradeDate, prices),
+      market_digest: calculateMarketDigest(prices),
     };
 
     afterAll(async () => {
@@ -313,8 +314,8 @@ describe('HealthModule (e2e)', () => {
         symbol,
       ]);
       await db.query(
-        `DELETE FROM market_data.ingestion_runs WHERE batch_id = $1`,
-        [batchId],
+        `DELETE FROM market_data.ingestion_runs WHERE batch_id = ANY($1::text[])`,
+        [[batchId, staleBatchId]],
       );
       await db.query(
         `DELETE FROM market_data.trading_calendar WHERE trade_date = $1::date`,
@@ -370,6 +371,28 @@ describe('HealthModule (e2e)', () => {
         .set('Authorization', `Bearer ${process.env.MARKET_INGESTION_TOKEN}`)
         .expect(200);
       expect(latest.body.data.batch_id).toBe(batchId);
+
+      const staleSnapshot = await request(app.getHttpServer())
+        .post('/internal/v1/ingestions/eod')
+        .set('Authorization', `Bearer ${process.env.MARKET_INGESTION_TOKEN}`)
+        .send({
+          ...body,
+          batch_id: staleBatchId,
+          trade_date: '2025-01-14',
+          source: {
+            ...body.source,
+            captured_at: '2025-01-14T09:20:00Z',
+          },
+        })
+        .expect(400);
+      expect(staleSnapshot.body.error).toEqual(
+        expect.objectContaining({
+          code: 'VALIDATION_FAILED',
+          fields: expect.arrayContaining([
+            expect.objectContaining({ field: 'market_digest' }),
+          ]),
+        }),
+      );
     });
   });
 });

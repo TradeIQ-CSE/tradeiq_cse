@@ -1,8 +1,10 @@
 # EOD ingestion API v1
 
-`market-trading` owns this machine-to-machine boundary. The validated daily
-collector sends one complete CSE session; no other process receives
-`market_data` database credentials.
+`market-trading` owns the recurring EOD machine-to-machine boundary. The
+validated daily collector sends one complete CSE session without receiving
+`market_data` database credentials. Controlled historical seed/import jobs,
+including `market-data-seed` and the legacy `pipeline` profile, remain direct
+database-write exceptions.
 
 ## Authentication
 
@@ -20,9 +22,11 @@ callers use HTTPS.
 
 The POST body is limited to 2 MiB and 2,000 prices. `batch_id`,
 `raw_payload_hash`, and `market_digest` are lowercase SHA-256 hex strings.
-Prices are non-negative decimal strings with at most four decimal places;
-volume and shares outstanding are non-negative integer strings. A request must
-contain metadata for every canonical uppercase CSE symbol in `prices`.
+Prices are non-negative decimal strings with at most four decimal places.
+`open` may instead be `null` when the validated source has no reliable opening
+price; `high`, `low`, and `close` are always required. Volume and shares
+outstanding are non-negative integer strings. A request must contain metadata
+for every canonical uppercase CSE symbol in `prices`.
 
 ```json
 {
@@ -68,7 +72,7 @@ contain metadata for every canonical uppercase CSE symbol in `prices`.
       "ohlc_repaired": false
     }
   ],
-  "market_digest": "<sha256 over the canonical price rows>"
+  "market_digest": "<sha256 over canonical symbol and OHLCV rows, excluding date>"
 }
 ```
 

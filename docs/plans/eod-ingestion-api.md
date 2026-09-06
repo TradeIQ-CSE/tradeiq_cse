@@ -13,10 +13,12 @@ CSE public endpoint
   -> existing markets, execution-quote and valuation APIs
 ```
 
-`market-trading` remains the sole owner and writer of `market_data`. Historical
-2017-2025 loading remains a separate seed/import path. This milestone ends once
-new EOD prices are visible through the existing market and paper-trading quote
-APIs; the automatic order sweep and ML handoff remain separate work.
+`market-trading` remains the sole recurring EOD write path for `market_data`.
+Historical 2017-2025 loading remains a controlled direct seed/import exception,
+including `market-data-seed` and the legacy `pipeline` profile. This milestone
+ends once new EOD prices are visible through the existing market and
+paper-trading quote APIs; the automatic order sweep and ML handoff remain
+separate work.
 
 ## Platform receiver
 

@@ -220,13 +220,11 @@ function parsePrice(
 }
 
 export function calculateMarketDigest(
-  tradeDate: string,
   prices: readonly EodPriceInput[],
 ): string {
   const canonical = [...prices]
     .sort((a, b) => a.symbol.localeCompare(b.symbol))
     .map((price) => ({
-      date: tradeDate,
       symbol: price.symbol,
       open: price.open,
       high: price.high,
@@ -388,7 +386,7 @@ export function parseEodIngestionRequest(value: unknown): {
   if (
     validDate(tradeDate) &&
     prices.length > 0 &&
-    calculateMarketDigest(tradeDate, prices) !== marketDigest
+    calculateMarketDigest(prices) !== marketDigest
   ) {
     fields.push({
       field: 'market_digest',
