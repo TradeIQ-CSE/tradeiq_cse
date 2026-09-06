@@ -7,6 +7,8 @@ import { BacktestWizard } from '../components/BacktestWizard';
 import * as api from '../api/backtestApi';
 import { ApiError } from '../../../lib/api';
 
+import { CreateBacktestRunResponse } from '../domain/types';
+
 describe('BacktestWizard Workflow Integration', () => {
   afterEach(() => {
     cleanup();
@@ -95,8 +97,6 @@ describe('BacktestWizard Workflow Integration', () => {
       status: 'queued',
     });
 
-    let currentPath = '';
-
     const LocationTracker: React.FC = () => {
       return (
         <div data-testid="status-target">Status Page Reached for mock-uuid-12345</div>
@@ -139,12 +139,12 @@ describe('BacktestWizard Workflow Integration', () => {
   });
 
   it('prevents duplicate submissions when Run Backtest is clicked repeatedly', async () => {
-    let resolveSubmit: (val: any) => void;
-    const submitPromise = new Promise((resolve) => {
+    let resolveSubmit: (val: CreateBacktestRunResponse) => void;
+    const submitPromise = new Promise<CreateBacktestRunResponse>((resolve) => {
       resolveSubmit = resolve;
     });
 
-    const submitSpy = vi.spyOn(api, 'submitBacktestRun').mockReturnValue(submitPromise as any);
+    const submitSpy = vi.spyOn(api, 'submitBacktestRun').mockReturnValue(submitPromise);
 
     render(
       <MemoryRouter initialEntries={['/backtests/new/review']}>

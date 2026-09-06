@@ -55,9 +55,18 @@ export async function submitBacktestRun(
     body: JSON.stringify(request),
   });
 
-  const res = await handleResponse<{ id?: string; runId?: string; status: 'queued' | 'running' | 'completed' | 'failed' }>(response);
+  const res = await handleResponse<{ id?: string; runId?: string; status?: 'queued' | 'running' | 'completed' | 'failed' }>(response);
+  const id = res.runId || res.id;
+  if (!id) {
+    throw new ApiError({
+      code: 'INVALID_RESPONSE',
+      message: 'Server returned a successful response but is missing a valid run identifier.',
+      trace_id: 'unknown',
+    });
+  }
+
   return {
-    id: (res.runId || res.id) as string,
+    id,
     status: res.status || 'queued',
   };
 }

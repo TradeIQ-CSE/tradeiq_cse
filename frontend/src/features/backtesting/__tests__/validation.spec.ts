@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { validateBacktestConfig } from '../domain/validation';
 import { createDefaultBacktestConfig } from '../domain/defaults';
-import { BacktestConfig } from '../domain/types';
 
 describe('validateBacktestConfig', () => {
   it('should accept the minimum valid configuration', () => {

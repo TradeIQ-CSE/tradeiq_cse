@@ -168,8 +168,10 @@ export const ExecutionStep: React.FC = () => {
                     type="radio"
                     name="position_sizing"
                     checked={isSelected}
-                    onChange={() => handleSizingTypeChange(opt.type)}
-                    style={{ accentColor: 'var(--accent)' }}
+                    readOnly
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    style={{ accentColor: 'var(--accent)', pointerEvents: 'none' }}
                   />
                 </div>
 

@@ -50,32 +50,35 @@ export const RulesStep: React.FC = () => {
 
   // At least 1 sell condition
   const handleToggleSell = (type: SellConditionType) => {
-    const exists = selectedSells.some((s) => s.type === type);
+    updateConfig((prev) => {
+      const currentSells = prev.rules?.sells || [];
+      const exists = currentSells.some((s) => s.type === type);
 
-    if (exists) {
-      // Remove sell rule (if at least one will remain or user deselects)
-      updateConfig((prev) => ({
-        ...prev,
-        rules: {
-          ...prev.rules,
-          sells: prev.rules.sells.filter((s) => s.type !== type),
-        },
-      }));
-    } else {
-      // Add sell rule
-      let defaultValue: number | undefined = undefined;
-      if (type === 'take_profit_pct') defaultValue = 10;
-      if (type === 'stop_loss_pct') defaultValue = 5;
-      if (type === 'target_price') defaultValue = config.security?.price ? Math.round(config.security.price * 1.15) : 150;
+      if (exists) {
+        // Remove sell rule (if at least one will remain or user deselects)
+        return {
+          ...prev,
+          rules: {
+            ...prev.rules,
+            sells: currentSells.filter((s) => s.type !== type),
+          },
+        };
+      } else {
+        // Add sell rule
+        let defaultValue: number | undefined = undefined;
+        if (type === 'take_profit_pct') defaultValue = 10;
+        if (type === 'stop_loss_pct') defaultValue = 5;
+        if (type === 'target_price') defaultValue = config.security?.price ? Math.round(config.security.price * 1.15) : 150;
 
-      updateConfig((prev) => ({
-        ...prev,
-        rules: {
-          ...prev.rules,
-          sells: [...prev.rules.sells, { type, value: defaultValue }],
-        },
-      }));
-    }
+        return {
+          ...prev,
+          rules: {
+            ...prev.rules,
+            sells: [...currentSells, { type, value: defaultValue }],
+          },
+        };
+      }
+    });
   };
 
   const handleSellValueChange = (type: SellConditionType, val: number) => {
@@ -158,8 +161,10 @@ export const RulesStep: React.FC = () => {
                     type="radio"
                     name="buy_condition"
                     checked={isSelected}
-                    onChange={() => handleSelectBuy(rule.type)}
-                    style={{ accentColor: 'var(--accent)' }}
+                    readOnly
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    style={{ accentColor: 'var(--accent)', pointerEvents: 'none' }}
                   />
                 </div>
 
@@ -243,8 +248,10 @@ export const RulesStep: React.FC = () => {
                   <input
                     type="checkbox"
                     checked={isSelected}
-                    onChange={() => handleToggleSell(rule.type)}
-                    style={{ accentColor: 'var(--accent)' }}
+                    readOnly
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    style={{ accentColor: 'var(--accent)', pointerEvents: 'none' }}
                   />
                 </div>
 

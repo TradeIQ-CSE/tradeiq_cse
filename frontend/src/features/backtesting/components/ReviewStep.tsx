@@ -312,10 +312,7 @@ export const ReviewStep: React.FC = () => {
               <span>Submitting Simulation...</span>
             </>
           ) : (
-            <>
-              <span>⚡</span>
-              <span>Run Backtest</span>
-            </>
+            <span>Run Backtest</span>
           )}
         </button>
       </div>

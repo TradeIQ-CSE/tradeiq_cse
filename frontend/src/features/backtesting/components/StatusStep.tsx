@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getBacktestRunStatus } from '../api/backtestApi';
 import { BacktestStatusResponse } from '../domain/types';
 
+const MAX_TRANSIENT_RETRIES = 5;
+
 export const StatusStep: React.FC = () => {
   const { runId } = useParams<{ runId: string }>();
   const navigate = useNavigate();
@@ -10,6 +12,13 @@ export const StatusStep: React.FC = () => {
   const [statusData, setStatusData] = useState<BacktestStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pollCount, setPollCount] = useState(0);
+  const [retryCount, setRetryCount] = useState(0);
+
+  const handleRetry = () => {
+    setRetryCount(0);
+    setError(null);
+    setPollCount((c) => c + 1);
+  };
 
   useEffect(() => {
     if (!runId) return;
@@ -24,6 +33,7 @@ export const StatusStep: React.FC = () => {
 
         setStatusData(data);
         setError(null);
+        setRetryCount(0);
 
         // Continue polling if status is queued or running
         if (data.status === 'queued' || data.status === 'running') {
@@ -34,7 +44,18 @@ export const StatusStep: React.FC = () => {
       } catch (err: unknown) {
         if (!isMounted) return;
         const e = err as Error;
-        setError(e?.message || 'Failed to check backtest status.');
+        const errMsg = e?.message || 'Failed to check backtest status.';
+        setError(errMsg);
+
+        setRetryCount((prev) => {
+          const nextRetry = prev + 1;
+          if (nextRetry < MAX_TRANSIENT_RETRIES) {
+            timer = setTimeout(() => {
+              if (isMounted) setPollCount((c) => c + 1);
+            }, 2000);
+          }
+          return nextRetry;
+        });
       }
     };
 
@@ -136,14 +157,33 @@ export const StatusStep: React.FC = () => {
         </div>
 
         {error && (
-          <div className="info-banner info-banner--warning" style={{ maxWidth: '520px' }}>
-            <span>⚠️</span>
-            <span>{error}</span>
+          <div className="info-banner info-banner--warning" style={{ maxWidth: '520px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>⚠️</span>
+              <span>{error}</span>
+            </div>
+            <button
+              type="button"
+              className="chip-btn"
+              onClick={handleRetry}
+              style={{ whiteSpace: 'nowrap', cursor: 'pointer' }}
+            >
+              🔄 Retry Now
+            </button>
           </div>
         )}
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '12px' }}>
+          {error && (
+            <button
+              type="button"
+              className="btn btn--secondary"
+              onClick={handleRetry}
+            >
+              Retry Status Check
+            </button>
+          )}
           <button
             type="button"
             className="btn btn--ghost"

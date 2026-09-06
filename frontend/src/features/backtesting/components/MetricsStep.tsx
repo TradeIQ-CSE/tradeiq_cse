@@ -10,20 +10,18 @@ export const MetricsStep: React.FC = () => {
   const selectedMetrics = config.metrics?.selected || [];
 
   const handleToggleMetric = (id: string) => {
-    const exists = selectedMetrics.includes(id);
-    let next: string[];
-    if (exists) {
-      next = selectedMetrics.filter((m) => m !== id);
-    } else {
-      next = [...selectedMetrics, id];
-    }
-
-    updateConfig((prev) => ({
-      ...prev,
-      metrics: {
-        selected: next,
-      },
-    }));
+    updateConfig((prev) => {
+      const selected = prev.metrics?.selected || [];
+      const exists = selected.includes(id);
+      const next = exists ? selected.filter((m) => m !== id) : [...selected, id];
+      return {
+        ...prev,
+        metrics: {
+          ...prev.metrics,
+          selected: next,
+        },
+      };
+    });
   };
 
   const selectAll = () => {
@@ -79,8 +77,10 @@ export const MetricsStep: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={isSelected}
-                  onChange={() => handleToggleMetric(metric.id)}
-                  style={{ accentColor: 'var(--accent)' }}
+                  readOnly
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  style={{ accentColor: 'var(--accent)', pointerEvents: 'none' }}
                 />
               </div>
               <p className="option-card__desc">{metric.description}</p>
