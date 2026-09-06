@@ -6,6 +6,9 @@ export type ApiErrorCode =
   | 'VALIDATION_FAILED'
   | 'NOT_FOUND'
   | 'SECURITY_NOT_FOUND'
+  | 'UNAUTHENTICATED'
+  | 'DEPENDENCY_UNAVAILABLE'
+  | 'CONFLICT'
   | 'RATE_LIMITED'
   | 'INTERNAL';
 
@@ -41,5 +44,31 @@ export class ValidationFailedException extends ApiException {
 export class SecurityNotFoundException extends ApiException {
   constructor() {
     super(HttpStatus.NOT_FOUND, 'SECURITY_NOT_FOUND', 'Security not found.');
+  }
+}
+
+export class IngestionUnauthenticatedException extends ApiException {
+  constructor() {
+    super(
+      HttpStatus.UNAUTHORIZED,
+      'UNAUTHENTICATED',
+      'Authentication required.',
+    );
+  }
+}
+
+export class IngestionUnavailableException extends ApiException {
+  constructor() {
+    super(
+      HttpStatus.SERVICE_UNAVAILABLE,
+      'DEPENDENCY_UNAVAILABLE',
+      'EOD ingestion is not configured.',
+    );
+  }
+}
+
+export class IngestionConflictException extends ApiException {
+  constructor(message: string) {
+    super(HttpStatus.CONFLICT, 'CONFLICT', message);
   }
 }

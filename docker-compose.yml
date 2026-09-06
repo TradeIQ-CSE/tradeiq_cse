@@ -33,6 +33,7 @@ services:
       MARKET_TRADING_PORT: ${MARKET_TRADING_PORT:-3001}
       MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@db:5432/market_data
       MARKET_TRADING_CORS_ORIGINS: ${MARKET_TRADING_CORS_ORIGINS:-http://localhost:5173}
+      MARKET_INGESTION_TOKEN: ${MARKET_INGESTION_TOKEN:-}
     ports:
       - "${MARKET_TRADING_PORT:-3001}:3001"
     depends_on:
@@ -150,6 +151,8 @@ services:
       dockerfile: pipeline/data-ingestion/Dockerfile
     profiles: ["pipeline"]
     environment:
+      # Legacy/local seed-compatible profile. Recurring EOD collection runs in
+      # cse-dataset and reaches this stack only through the ingestion API.
       DATA_INGESTION_MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@db:5432/market_data
       CSE_DATA_SOURCE_URL: ${CSE_DATA_SOURCE_URL:-}
     depends_on:

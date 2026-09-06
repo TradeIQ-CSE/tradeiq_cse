@@ -29,6 +29,10 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   MARKET_TRADING_CORS_ORIGINS?: string;
+
+  @IsOptional()
+  @IsString()
+  MARKET_INGESTION_TOKEN?: string;
 }
 
 export function validate(config: Record<string, unknown>) {
