@@ -160,7 +160,12 @@ export const StatusStep: React.FC = () => {
           <div className="info-banner info-banner--warning" style={{ maxWidth: '520px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>⚠️</span>
-              <span>{error}</span>
+              <span>
+                {error}
+                {retryCount > 0 && retryCount < MAX_TRANSIENT_RETRIES
+                  ? ` (Retry attempt ${retryCount} of ${MAX_TRANSIENT_RETRIES})`
+                  : ''}
+              </span>
             </div>
             <button
               type="button"

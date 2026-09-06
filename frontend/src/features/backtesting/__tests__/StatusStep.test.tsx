@@ -36,7 +36,7 @@ describe('StatusStep Polling & Retry Behavior', () => {
     // Initial load executes first status check (which fails)
     await waitFor(() => {
       expect(getStatusSpy).toHaveBeenCalledTimes(1);
-      expect(screen.getByText('Network glitch')).toBeTruthy();
+      expect(screen.getByText(/Network glitch/i)).toBeTruthy();
     });
 
     // Wait for the automatic transient retry (2000ms delay) to complete
@@ -66,7 +66,7 @@ describe('StatusStep Polling & Retry Behavior', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Persistent 500 error')).toBeTruthy();
+      expect(screen.getByText(/Persistent 500 error/i)).toBeTruthy();
     });
 
     const retryBtn = screen.getByRole('button', { name: /Retry Status Check/i });
