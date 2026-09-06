@@ -106,6 +106,201 @@ describe('HealthModule (e2e)', () => {
     ]);
   });
 
+  describe('/securities/{symbol} market history reads', () => {
+    const errorWithoutTrace = (body: {
+      error: Record<string, unknown>;
+    }): Record<string, unknown> => {
+      const { trace_id, ...error } = body.error;
+      expect(trace_id).toEqual(expect.any(String));
+      return error;
+    };
+
+    it('returns canonical detail from a lowercase symbol', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/securities/jkh.n0000')
+        .expect(200);
+
+      expect(response.body).toEqual({
+        data: {
+          symbol: 'JKH.N0000',
+          company_name: 'John Keells Holdings PLC',
+          cse_code: 'JKH.N0000',
+          sector: { gics_code: '2010', name: 'Capital Goods' },
+          shares_outstanding: 1513637385,
+          data_from: '2025-01-02',
+          data_to: '2025-01-10',
+          listing_status: 'listed',
+          latest: {
+            trade_date: '2025-01-10',
+            close: 22.73,
+            change: 0.38,
+            change_pct: 1.7,
+            volume: 1571980,
+          },
+          ratios: null,
+        },
+      });
+    });
+
+    it('returns inclusive daily bars in ascending order', async () => {
+      const response = await request(app.getHttpServer())
+        .get(
+          '/securities/JKH.N0000/ohlcv' +
+            '?timeframe=daily&from=2025-01-02&to=2025-01-03',
+        )
+        .expect(200);
+
+      expect(response.body).toEqual({
+        data: {
+          symbol: 'JKH.N0000',
+          timeframe: 'daily',
+          from: '2025-01-02',
+          to: '2025-01-03',
+          bars: [
+            {
+              date: '2025-01-02',
+              open: 22.48,
+              high: 22.59,
+              low: 22.13,
+              close: 22.43,
+              adjusted_close: null,
+              volume: 1631334,
+            },
+            {
+              date: '2025-01-03',
+              open: 22.41,
+              high: 22.69,
+              low: 22.25,
+              close: 22.32,
+              adjusted_close: null,
+              volume: 785056,
+            },
+          ],
+        },
+      });
+    });
+
+    it('returns deterministic weekly aggregates and excludes partial periods', async () => {
+      const complete = await request(app.getHttpServer())
+        .get(
+          '/securities/JKH.N0000/ohlcv' +
+            '?timeframe=weekly&from=2024-12-30&to=2025-01-10',
+        )
+        .expect(200);
+
+      expect(complete.body.data.bars).toEqual([
+        {
+          period_start: '2024-12-30',
+          period_end: '2025-01-03',
+          open: 22.48,
+          high: 22.69,
+          low: 22.13,
+          close: 22.32,
+          volume: 2416390,
+        },
+        {
+          period_start: '2025-01-06',
+          period_end: '2025-01-10',
+          open: 22.43,
+          high: 22.84,
+          low: 21.75,
+          close: 22.73,
+          volume: 5186409,
+        },
+      ]);
+
+      const partial = await request(app.getHttpServer())
+        .get(
+          '/securities/JKH.N0000/ohlcv' +
+            '?timeframe=weekly&from=2025-01-02&to=2025-01-10',
+        )
+        .expect(200);
+      expect(partial.body.data.bars).toEqual([complete.body.data.bars[1]]);
+    });
+
+    it('returns deterministic monthly aggregates', async () => {
+      const response = await request(app.getHttpServer())
+        .get(
+          '/securities/JKH.N0000/ohlcv' +
+            '?timeframe=monthly&from=2025-01-01&to=2025-01-31',
+        )
+        .expect(200);
+
+      expect(response.body.data.bars).toEqual([
+        {
+          period_start: '2025-01-01',
+          period_end: '2025-01-10',
+          open: 22.48,
+          high: 22.84,
+          low: 21.75,
+          close: 22.73,
+          volume: 7602799,
+        },
+      ]);
+    });
+
+    it('resolves the default daily range from the latest market date', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/securities/JKH.N0000/ohlcv')
+        .expect(200);
+
+      expect(response.body.data).toEqual(
+        expect.objectContaining({
+          symbol: 'JKH.N0000',
+          timeframe: 'daily',
+          from: '2024-01-10',
+          to: '2025-01-10',
+        }),
+      );
+      expect(response.body.data.bars).toHaveLength(7);
+      expect(response.body.data.bars[0].date).toBe('2025-01-02');
+      expect(response.body.data.bars[6].date).toBe('2025-01-10');
+    });
+
+    it('returns no data for a valid pre-listing range', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/securities/JKH.N0000/ohlcv' + '?from=2024-01-01&to=2024-01-31')
+        .expect(200);
+
+      expect(response.body.data.bars).toEqual([]);
+      expect(response.body.data.from).toBe('2024-01-01');
+      expect(response.body.data.to).toBe('2024-01-31');
+    });
+
+    it('returns SECURITY_NOT_FOUND for unknown detail and OHLCV symbols', async () => {
+      for (const path of [
+        '/securities/NOPE.X0000',
+        '/securities/NOPE.X0000/ohlcv',
+      ]) {
+        const response = await request(app.getHttpServer())
+          .get(path)
+          .expect(404);
+        expect(errorWithoutTrace(response.body)).toEqual({
+          code: 'SECURITY_NOT_FOUND',
+          message: 'Security not found.',
+        });
+      }
+    });
+
+    it.each([
+      ['/securities/JKH.N0000/ohlcv?timeframe=hourly', 'timeframe'],
+      ['/securities/JKH.N0000/ohlcv?from=2025-02-30', 'from'],
+      ['/securities/JKH.N0000/ohlcv?from=2025-01-10&to=2025-01-01', 'from'],
+      [`/securities/${'A'.repeat(21)}`, 'symbol'],
+    ])('returns the validation envelope for %s', async (path, field) => {
+      const response = await request(app.getHttpServer()).get(path).expect(400);
+      const error = errorWithoutTrace(response.body);
+
+      expect(error).toEqual(
+        expect.objectContaining({
+          code: 'VALIDATION_FAILED',
+          message: 'Request validation failed.',
+        }),
+      );
+      expect(error.fields).toEqual([expect.objectContaining({ field })]);
+    });
+  });
+
   // docs/api/paper-trading-v1.md §2.3 — the execution quote identity-auth
   // prices paper orders from.
   describe('/internal/paper-trading/quotes/{symbol} (GET)', () => {

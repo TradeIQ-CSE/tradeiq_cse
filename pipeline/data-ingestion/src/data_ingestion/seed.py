@@ -192,11 +192,12 @@ def load_seed(database_url: str, bundle: Path, start: date, end: date) -> dict[s
             cur.executemany(
                 """
                 INSERT INTO market_data.securities (
-                    security_id, symbol, company_name, sector_id,
+                    security_id, symbol, cse_code, company_name, sector_id,
                     shares_outstanding, data_from, data_to
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (symbol) DO UPDATE SET
+                    cse_code = EXCLUDED.cse_code,
                     company_name = EXCLUDED.company_name,
                     sector_id = EXCLUDED.sector_id,
                     shares_outstanding = EXCLUDED.shares_outstanding,
@@ -206,6 +207,9 @@ def load_seed(database_url: str, bundle: Path, start: date, end: date) -> dict[s
                 [
                     (
                         security_id(s.symbol),
+                        s.symbol,
+                        # The canonical bundle has no separate exchange code.
+                        # Preserve a useful API value without inventing one.
                         s.symbol,
                         s.company_name,
                         sector_ids.get(s.sector_name or ""),
@@ -291,6 +295,49 @@ def load_seed(database_url: str, bundle: Path, start: date, end: date) -> dict[s
                 """,
                 (SEED_RUN_ID,),
             )
+
+            # Rebuild all historical aggregates for securities owned by this
+            # seed from the stored daily rows. Reading from the database (not
+            # just this invocation's date window) keeps a partial re-seed from
+            # truncating a week/month that already has adjacent daily data.
+            seed_security_ids = [security_id(s.symbol) for s in securities.values()]
+            for period_type, trunc in (("weekly", "week"), ("monthly", "month")):
+                cur.execute(
+                    """
+                    DELETE FROM market_data.price_aggregates
+                    WHERE security_id = ANY(%s::uuid[]) AND period_type = %s
+                    """,
+                    (seed_security_ids, period_type),
+                )
+                cur.execute(
+                    f"""
+                    INSERT INTO market_data.price_aggregates (
+                        aggregate_id, security_id, period_type, period_start, period_end,
+                        open, high, low, close, volume
+                    )
+                    SELECT
+                        md5(
+                            p.security_id::text || ':' || %s || ':' ||
+                            date_trunc('{trunc}', p.trade_date)::date::text
+                        )::uuid,
+                        p.security_id,
+                        %s,
+                        date_trunc('{trunc}', p.trade_date)::date,
+                        max(p.trade_date),
+                        (
+                            array_agg(p.open ORDER BY p.trade_date)
+                            FILTER (WHERE p.open IS NOT NULL)
+                        )[1],
+                        max(p.high),
+                        min(p.low),
+                        (array_agg(p.close ORDER BY p.trade_date DESC))[1],
+                        sum(p.volume)
+                    FROM market_data.daily_prices p
+                    WHERE p.security_id = ANY(%s::uuid[])
+                    GROUP BY p.security_id, date_trunc('{trunc}', p.trade_date)::date
+                    """,
+                    (period_type, period_type, seed_security_ids),
+                )
 
             indices = sorted({(r.index_code, r.index_name) for r in index_values})
             cur.executemany(
