@@ -12,7 +12,7 @@ export const StatusStep: React.FC = () => {
   const [statusData, setStatusData] = useState<BacktestStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pollCount, setPollCount] = useState(0);
-  const [retryCount, setRetryCount] = useState(0);
+  const [, setRetryCount] = useState(0);
 
   const handleRetry = () => {
     setRetryCount(0);
@@ -160,12 +160,7 @@ export const StatusStep: React.FC = () => {
           <div className="info-banner info-banner--warning" style={{ maxWidth: '520px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>⚠️</span>
-              <span>
-                {error}
-                {retryCount > 0 && retryCount < MAX_TRANSIENT_RETRIES
-                  ? ` (Retry attempt ${retryCount} of ${MAX_TRANSIENT_RETRIES})`
-                  : ''}
-              </span>
+              <span>{error}</span>
             </div>
             <button
               type="button"
