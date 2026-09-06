@@ -36,6 +36,8 @@
   --positive: #00d492;
   --negative: #ff6467;
 
+  --focus-ring: 2px solid var(--accent-text);
+
   --radius-pill: 10.5px;
   --radius-sm: 8.5px;
   --radius-card: 14.5px;
@@ -79,4 +81,14 @@ input,
 select {
   font-family: inherit;
   color: inherit;
+}
+
+/* One focus style for the whole app rather than a per-feature one. Nothing
+   defined this before, so a keyboard user had only the browser default, which
+   is close to invisible on these backgrounds. :focus-visible keeps it off a
+   mouse click. */
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
 }

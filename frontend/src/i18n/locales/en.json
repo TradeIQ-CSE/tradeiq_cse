@@ -203,5 +203,81 @@
     "unavailable": "Something went wrong. Please try again.",
     "signOut": "Sign out",
     "signedOut": "Not signed in"
+  },
+  "portfolio": {
+    "title": "My Portfolio",
+    "asOfLabel": "Valuation date",
+    "selector": {
+      "label": "Portfolio",
+      "new": "New portfolio"
+    },
+    "scope": {
+      "loading": "Loading portfolios…",
+      "empty": "You do not have a portfolio yet. Create one to start paper trading.",
+      "unavailable": "None of your portfolios could be loaded. Create a new one to continue.",
+      "unreachable": "Could not reach the identity-auth API."
+    },
+    "create": {
+      "title": "Create a portfolio",
+      "name": "Name",
+      "startingCapital": "Starting capital (LKR)",
+      "submit": "Create portfolio",
+      "errors": {
+        "idempotencyReused": "This portfolio was already submitted with different details. Try again.",
+        "unreachable": "Could not reach the identity-auth API."
+      }
+    },
+    "summary": {
+      "totalEquity": "Total equity",
+      "cashBalance": "Cash",
+      "holdingsValue": "Holdings value",
+      "totalPnl": "Total P/L",
+      "realizedPnl": "Realized P/L",
+      "unrealizedPnl": "Unrealized P/L",
+      "asOf": "Priced at {{date}}",
+      "noSession": "No priced session available yet.",
+      "latestSession": "the latest session",
+      "loading": "Loading portfolio summary…",
+      "priceUnavailable": "No closing price for {{date}}, so the portfolio cannot be valued. Pick another date.",
+      "unreachable": "Could not reach the identity-auth API."
+    },
+    "positions": {
+      "title": "Positions",
+      "columns": {
+        "symbol": "Symbol",
+        "quantity": "Qty",
+        "averageCost": "Avg cost",
+        "price": "Price",
+        "marketValue": "Value",
+        "unrealizedPnl": "Unrealized P/L",
+        "unrealizedReturnPct": "Return"
+      },
+      "empty": "No open positions.",
+      "loading": "Loading positions…",
+      "priceUnavailable": "No closing price for {{date}}, so positions cannot be valued. Pick another date.",
+      "unreachable": "Could not reach the identity-auth API."
+    },
+    "cashLedger": {
+      "title": "Cash movements",
+      "columns": {
+        "type": "Type",
+        "amount": "Amount",
+        "balanceAfter": "Balance after",
+        "effectiveDate": "Date"
+      },
+      "types": {
+        "initial_capital": "Opening capital",
+        "buy_debit": "Buy",
+        "sell_credit": "Sell"
+      },
+      "empty": "No cash movements yet.",
+      "loading": "Loading cash movements…",
+      "pagination": {
+        "page": "Page {{page}} of {{lastPage}}",
+        "previous": "Previous",
+        "next": "Next"
+      },
+      "unreachable": "Could not reach the identity-auth API."
+    }
   }
 }

@@ -1,4 +1,10 @@
 import { http, HttpResponse } from 'msw';
+import {
+  cashTransactionsFixture,
+  portfolioFixture,
+  positionsFixture,
+  summaryFixture,
+} from './fixtures/paper-trading';
 import { securitiesFixture } from './fixtures/securities';
 
 // Default handlers used by every test unless overridden with `server.use(...)`.
@@ -17,6 +23,34 @@ export const handlers = [
         available_from: '2020-01-02',
         available_to: '2026-09-02',
       },
+    });
+  }),
+
+  // Paper trading (identity-auth, docs/api/paper-trading-v1.md). The order of
+  // these matters: msw matches in order, so `/portfolios/:id/...` must be
+  // declared before the bare `/portfolios` list would swallow it.
+  http.get('*/portfolios/:portfolioId/positions', () => {
+    return HttpResponse.json({
+      data: positionsFixture,
+      meta: { as_of: summaryFixture.as_of, total: positionsFixture.length },
+    });
+  }),
+
+  http.get('*/portfolios/:portfolioId/summary', () => {
+    return HttpResponse.json({ data: summaryFixture });
+  }),
+
+  http.get('*/portfolios/:portfolioId/cash-transactions', () => {
+    return HttpResponse.json({
+      data: cashTransactionsFixture,
+      meta: { page: 1, page_size: 50, total: cashTransactionsFixture.length },
+    });
+  }),
+
+  http.get('*/portfolios', () => {
+    return HttpResponse.json({
+      data: [portfolioFixture],
+      meta: { page: 1, page_size: 50, total: 1 },
     });
   }),
 ];
