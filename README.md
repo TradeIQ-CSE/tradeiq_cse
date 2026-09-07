@@ -2,9 +2,10 @@
 
 CSE (Colombo Stock Exchange) strategy backtesting, paper-trading, and portfolio-analytics platform.
 
-> **Status:** skeleton only. No business logic or endpoints are implemented yet.
-> Every service exposes a static `/health` stub; databases start empty but are
-> migrated to the schema-v2 layout automatically on `docker compose up`.
+> **Status:** functional prototype. The stack includes public market-data APIs,
+> authentication, paper-trading portfolios and orders, backtesting workflows,
+> migrations, and deterministic sample data. Some planned analytics, ML, and
+> operational features remain incomplete.
 
 ## Layout
 
@@ -84,6 +85,49 @@ one-off/scheduled job, run with:
 
 ```sh
 docker compose run --rm data-ingestion
+```
+
+### Docker Compose smoke test
+
+Run the production-shaped images together against a fresh, disposable database
+and exercise the public market APIs plus the authenticated paper-trading path:
+
+```sh
+pnpm smoke:compose
+```
+
+The command uses a separate `tradeiq-smoke-*` Compose project, smoke-specific
+image tags, and alternate host ports, so a normal local TradeIQ stack can stay
+running. It checks both one-shot migration/seed jobs, service health, frontend
+assets, CORS, auth cookie rotation, portfolio idempotency, a real order call
+from `identity-auth` to `market-trading`, and the resulting positions and
+summary. Containers, networks, smoke-specific images, and the smoke database
+volume are removed when the command finishes.
+
+The default published ports are 55432 (Postgres), 53001 (market-trading),
+53002 (identity-auth), 58001 (ML), and 55173 (frontend). Override a port when
+needed, for example:
+
+```sh
+SMOKE_MARKET_PORT=54001 pnpm smoke:compose
+```
+
+Failure logs are written below the operating system's temporary directory in
+`tradeiq-smoke-logs/<project-name>`. To keep a failed local stack available for
+inspection, opt in explicitly:
+
+```sh
+SMOKE_KEEP_STACK=1 pnpm smoke:compose
+```
+
+When keeping a stack, use the project name printed by the command to remove
+only that stack after inspection:
+
+```sh
+SMOKE_PROJECT_NAME=tradeiq-smoke-local-12345
+docker compose --project-name "$SMOKE_PROJECT_NAME" \
+  --file docker-compose.yml --file docker-compose.smoke.yml \
+  down --volumes --remove-orphans
 ```
 
 ## API contracts

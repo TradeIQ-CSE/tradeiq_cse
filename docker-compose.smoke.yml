@@ -1,0 +1,26 @@
+services:
+  db:
+    ports: !override
+      - "${SMOKE_DB_PORT:-55432}:5432"
+
+  market-trading:
+    image: tradeiq-smoke/market-trading:${SMOKE_IMAGE_TAG:-local}
+    ports: !override
+      - "${SMOKE_MARKET_PORT:-53001}:3001"
+
+  identity-auth:
+    image: tradeiq-smoke/identity-auth:${SMOKE_IMAGE_TAG:-local}
+    ports: !override
+      - "${SMOKE_AUTH_PORT:-53002}:3002"
+
+  ml-prediction-migrate:
+    image: tradeiq-smoke/ml-prediction:${SMOKE_IMAGE_TAG:-local}
+
+  ml-prediction:
+    image: tradeiq-smoke/ml-prediction:${SMOKE_IMAGE_TAG:-local}
+    ports: !override
+      - "${SMOKE_ML_PORT:-58001}:8001"
+
+  frontend:
+    ports: !override
+      - "${SMOKE_FRONTEND_PORT:-55173}:5173"
