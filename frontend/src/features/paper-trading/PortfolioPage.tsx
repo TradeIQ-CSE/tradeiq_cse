@@ -15,8 +15,9 @@ export function PortfolioPage() {
   const [selectedAsOf, setSelectedAsOf] = useState<string>('');
   const { availableFrom, availableTo } = useTradingDateBounds();
 
-  // No AppShell here: AppRoutes' ConsoleRoute already wraps every console page
-  // in it, and mounting a second one would nest the sidebar inside itself.
+  // No AppShell here: AppRoutes' ConsoleShellLayout already wraps every
+  // console page in it, and mounting a second one would nest the sidebar
+  // inside itself.
   return (
     <div className="portfolio-page">
       <header className="portfolio-page__header">

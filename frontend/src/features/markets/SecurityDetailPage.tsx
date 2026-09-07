@@ -1,7 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { AppShell } from '../../components/layout/AppShell';
 import { CandlestickChart } from '../../components/charts/CandlestickChart';
 import { localeFor } from '../../i18n';
 import { ApiError } from '../../lib/api';
@@ -46,38 +45,36 @@ function DetailState({
   const displaySymbol =
     symbol.trim() || t('securityDetail.states.notFound.fallbackSymbol');
   return (
-    <AppShell>
-      <main className="security-detail-page">
-        <Link className="security-detail-page__back" to="/markets">
-          ← {t('securityDetail.back')}
-        </Link>
-        <section
-          className={`security-detail-state security-detail-state--${kind}`}
-          aria-live="polite"
-        >
-          {kind === 'loading' ? (
-            <>
-              <span className="security-detail-state__spinner" aria-hidden="true" />
-              <h1>{t('securityDetail.states.loading')}</h1>
-            </>
-          ) : (
-            <>
-              <h1>
-                {t(`securityDetail.states.${kind}.title`, {
-                  symbol: displaySymbol,
-                })}
-              </h1>
-              <p>{t(`securityDetail.states.${kind}.description`)}</p>
-              {kind === 'unavailable' && onRetry && (
-                <button type="button" onClick={onRetry}>
-                  {t('securityDetail.actions.retry')}
-                </button>
-              )}
-            </>
-          )}
-        </section>
-      </main>
-    </AppShell>
+    <main className="security-detail-page">
+      <Link className="security-detail-page__back" to="/markets">
+        ← {t('securityDetail.back')}
+      </Link>
+      <section
+        className={`security-detail-state security-detail-state--${kind}`}
+        aria-live="polite"
+      >
+        {kind === 'loading' ? (
+          <>
+            <span className="security-detail-state__spinner" aria-hidden="true" />
+            <h1>{t('securityDetail.states.loading')}</h1>
+          </>
+        ) : (
+          <>
+            <h1>
+              {t(`securityDetail.states.${kind}.title`, {
+                symbol: displaySymbol,
+              })}
+            </h1>
+            <p>{t(`securityDetail.states.${kind}.description`)}</p>
+            {kind === 'unavailable' && onRetry && (
+              <button type="button" onClick={onRetry}>
+                {t('securityDetail.actions.retry')}
+              </button>
+            )}
+          </>
+        )}
+      </section>
+    </main>
   );
 }
 
@@ -220,202 +217,200 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
   }
 
   return (
-    <AppShell>
-      <main className="security-detail-page">
-        <Link className="security-detail-page__back" to="/markets">
-          ← {t('securityDetail.back')}
-        </Link>
+    <main className="security-detail-page">
+      <Link className="security-detail-page__back" to="/markets">
+        ← {t('securityDetail.back')}
+      </Link>
 
-        <SecuritySummary detail={detail} locale={locale} />
+      <SecuritySummary detail={detail} locale={locale} />
 
-        <div className="security-detail-layout">
-          <section className="security-chart-card" aria-busy={chartQuery.isFetching}>
-            <div className="security-chart-card__header">
-              <div>
-                <h2>{t('securityDetail.chart.title')}</h2>
-                <p>
-                  {chartQuery.data?.from && chartQuery.data.to
-                    ? t('securityDetail.chart.range', {
-                        from: isoDateLabel(chartQuery.data.from, locale),
-                        to: isoDateLabel(chartQuery.data.to, locale),
-                      })
-                    : t('securityDetail.chart.rangeUnavailable')}
-                </p>
-              </div>
-
-              <div
-                className="security-timeframes"
-                role="group"
-                aria-label={t('securityDetail.chart.timeframeLabel')}
-              >
-                {TIMEFRAMES.map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className={value === timeframe ? 'security-timeframes__active' : ''}
-                    aria-pressed={value === timeframe}
-                    onClick={() => setTimeframe(value)}
-                  >
-                    {t(`securityDetail.timeframes.${value}`)}
-                  </button>
-                ))}
-              </div>
+      <div className="security-detail-layout">
+        <section className="security-chart-card" aria-busy={chartQuery.isFetching}>
+          <div className="security-chart-card__header">
+            <div>
+              <h2>{t('securityDetail.chart.title')}</h2>
+              <p>
+                {chartQuery.data?.from && chartQuery.data.to
+                  ? t('securityDetail.chart.range', {
+                      from: isoDateLabel(chartQuery.data.from, locale),
+                      to: isoDateLabel(chartQuery.data.to, locale),
+                    })
+                  : t('securityDetail.chart.rangeUnavailable')}
+              </p>
             </div>
 
-            <form className="security-range" onSubmit={commitRange} noValidate>
-              <label>
-                <span>{t('securityDetail.range.from')}</span>
-                <input
-                  type="date"
-                  value={draftFrom}
-                  min={detail.data_from ?? undefined}
-                  max={draftTo || detail.data_to || undefined}
-                  disabled={!detail.data_from || !detail.data_to}
-                  aria-invalid={rangeHasError}
-                  aria-describedby={rangeHasError ? RANGE_ERROR_ID : undefined}
-                  onChange={(event) => {
-                    setDraftFrom(event.target.value);
-                    setClientRangeError(null);
-                  }}
-                />
-              </label>
-              <label>
-                <span>{t('securityDetail.range.to')}</span>
-                <input
-                  type="date"
-                  value={draftTo}
-                  min={draftFrom || detail.data_from || undefined}
-                  max={detail.data_to ?? undefined}
-                  disabled={!detail.data_from || !detail.data_to}
-                  aria-invalid={rangeHasError}
-                  aria-describedby={rangeHasError ? RANGE_ERROR_ID : undefined}
-                  onChange={(event) => {
-                    setDraftTo(event.target.value);
-                    setClientRangeError(null);
-                  }}
-                />
-              </label>
-              <div className="security-range__actions">
-                <button type="submit">{t('securityDetail.actions.apply')}</button>
-                <button type="button" className="security-range__reset" onClick={resetRange}>
-                  {t('securityDetail.actions.reset')}
+            <div
+              className="security-timeframes"
+              role="group"
+              aria-label={t('securityDetail.chart.timeframeLabel')}
+            >
+              {TIMEFRAMES.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={value === timeframe ? 'security-timeframes__active' : ''}
+                  aria-pressed={value === timeframe}
+                  onClick={() => setTimeframe(value)}
+                >
+                  {t(`securityDetail.timeframes.${value}`)}
                 </button>
-              </div>
-            </form>
-
-            {rangeHasError && (
-              <div id={RANGE_ERROR_ID} className="security-range__error" role="alert">
-                {clientRangeError && <p>{clientRangeError}</p>}
-                {serverFieldErrors.map((field) => (
-                  <p key={`${field.field}-${field.reason}`}>
-                    {t('securityDetail.range.fieldError', {
-                      field: field.field,
-                      reason: field.reason,
-                    })}
-                  </p>
-                ))}
-              </div>
-            )}
-
-            <div className="security-chart-card__body" aria-live="polite">
-              {chartQuery.isPending ? (
-                <div className="security-chart-state">
-                  <span className="security-detail-state__spinner" aria-hidden="true" />
-                  <p>{t('securityDetail.chart.loading')}</p>
-                </div>
-              ) : chartQuery.isError ? (
-                <div className="security-chart-state security-chart-state--error">
-                  <p>
-                    {serverFieldErrors.length > 0
-                      ? t('securityDetail.chart.validationFailed')
-                      : chartApiError?.body.message ?? t('securityDetail.chart.unavailable')}
-                  </p>
-                  {serverFieldErrors.length === 0 && (
-                    <button type="button" onClick={() => void chartQuery.refetch()}>
-                      {t('securityDetail.actions.retry')}
-                    </button>
-                  )}
-                </div>
-              ) : chartData.length === 0 ? (
-                <div className="security-chart-state">
-                  <h3>{t('securityDetail.chart.empty.title')}</h3>
-                  <p>{t('securityDetail.chart.empty.description')}</p>
-                </div>
-              ) : (
-                <CandlestickChart
-                  data={chartData}
-                  locale={locale}
-                  accessibleLabel={t('securityDetail.chart.accessibleLabel', {
-                    symbol: detail.symbol,
-                    timeframe: t(`securityDetail.timeframes.${timeframe}`),
-                  })}
-                  labels={{
-                    date: t('securityDetail.chart.values.date'),
-                    open: t('securityDetail.chart.values.open'),
-                    high: t('securityDetail.chart.values.high'),
-                    low: t('securityDetail.chart.values.low'),
-                    close: t('securityDetail.chart.values.close'),
-                    adjustedClose: t('securityDetail.chart.values.adjustedClose'),
-                    volume: t('securityDetail.chart.values.volume'),
-                  }}
-                />
-              )}
+              ))}
             </div>
-          </section>
+          </div>
 
-          <aside className="security-info-card">
-            <h2>{t('securityDetail.info.title')}</h2>
-            <dl>
-              <InfoItem label={t('securityDetail.info.sector')} value={detail.sector?.name ?? '—'} />
-              <InfoItem label={t('securityDetail.info.cseCode')} value={detail.cse_code ?? '—'} />
-              <InfoItem
-                label={t('securityDetail.info.listingStatus')}
-                value={t(`securityDetail.listingStatus.${detail.listing_status}`)}
+          <form className="security-range" onSubmit={commitRange} noValidate>
+            <label>
+              <span>{t('securityDetail.range.from')}</span>
+              <input
+                type="date"
+                value={draftFrom}
+                min={detail.data_from ?? undefined}
+                max={draftTo || detail.data_to || undefined}
+                disabled={!detail.data_from || !detail.data_to}
+                aria-invalid={rangeHasError}
+                aria-describedby={rangeHasError ? RANGE_ERROR_ID : undefined}
+                onChange={(event) => {
+                  setDraftFrom(event.target.value);
+                  setClientRangeError(null);
+                }}
               />
-              <InfoItem
-                label={t('securityDetail.info.lastTrade')}
-                value={isoDateLabel(detail.latest?.trade_date ?? null, locale)}
+            </label>
+            <label>
+              <span>{t('securityDetail.range.to')}</span>
+              <input
+                type="date"
+                value={draftTo}
+                min={draftFrom || detail.data_from || undefined}
+                max={detail.data_to ?? undefined}
+                disabled={!detail.data_from || !detail.data_to}
+                aria-invalid={rangeHasError}
+                aria-describedby={rangeHasError ? RANGE_ERROR_ID : undefined}
+                onChange={(event) => {
+                  setDraftTo(event.target.value);
+                  setClientRangeError(null);
+                }}
               />
-              <InfoItem
-                label={t('securityDetail.info.volume')}
-                value={
-                  detail.latest ? formatVolume(detail.latest.volume, locale) : '—'
-                }
+            </label>
+            <div className="security-range__actions">
+              <button type="submit">{t('securityDetail.actions.apply')}</button>
+              <button type="button" className="security-range__reset" onClick={resetRange}>
+                {t('securityDetail.actions.reset')}
+              </button>
+            </div>
+          </form>
+
+          {rangeHasError && (
+            <div id={RANGE_ERROR_ID} className="security-range__error" role="alert">
+              {clientRangeError && <p>{clientRangeError}</p>}
+              {serverFieldErrors.map((field) => (
+                <p key={`${field.field}-${field.reason}`}>
+                  {t('securityDetail.range.fieldError', {
+                    field: field.field,
+                    reason: field.reason,
+                  })}
+                </p>
+              ))}
+            </div>
+          )}
+
+          <div className="security-chart-card__body" aria-live="polite">
+            {chartQuery.isPending ? (
+              <div className="security-chart-state">
+                <span className="security-detail-state__spinner" aria-hidden="true" />
+                <p>{t('securityDetail.chart.loading')}</p>
+              </div>
+            ) : chartQuery.isError ? (
+              <div className="security-chart-state security-chart-state--error">
+                <p>
+                  {serverFieldErrors.length > 0
+                    ? t('securityDetail.chart.validationFailed')
+                    : chartApiError?.body.message ?? t('securityDetail.chart.unavailable')}
+                </p>
+                {serverFieldErrors.length === 0 && (
+                  <button type="button" onClick={() => void chartQuery.refetch()}>
+                    {t('securityDetail.actions.retry')}
+                  </button>
+                )}
+              </div>
+            ) : chartData.length === 0 ? (
+              <div className="security-chart-state">
+                <h3>{t('securityDetail.chart.empty.title')}</h3>
+                <p>{t('securityDetail.chart.empty.description')}</p>
+              </div>
+            ) : (
+              <CandlestickChart
+                data={chartData}
+                locale={locale}
+                accessibleLabel={t('securityDetail.chart.accessibleLabel', {
+                  symbol: detail.symbol,
+                  timeframe: t(`securityDetail.timeframes.${timeframe}`),
+                })}
+                labels={{
+                  date: t('securityDetail.chart.values.date'),
+                  open: t('securityDetail.chart.values.open'),
+                  high: t('securityDetail.chart.values.high'),
+                  low: t('securityDetail.chart.values.low'),
+                  close: t('securityDetail.chart.values.close'),
+                  adjustedClose: t('securityDetail.chart.values.adjustedClose'),
+                  volume: t('securityDetail.chart.values.volume'),
+                }}
               />
-              <InfoItem
-                label={t('securityDetail.info.sharesOutstanding')}
-                value={
-                  detail.shares_outstanding === null
-                    ? '—'
-                    : formatCount(detail.shares_outstanding, locale)
-                }
-              />
-              <InfoItem label={t('securityDetail.info.coverage')} value={coverage} />
-              <InfoItem
-                label={t('securityDetail.info.peRatio')}
-                value={
-                  detail.ratios?.pe_ratio === null || detail.ratios?.pe_ratio === undefined
-                    ? '—'
-                    : formatPrice(detail.ratios.pe_ratio, locale)
-                }
-              />
-              <InfoItem
-                label={t('securityDetail.info.pbRatio')}
-                value={
-                  detail.ratios?.pb_ratio === null || detail.ratios?.pb_ratio === undefined
-                    ? '—'
-                    : formatPrice(detail.ratios.pb_ratio, locale)
-                }
-              />
-              <InfoItem
-                label={t('securityDetail.info.ratioDate')}
-                value={isoDateLabel(detail.ratios?.valid_from ?? null, locale)}
-              />
-            </dl>
-          </aside>
-        </div>
-      </main>
-    </AppShell>
+            )}
+          </div>
+        </section>
+
+        <aside className="security-info-card">
+          <h2>{t('securityDetail.info.title')}</h2>
+          <dl>
+            <InfoItem label={t('securityDetail.info.sector')} value={detail.sector?.name ?? '—'} />
+            <InfoItem label={t('securityDetail.info.cseCode')} value={detail.cse_code ?? '—'} />
+            <InfoItem
+              label={t('securityDetail.info.listingStatus')}
+              value={t(`securityDetail.listingStatus.${detail.listing_status}`)}
+            />
+            <InfoItem
+              label={t('securityDetail.info.lastTrade')}
+              value={isoDateLabel(detail.latest?.trade_date ?? null, locale)}
+            />
+            <InfoItem
+              label={t('securityDetail.info.volume')}
+              value={
+                detail.latest ? formatVolume(detail.latest.volume, locale) : '—'
+              }
+            />
+            <InfoItem
+              label={t('securityDetail.info.sharesOutstanding')}
+              value={
+                detail.shares_outstanding === null
+                  ? '—'
+                  : formatCount(detail.shares_outstanding, locale)
+              }
+            />
+            <InfoItem label={t('securityDetail.info.coverage')} value={coverage} />
+            <InfoItem
+              label={t('securityDetail.info.peRatio')}
+              value={
+                detail.ratios?.pe_ratio === null || detail.ratios?.pe_ratio === undefined
+                  ? '—'
+                  : formatPrice(detail.ratios.pe_ratio, locale)
+              }
+            />
+            <InfoItem
+              label={t('securityDetail.info.pbRatio')}
+              value={
+                detail.ratios?.pb_ratio === null || detail.ratios?.pb_ratio === undefined
+                  ? '—'
+                  : formatPrice(detail.ratios.pb_ratio, locale)
+              }
+            />
+            <InfoItem
+              label={t('securityDetail.info.ratioDate')}
+              value={isoDateLabel(detail.ratios?.valid_from ?? null, locale)}
+            />
+          </dl>
+        </aside>
+      </div>
+    </main>
   );
 }
 

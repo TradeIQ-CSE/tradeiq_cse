@@ -1,7 +1,8 @@
-import { lazy, ReactNode, Suspense } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { AppShell } from '../components/layout/AppShell';
 import { RequireAuth } from '../auth/RequireAuth';
+import { RequireAdmin } from '../auth/RequireAdmin';
 import { useAuth } from '../auth/useAuth';
 
 const LandingPage = lazy(() =>
@@ -58,6 +59,19 @@ function LoadingFallback() {
   );
 }
 
+// Every screen inside the shell — public Markets pages and the authenticated
+// console alike — mounts through this one layout, so there is exactly one
+// AppShell instance in the tree rather than a copy per page. React Router
+// keeps it mounted across navigation between sibling routes here, which also
+// means the sidebar/topbar no longer remount when moving between them.
+function ShellLayout() {
+  return (
+    <AppShell>
+      <Outlet />
+    </AppShell>
+  );
+}
+
 // Every console route needs a live session, so the guard lives here once
 // rather than being repeated at each <Route> below.
 //
@@ -72,16 +86,22 @@ function LoadingFallback() {
 // render() flushes effects inside act(), so the shell is already gone before
 // any assertion can run. The frame this avoids exists only in a real browser,
 // which paints between commit and effect.
-function ConsoleRoute({ children }: { children: ReactNode }) {
+function ConsoleShellLayout() {
   const { status } = useAuth();
 
   if (status === 'anonymous') {
-    return <RequireAuth>{children}</RequireAuth>;
+    return (
+      <RequireAuth>
+        <Outlet />
+      </RequireAuth>
+    );
   }
 
   return (
     <AppShell>
-      <RequireAuth>{children}</RequireAuth>
+      <RequireAuth>
+        <Outlet />
+      </RequireAuth>
     </AppShell>
   );
 }
@@ -102,100 +122,37 @@ export function AppRoutes() {
     <Suspense fallback={<LoadingFallback />}>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/markets" element={<MarketsPage />} />
-        <Route path="/markets/:symbol" element={<SecurityDetailPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
-        <Route
-          path="/dashboard"
-          element={
-            <ConsoleRoute>
-              <Dashboard />
-            </ConsoleRoute>
-          }
-        />
-        <Route
-          path="/watchlist"
-          element={
-            <ConsoleRoute>
-              <Watchlist />
-            </ConsoleRoute>
-          }
-        />
-        <Route
-          path="/portfolio"
-          element={
-            <ConsoleRoute>
-              <Portfolio />
-            </ConsoleRoute>
-          }
-        />
-        <Route
-          path="/orders"
-          element={
-            <ConsoleRoute>
-              <Orders />
-            </ConsoleRoute>
-          }
-        />
-        <Route
-          path="/analytics"
-          element={
-            <ConsoleRoute>
-              <Analytics />
-            </ConsoleRoute>
-          }
-        />
-        <Route
-          path="/paper-trading"
-          element={
-            <ConsoleRoute>
-              <PlannedFeature title="Paper Trading" />
-            </ConsoleRoute>
-          }
-        />
-        <Route
-          path="/ai-insights"
-          element={
-            <ConsoleRoute>
-              <PlannedFeature title="Machine Learning Insights" />
-            </ConsoleRoute>
-          }
-        />
-        <Route
-          path="/reports"
-          element={
-            <ConsoleRoute>
-              <PlannedFeature title="Reports" />
-            </ConsoleRoute>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <ConsoleRoute>
-              <AdminHome />
-            </ConsoleRoute>
-          }
-        />
-        <Route path="/backtests" element={<Navigate to="/backtests/new/security" replace />} />
-        <Route path="/backtests/new" element={<Navigate to="/backtests/new/security" replace />} />
-        <Route
-          path="/backtests/new/:step"
-          element={
-            <ConsoleRoute>
-              <BacktestWizard />
-            </ConsoleRoute>
-          }
-        />
-        <Route
-          path="/backtests/:runId/status"
-          element={
-            <ConsoleRoute>
-              <StatusStep />
-            </ConsoleRoute>
-          }
-        />
+
+        <Route element={<ShellLayout />}>
+          <Route path="/markets" element={<MarketsPage />} />
+          <Route path="/markets/:symbol" element={<SecurityDetailPage />} />
+        </Route>
+
+        <Route element={<ConsoleShellLayout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/watchlist" element={<Watchlist />} />
+          <Route path="/portfolio" element={<Portfolio />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/paper-trading" element={<PlannedFeature title="Paper Trading" />} />
+          <Route path="/ai-insights" element={<PlannedFeature title="Machine Learning Insights" />} />
+          <Route path="/reports" element={<PlannedFeature title="Reports" />} />
+          <Route
+            path="/admin"
+            element={
+              <RequireAdmin>
+                <AdminHome />
+              </RequireAdmin>
+            }
+          />
+          <Route path="/backtests" element={<Navigate to="/backtests/new/security" replace />} />
+          <Route path="/backtests/new" element={<Navigate to="/backtests/new/security" replace />} />
+          <Route path="/backtests/new/:step" element={<BacktestWizard />} />
+          <Route path="/backtests/:runId/status" element={<StatusStep />} />
+        </Route>
+
         <Route path="*" element={<Navigate to="/markets" replace />} />
       </Routes>
     </Suspense>

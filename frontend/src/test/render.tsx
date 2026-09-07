@@ -4,6 +4,7 @@ import { Location, MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ConfigProvider } from 'antd';
 import { darkTheme } from '../theme/theme';
+import { ThemeProvider } from '../theme/ThemeProvider';
 import { AuthContext, AuthContextValue, AuthStatus } from '../auth/useAuth';
 import { SessionUser } from '../lib/session';
 
@@ -87,9 +88,11 @@ export function renderWithProviders(
     return (
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={initialEntries}>
-          <AuthContext.Provider value={authValue}>
-            <ConfigProvider theme={darkTheme}>{children}</ConfigProvider>
-          </AuthContext.Provider>
+          <ThemeProvider>
+            <AuthContext.Provider value={authValue}>
+              <ConfigProvider theme={darkTheme}>{children}</ConfigProvider>
+            </AuthContext.Provider>
+          </ThemeProvider>
         </MemoryRouter>
       </QueryClientProvider>
     );

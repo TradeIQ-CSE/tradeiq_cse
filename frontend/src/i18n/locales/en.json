@@ -12,24 +12,35 @@
       "utilities": "Utilities"
     },
     "items": {
+      "dashboard": "Dashboard",
       "markets": "Markets",
       "watchlist": "Watchlist",
       "portfolio": "Portfolio",
       "trades": "Trades",
       "paperTrading": "Paper Trading",
       "backtesting": "Backtesting",
+      "analytics": "Analytics",
       "aiInsights": "AI Insights",
       "reports": "Reports",
-      "settings": "Settings"
+      "admin": "Admin",
+      "settings": "Settings",
+      "planned": "Coming soon"
     },
     "language": "Language",
     "languageUnavailable": "{{language}} translation is not available yet",
     "profile": {
       "role": "Live trader"
+    },
+    "commandPalette": {
+      "trigger": "Search pages",
+      "title": "Jump to a page",
+      "placeholder": "Search pages…",
+      "empty": "No matching pages"
     }
   },
   "topbar": {
-    "searchPlaceholder": "Search symbol or company…"
+    "searchPlaceholder": "Search symbol or company…",
+    "breadcrumbRoot": "Console"
   },
   "markets": {
     "title": "Browse Securities",

@@ -13,8 +13,8 @@ describe('AppRoutes', () => {
   it('redirects an unknown path to /markets', async () => {
     renderWithProviders(<AppRoutes />, { initialEntries: ['/this-page-does-not-exist'] });
 
-    // MarketsPage renders AppShell + its own heading; the heading is the
-    // clearest signal that the redirect landed rather than a 404 shell.
+    // The redirect lands inside ShellLayout's AppShell; MarketsPage's own
+    // heading is the clearest signal it landed rather than a 404 shell.
     expect(await screen.findByRole('heading', { name: t('markets.title') })).toBeInTheDocument();
   });
 
