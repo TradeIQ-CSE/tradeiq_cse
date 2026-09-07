@@ -14,10 +14,6 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const { status } = useAuth();
   const location = useLocation();
 
-  if (import.meta.env.VITE_BYPASS_AUTH === 'true' && import.meta.env.MODE !== 'test') {
-    return <>{children}</>;
-  }
-
   if (status === 'restoring') {
     return null;
   }
