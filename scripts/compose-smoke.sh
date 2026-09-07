@@ -187,7 +187,21 @@ wait_for_completed_job() {
 command -v docker >/dev/null 2>&1 || fail "Docker is required"
 command -v node >/dev/null 2>&1 || fail "Node.js 20 is required"
 docker info >/dev/null 2>&1 || fail "Docker Engine is not reachable"
-docker compose version >/dev/null 2>&1 || fail "Docker Compose v2 is required"
+
+compose_version="$(docker compose version --short 2>/dev/null)" || \
+  fail "Docker Compose 2.24.4 or later is required"
+compose_version="${compose_version#v}"
+if [[ ! "$compose_version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+  fail "Docker Compose 2.24.4 or later is required; found $compose_version"
+fi
+compose_major="${BASH_REMATCH[1]}"
+compose_minor="${BASH_REMATCH[2]}"
+compose_patch="${BASH_REMATCH[3]}"
+if ((compose_major < 2)) || \
+  ((compose_major == 2 && compose_minor < 24)) || \
+  ((compose_major == 2 && compose_minor == 24 && compose_patch < 4)); then
+  fail "Docker Compose 2.24.4 or later is required; found $compose_version"
+fi
 
 node_major="$(node -p 'process.versions.node.split(".")[0]')"
 if [[ "$node_major" != "20" ]]; then

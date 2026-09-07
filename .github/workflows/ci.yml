@@ -215,9 +215,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: [node, python, migrations, seed]
     timeout-minutes: 20
+    permissions:
+      contents: read
     env:
       SMOKE_PROJECT_NAME: tradeiq-smoke-${{ github.run_id }}-${{ github.run_attempt }}
-      SMOKE_LOG_DIR: ${{ runner.temp }}/tradeiq-compose-smoke
     steps:
       - uses: actions/checkout@v4
         with:
@@ -230,6 +231,8 @@ jobs:
           node-version: "20"
 
       - name: Run isolated Compose smoke test
+        env:
+          SMOKE_LOG_DIR: ${{ runner.temp }}/tradeiq-compose-smoke
         run: pnpm smoke:compose
 
       - name: Clean up smoke project
@@ -247,6 +250,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: compose-smoke-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ env.SMOKE_LOG_DIR }}
+          path: ${{ runner.temp }}/tradeiq-compose-smoke
           if-no-files-found: warn
           retention-days: 7

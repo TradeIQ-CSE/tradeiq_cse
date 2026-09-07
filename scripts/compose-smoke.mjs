@@ -121,7 +121,16 @@ async function checkFrontendAssets(html) {
     ...html.matchAll(/(?:src|href)=["']([^"']+\.(?:js|css)(?:\?[^"']*)?)["']/g),
   ].map((match) => match[1]);
   const uniqueAssets = [...new Set(assetPaths)];
-  check(uniqueAssets.length >= 2, 'frontend must reference at least one JS and one CSS asset');
+  const hasJavaScript = uniqueAssets.some((asset) =>
+    new URL(asset, `${origins.frontend}/`).pathname.endsWith('.js'),
+  );
+  const hasStylesheet = uniqueAssets.some((asset) =>
+    new URL(asset, `${origins.frontend}/`).pathname.endsWith('.css'),
+  );
+  check(
+    hasJavaScript && hasStylesheet,
+    'frontend must reference at least one JS and one CSS asset',
+  );
 
   for (const asset of uniqueAssets) {
     const response = await timedFetch(new URL(asset, `${origins.frontend}/`));
@@ -131,18 +140,29 @@ async function checkFrontendAssets(html) {
 }
 
 async function checkCors(label, origin, path, method, expectsCredentials) {
+  const requestedHeaders = ['content-type', 'authorization', 'idempotency-key'];
   const response = await timedFetch(new URL(path, origin), {
     method: 'OPTIONS',
     headers: {
       Origin: origins.frontend,
       'Access-Control-Request-Method': method,
-      'Access-Control-Request-Headers': 'content-type,authorization,idempotency-key',
+      'Access-Control-Request-Headers': requestedHeaders.join(','),
     },
   });
   check(response.ok, `${label} CORS preflight returned HTTP ${response.status}`);
   check(
     response.headers.get('access-control-allow-origin') === origins.frontend,
     `${label} CORS preflight did not allow the configured frontend origin`,
+  );
+  const allowedHeaders = new Set(
+    (response.headers.get('access-control-allow-headers') ?? '')
+      .split(',')
+      .map((header) => header.trim().toLowerCase())
+      .filter(Boolean),
+  );
+  check(
+    requestedHeaders.every((header) => allowedHeaders.has(header)),
+    `${label} CORS preflight did not allow every requested header`,
   );
   if (expectsCredentials) {
     check(
