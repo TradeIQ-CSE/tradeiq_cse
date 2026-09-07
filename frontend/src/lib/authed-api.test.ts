@@ -196,6 +196,41 @@ describe('non-envelope failures', () => {
 
     await expect(authedGet('/portfolios')).rejects.toBeInstanceOf(ApiError);
   });
+
+  // A 200 is the dangerous case: the status says the call succeeded, so
+  // nothing downstream is on its guard. Returning `{ data: undefined }` here
+  // pushes the failure into the component, which reads `.data.total_pnl` and
+  // throws a TypeError that no error boundary catches.
+  it('turns an HTML 200 body into an ApiError, never `{ data: undefined }`', async () => {
+    server.use(
+      http.get(`${AUTH_ORIGIN}/portfolios/p1/summary`, () =>
+        HttpResponse.html('<html>Service temporarily unavailable</html>'),
+      ),
+    );
+    setSession({ access_token: 'tok', user: { user_id: 'u1', display_name: 'Ada', role: 'trader' } });
+
+    await expect(authedGet('/portfolios/p1/summary')).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('turns a 200 JSON body with no `data` key into an ApiError', async () => {
+    server.use(
+      http.get(`${AUTH_ORIGIN}/portfolios`, () => HttpResponse.json({ portfolios: [] })),
+    );
+    setSession({ access_token: 'tok', user: { user_id: 'u1', display_name: 'Ada', role: 'trader' } });
+
+    await expect(authedGet('/portfolios')).rejects.toBeInstanceOf(ApiError);
+  });
+
+  // The 204 endpoints (logout, DELETE /portfolios/:id) have no body by
+  // contract, so the envelope check must not reject them.
+  it('still accepts a 204 with no body', async () => {
+    server.use(
+      http.delete(`${AUTH_ORIGIN}/portfolios/p1`, () => new HttpResponse(null, { status: 204 })),
+    );
+    setSession({ access_token: 'tok', user: { user_id: 'u1', display_name: 'Ada', role: 'trader' } });
+
+    await expect(authedDelete('/portfolios/p1')).resolves.toBeUndefined();
+  });
 });
 
 describe('authFetch (via authedGet) refresh-on-401', () => {

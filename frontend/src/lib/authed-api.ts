@@ -45,6 +45,10 @@ function isErrorBody(value: unknown): value is { error: ApiErrorBody } {
   return typeof (error as ApiErrorBody | undefined)?.code === 'string';
 }
 
+function isEnvelope(value: unknown): value is { data: unknown; meta?: PageMeta } {
+  return typeof value === 'object' && value !== null && 'data' in value;
+}
+
 /**
  * Parses the identity-auth envelope. A 204 (logout, delete) has no body at
  * all, so this reads text first and only parses it when non-empty — calling
@@ -76,10 +80,27 @@ export async function parseEnvelope<T>(response: Response): Promise<EnvelopeResu
     });
   }
 
-  const envelope = body as { data: T; meta?: PageMeta } | undefined;
+  // 204 carries no body by contract — logout and DELETE /portfolios/:id.
+  if (response.status === 204) return { data: undefined as T };
+
+  // Every other success must be a JSON envelope. A 200 whose body is not one
+  // — a proxy returning its own HTML page, a truncated response — parsed to
+  // `undefined` here, and callers then read `.data` off it: SummaryCards'
+  // `if (isPending || !data)` guard passes (the EnvelopeResult is truthy) and
+  // `summary.total_pnl` throws a TypeError with no error boundary to catch
+  // it, blanking the page. Failing as an ApiError instead puts it on the
+  // branch every caller already handles.
+  if (!isEnvelope(body)) {
+    throw new ApiError({
+      code: 'INTERNAL',
+      message: `The server returned an unexpected ${response.status} response.`,
+      trace_id: '',
+    });
+  }
+
   return {
-    data: envelope?.data as T,
-    meta: envelope?.meta,
+    data: body.data as T,
+    meta: body.meta,
     idempotentReplayed: response.headers.get('Idempotent-Replayed') === 'true' || undefined,
   };
 }
