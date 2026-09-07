@@ -8,13 +8,10 @@ import { ChevronUpDownSmall } from '../../components/foundations/icons/chevrons'
 import { useTopbarSearch } from '../../components/layout/useTopbarSearch';
 import { ApiError } from '../../lib/api';
 import { localeFor } from '../../i18n';
-import {
-  MARKET_FILTERS,
-  MarketFilter,
-} from './definitions/market-filter';
 import { SecuritiesSort } from './types';
 import { useSecurities } from './useSecurities';
 import { useSectorOptions } from './useSectorOptions';
+import { TopMovers } from './TopMovers';
 import {
   formatCount,
   formatPrice,
@@ -130,25 +127,9 @@ export function MarketsPage() {
         />
       </div>
 
+      <TopMovers asOf={selectedTradingDate} sector={selectedSector} />
+
       <div className="flex flex-wrap items-center gap-2">
-        {MARKET_FILTERS.map((chip) => (
-          <Button
-            key={chip}
-            variant={chip === MarketFilter.All ? 'secondary' : 'ghost'}
-            size="small"
-            disabled={chip !== MarketFilter.All}
-            title={
-              chip !== MarketFilter.All
-                ? t('markets.unavailable.marketOverview')
-                : undefined
-            }
-          >
-            {t(`markets.filters.${chip}`)}
-          </Button>
-        ))}
-
-        <span className="mx-1 h-5 w-px bg-separator-border" />
-
         <select
           className="h-8 rounded-lg border border-border-button-default bg-background-primary-default px-2 text-body-medium text-text-primary"
           value={selectedSector}
@@ -168,7 +149,7 @@ export function MarketsPage() {
         <select
           className="h-8 rounded-lg border border-border-button-default bg-background-primary-default px-2 text-body-medium text-text-tertiary disabled:cursor-not-allowed"
           disabled
-          title={t('markets.unavailable.marketOverview')}
+          title={t('markets.unavailable.marketCap')}
         >
           <option>{t('markets.filters.selectMarketCap')}</option>
         </select>

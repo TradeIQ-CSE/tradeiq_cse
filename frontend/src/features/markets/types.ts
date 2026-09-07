@@ -21,6 +21,28 @@ export interface SecurityListItem {
 
 export type SecuritiesSort = 'symbol' | 'company_name';
 
+// endpoint-catalogue-v0.md §6 (GET /market/overview). One ranked row; the
+// same shape backs all three lists.
+export interface MarketRanking {
+  rank: number;
+  symbol: string;
+  company_name: string;
+  close: number;
+  change: number;
+  change_pct: number;
+  volume: number;
+}
+
+export interface MarketOverview {
+  as_of: string;
+  gainers: MarketRanking[];
+  losers: MarketRanking[];
+  most_active: MarketRanking[];
+}
+
+/** The three ranked lists, keyed as they arrive in the overview response. */
+export type RankingList = 'gainers' | 'losers' | 'most_active';
+
 export type ListingStatus = 'listed' | 'suspended' | 'delisted';
 
 export interface SecurityDetail {

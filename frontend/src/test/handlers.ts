@@ -5,6 +5,7 @@ import {
   positionsFixture,
   summaryFixture,
 } from './fixtures/paper-trading';
+import { marketOverviewFixture } from './fixtures/market-overview';
 import { securitiesFixture } from './fixtures/securities';
 import {
   dailyOhlcvFixture,
@@ -16,6 +17,10 @@ import {
 // (`{ data, meta }`), a failure body is `{ error: { code, message, trace_id } }`
 // because `getEnvelope` throws `new ApiError(body.error)`.
 export const handlers = [
+  http.get('*/market/overview', () => {
+    return HttpResponse.json({ data: marketOverviewFixture });
+  }),
+
   http.get('*/securities/:symbol/ohlcv', () => {
     return HttpResponse.json({ data: dailyOhlcvFixture });
   }),

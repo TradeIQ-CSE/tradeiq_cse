@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import userEvent from '@testing-library/user-event';
 import { useLocation } from 'react-router-dom';
-import { renderWithProviders, screen, waitFor } from '../../test/render';
+import { renderWithProviders, screen, waitFor, within } from '../../test/render';
 import { server } from '../../test/server';
 import { securitiesFixture } from '../../test/fixtures/securities';
 import { AppShell } from '../../components/layout/AppShell';
@@ -13,6 +13,12 @@ import i18n from '../../i18n';
 // assertion on a translated string can never drift from what the component
 // actually renders.
 const t = i18n.t.bind(i18n);
+
+// Symbols appear both in the Top movers card and in the securities table, so
+// assertions about the table have to be scoped to it rather than to the page.
+function table() {
+  return within(screen.getByRole('table', { name: t('markets.title') }));
+}
 
 function LocationProbe() {
   const location = useLocation();
@@ -38,8 +44,8 @@ describe('MarketsPage', () => {
     renderWithProviders(<MarketsPage />);
 
     for (const security of securitiesFixture) {
-      expect(await screen.findByText(security.symbol)).toBeInTheDocument();
-      expect(screen.getByText(security.company_name)).toBeInTheDocument();
+      expect(await table().findByText(security.symbol)).toBeInTheDocument();
+      expect(table().getByText(security.company_name)).toBeInTheDocument();
     }
   });
 
@@ -68,11 +74,13 @@ describe('MarketsPage', () => {
 
     // isPending && !data: no row content yet, only skeleton placeholders.
     for (const security of securitiesFixture) {
-      expect(screen.queryByText(security.symbol)).not.toBeInTheDocument();
+      // Scoped to the table: the Top movers card above it renders some of
+      // these same symbols, and does so on its own request's timing.
+      expect(table().queryByText(security.symbol)).not.toBeInTheDocument();
     }
 
     releaseResponse();
-    expect(await screen.findByText(securitiesFixture[0].symbol)).toBeInTheDocument();
+    expect(await table().findByText(securitiesFixture[0].symbol)).toBeInTheDocument();
     expect(card).toHaveAttribute('aria-busy', 'false');
   });
 
@@ -142,7 +150,7 @@ describe('MarketsPage', () => {
       </AppShell>,
     );
 
-    await screen.findByText(securitiesFixture[0].symbol);
+    await table().findByText(securitiesFixture[0].symbol);
 
     const nextButton = screen.getByRole('button', { name: t('markets.pagination.next') });
     await user.click(nextButton);
@@ -171,7 +179,7 @@ describe('MarketsPage', () => {
 
     renderWithProviders(<MarketsPage />);
 
-    await screen.findByText(securitiesFixture[0].symbol);
+    await table().findByText(securitiesFixture[0].symbol);
 
     const nextButton = screen.getByRole('button', { name: t('markets.pagination.next') });
     await user.click(nextButton);
@@ -200,7 +208,7 @@ describe('MarketsPage', () => {
     const user = userEvent.setup();
     renderWithProviders(<MarketsPage />);
 
-    await screen.findByText(securitiesFixture[0].symbol);
+    await table().findByText(securitiesFixture[0].symbol);
 
     // Every row starts unwatched, so the first "add to watchlist" button in
     // document order belongs to the first fixture row.
@@ -270,14 +278,14 @@ describe('MarketsPage', () => {
     );
 
     renderWithProviders(<MarketsPage />);
-    await screen.findByText(securitiesFixture[0].symbol);
+    await table().findByText(securitiesFixture[0].symbol);
 
     const nextButton = screen.getByRole('button', { name: t('markets.pagination.next') });
     await user.click(nextButton);
 
     // Page 2's request is still in flight (gated), but placeholderData must
     // keep the old rows on screen rather than swapping to a skeleton.
-    expect(screen.getByText(securitiesFixture[0].symbol)).toBeInTheDocument();
+    expect(table().getByText(securitiesFixture[0].symbol)).toBeInTheDocument();
     const loadingStatus = screen.getByRole('status', { name: t('markets.states.loading') });
     // Capture the card once, while the status span (its only conditionally
     // rendered child) still exists to reach it through — re-deriving this
