@@ -325,12 +325,12 @@ describe('PortfolioPage', () => {
     // Each row renders the glyph twice (P/L and return %), so scope with
     // getAllByText rather than getByText.
     const gainSymbol = await screen.findByText(positionsFixture[0].symbol);
-    const gainRow = gainSymbol.closest('.positions-row');
+    const gainRow = gainSymbol.closest('tr');
     if (!gainRow) throw new Error('gain row not found');
     expect(within(gainRow as HTMLElement).getAllByText('▲').length).toBeGreaterThan(0);
     expect(within(gainRow as HTMLElement).queryByText('▼')).not.toBeInTheDocument();
 
-    const lossRow = screen.getByText(positionsFixture[1].symbol).closest('.positions-row');
+    const lossRow = screen.getByText(positionsFixture[1].symbol).closest('tr');
     if (!lossRow) throw new Error('loss row not found');
     expect(within(lossRow as HTMLElement).getAllByText('▼').length).toBeGreaterThan(0);
     expect(within(lossRow as HTMLElement).queryByText('▲')).not.toBeInTheDocument();

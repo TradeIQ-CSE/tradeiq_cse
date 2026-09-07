@@ -1,25 +1,38 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../lib/api';
 import { readErrorText } from './error-text';
 import { localeFor } from '../../i18n';
 import { changeDirection, formatMoney, formatPercent, formatSignedMoney } from './format';
 import { usePortfolioSummary } from './usePortfolios';
-import './paper-trading.css';
+import { DirectionGlyph, ErrorCard, NoticeCard } from './ui';
+import { toneClass } from './ui-styles';
+import { cx } from '../../utils/cx';
 
 interface SummaryCardsProps {
   portfolioId: string;
   asOf?: string;
 }
 
-// Kept local and unexported rather than shared: SummaryCards and
-// PositionsTable each render this two-glyph indicator, and a shared helper
-// module for something this small isn't worth a new file.
-function DirectionGlyph({ direction }: { direction: 'up' | 'down' | 'flat' }) {
-  if (direction === 'flat') return null;
+function SummaryCard({
+  label,
+  value,
+  sub,
+  tone,
+}: {
+  label: string;
+  value: ReactNode;
+  sub?: ReactNode;
+  tone?: string;
+}) {
   return (
-    <span className={`direction-glyph direction-glyph--${direction}`} aria-hidden="true">
-      {direction === 'up' ? '▲' : '▼'}
-    </span>
+    <div className="flex min-w-0 flex-col gap-1 rounded-2xl bg-background-secondary-default p-4">
+      <span className="truncate text-body-medium text-text-secondary">{label}</span>
+      <span className={cx('truncate text-title-2-medium tabular-nums', tone ?? 'text-text-primary')}>
+        {value}
+      </span>
+      {sub && <span className={cx('truncate text-body-2-medium', tone)}>{sub}</span>}
+    </div>
   );
 }
 
@@ -33,25 +46,27 @@ export function SummaryCards({ portfolioId, asOf }: SummaryCardsProps) {
   if (isError) {
     if (error instanceof ApiError && error.body.code === 'PRICE_UNAVAILABLE') {
       return (
-        <div className="paper-trading-card paper-trading-card--notice">
+        <NoticeCard>
           {t('portfolio.summary.priceUnavailable', {
             date: asOf || t('portfolio.summary.latestSession'),
           })}
-        </div>
+        </NoticeCard>
       );
     }
-    return (
-      <div className="paper-trading-card paper-trading-card--error">
-        {readErrorText(error, t('portfolio.summary.unreachable'))}
-      </div>
-    );
+    return <ErrorCard>{readErrorText(error, t('portfolio.summary.unreachable'))}</ErrorCard>;
   }
 
   if (isPending || !data) {
     return (
-      <div className="summary-cards" aria-busy="true">
+      <div
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
+        aria-busy="true"
+      >
         {Array.from({ length: 6 }).map((_, index) => (
-          <div className="summary-card summary-card--skeleton" key={index} />
+          <div
+            className="h-24 animate-pulse rounded-2xl bg-background-secondary-default"
+            key={index}
+          />
         ))}
       </div>
     );
@@ -64,63 +79,71 @@ export function SummaryCards({ portfolioId, asOf }: SummaryCardsProps) {
   const unrealizedDirection = changeDirection(summary.unrealized_pnl);
 
   return (
-    <div className="summary-cards" aria-busy={isFetching}>
+    <section className="relative flex flex-col gap-3" aria-busy={isFetching}>
       {isFetching && (
         <span
-          className="summary-cards__progress"
+          className="absolute inset-x-0 -top-1 h-0.5 animate-pulse bg-button-primary"
           role="status"
           aria-label={t('portfolio.summary.loading')}
         />
       )}
 
-      <div className="summary-card">
-        <span className="summary-card__label">{t('portfolio.summary.totalEquity')}</span>
-        <span className="summary-card__value">{formatMoney(summary.total_equity, locale)}</span>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <SummaryCard
+          label={t('portfolio.summary.totalEquity')}
+          value={formatMoney(summary.total_equity, locale)}
+        />
+        <SummaryCard
+          label={t('portfolio.summary.cashBalance')}
+          value={formatMoney(summary.cash_balance, locale)}
+        />
+        <SummaryCard
+          label={t('portfolio.summary.holdingsValue')}
+          value={formatMoney(summary.holdings_value, locale)}
+        />
+        <SummaryCard
+          label={t('portfolio.summary.totalPnl')}
+          tone={toneClass(summary.total_pnl)}
+          value={
+            <>
+              <DirectionGlyph direction={totalDirection} />
+              {formatSignedMoney(summary.total_pnl, locale)}
+            </>
+          }
+          sub={
+            <>
+              <DirectionGlyph direction={returnDirection} />
+              {formatPercent(summary.total_return_pct, locale)}
+            </>
+          }
+        />
+        <SummaryCard
+          label={t('portfolio.summary.realizedPnl')}
+          tone={toneClass(summary.realized_pnl)}
+          value={
+            <>
+              <DirectionGlyph direction={realizedDirection} />
+              {formatSignedMoney(summary.realized_pnl, locale)}
+            </>
+          }
+        />
+        <SummaryCard
+          label={t('portfolio.summary.unrealizedPnl')}
+          tone={toneClass(summary.unrealized_pnl)}
+          value={
+            <>
+              <DirectionGlyph direction={unrealizedDirection} />
+              {formatSignedMoney(summary.unrealized_pnl, locale)}
+            </>
+          }
+        />
       </div>
 
-      <div className="summary-card">
-        <span className="summary-card__label">{t('portfolio.summary.cashBalance')}</span>
-        <span className="summary-card__value">{formatMoney(summary.cash_balance, locale)}</span>
-      </div>
-
-      <div className="summary-card">
-        <span className="summary-card__label">{t('portfolio.summary.holdingsValue')}</span>
-        <span className="summary-card__value">{formatMoney(summary.holdings_value, locale)}</span>
-      </div>
-
-      <div className={`summary-card summary-card--${totalDirection}`}>
-        <span className="summary-card__label">{t('portfolio.summary.totalPnl')}</span>
-        <span className="summary-card__value">
-          <DirectionGlyph direction={totalDirection} />
-          {formatSignedMoney(summary.total_pnl, locale)}
-        </span>
-        <span className="summary-card__sub">
-          <DirectionGlyph direction={returnDirection} />
-          {formatPercent(summary.total_return_pct, locale)}
-        </span>
-      </div>
-
-      <div className={`summary-card summary-card--${realizedDirection}`}>
-        <span className="summary-card__label">{t('portfolio.summary.realizedPnl')}</span>
-        <span className="summary-card__value">
-          <DirectionGlyph direction={realizedDirection} />
-          {formatSignedMoney(summary.realized_pnl, locale)}
-        </span>
-      </div>
-
-      <div className={`summary-card summary-card--${unrealizedDirection}`}>
-        <span className="summary-card__label">{t('portfolio.summary.unrealizedPnl')}</span>
-        <span className="summary-card__value">
-          <DirectionGlyph direction={unrealizedDirection} />
-          {formatSignedMoney(summary.unrealized_pnl, locale)}
-        </span>
-      </div>
-
-      <div className="summary-cards__asof">
+      <p className="text-body-2-medium text-text-tertiary">
         {summary.as_of
           ? t('portfolio.summary.asOf', { date: summary.as_of })
           : t('portfolio.summary.noSession')}
-      </div>
-    </div>
+      </p>
+    </section>
   );
 }

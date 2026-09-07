@@ -1,6 +1,9 @@
 import { useTranslation } from 'react-i18next';
+import { RiAddLine } from '@remixicon/react';
+import { Button } from '../../components/base/buttons/button';
+import { Field } from './ui';
+import { fieldShell } from './ui-styles';
 import { Portfolio } from './types';
-import './paper-trading.css';
 
 interface PortfolioSelectorProps {
   portfolios: Portfolio[];
@@ -21,11 +24,10 @@ export function PortfolioSelector({
   const { t } = useTranslation();
 
   return (
-    <div className="portfolio-selector">
-      <label className="portfolio-selector__field">
-        <span>{t('portfolio.selector.label')}</span>
+    <div className="flex flex-wrap items-end gap-3">
+      <Field label={t('portfolio.selector.label')} className="max-w-xs">
         <select
-          className="portfolio-select"
+          className={fieldShell}
           value={selectedId ?? ''}
           onChange={(event) => onSelect(event.target.value)}
         >
@@ -35,10 +37,10 @@ export function PortfolioSelector({
             </option>
           ))}
         </select>
-      </label>
-      <button type="button" className="portfolio-selector__new" onClick={onCreateNew}>
+      </Field>
+      <Button variant="secondary" leadingIcon={RiAddLine} onClick={onCreateNew}>
         {t('portfolio.selector.new')}
-      </button>
+      </Button>
     </div>
   );
 }

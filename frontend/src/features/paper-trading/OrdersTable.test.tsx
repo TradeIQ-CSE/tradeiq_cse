@@ -30,9 +30,9 @@ describe('OrdersTable', () => {
 
     // "Rejected" also appears as a <option> in the status filter — scope to
     // this row's status badge rather than matching either occurrence.
-    const row = symbolCell.closest('.orders-row');
+    const row = symbolCell.closest('tr');
     if (!row) throw new Error('order row not found');
-    expect(row.querySelector('.orders-status-badge--rejected')).toHaveTextContent(
+    expect(row.querySelector('[data-status="rejected"]')).toHaveTextContent(
       t('orders.status.rejected'),
     );
   });

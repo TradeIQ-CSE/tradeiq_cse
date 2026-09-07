@@ -7,7 +7,9 @@ import { OrderResultOutcome, ResultBanner } from './ResultBanner';
 import { SymbolPicker } from './SymbolPicker';
 import { Order, OrderEstimate, OrderSide } from './types';
 import { useEstimateOrder, useSubmitOrder } from './useOrders';
-import './paper-trading.css';
+import { Button } from '../../components/base/buttons/button';
+import { Card, CardHeading, Field } from './ui';
+import { fieldShell } from './ui-styles';
 
 interface OrderTicketProps {
   portfolioId: string;
@@ -154,60 +156,67 @@ export function OrderTicket({ portfolioId }: OrderTicketProps) {
     }
   }
 
+  // Two columns on desktop, stacked on mobile: the form on the left stays
+  // put while the estimate on the right updates, so Preview never pushes the
+  // Confirm button out from under the pointer.
   return (
-    <form className="paper-trading-card order-ticket" onSubmit={handleSubmit}>
-      <h2>{t('paperTrading.ticket.title')}</h2>
+    <form className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2" onSubmit={handleSubmit}>
+      <Card>
+        <CardHeading title={t('paperTrading.ticket.title')} />
 
-      {outcome && <ResultBanner outcome={outcome} />}
+        <div className="flex flex-col gap-4 px-4 pb-4">
+          {outcome && <ResultBanner outcome={outcome} />}
 
-      <SymbolPicker
-        value={symbol}
-        onChange={(next) => {
-          setSymbol(next);
-          setOutcome(null);
-        }}
-        disabled={submitMutation.isPending}
-      />
+          <SymbolPicker
+            value={symbol}
+            onChange={(next) => {
+              setSymbol(next);
+              setOutcome(null);
+            }}
+            disabled={submitMutation.isPending}
+          />
 
-      <label className="order-ticket__field">
-        <span>{t('paperTrading.ticket.side')}</span>
-        <select
-          value={side}
-          disabled={submitMutation.isPending}
-          onChange={(event) => {
-            setSide(event.target.value as OrderSide);
-            setOutcome(null);
-          }}
-        >
-          <option value="buy">{t('paperTrading.ticket.sides.buy')}</option>
-          <option value="sell">{t('paperTrading.ticket.sides.sell')}</option>
-        </select>
-      </label>
+          <Field label={t('paperTrading.ticket.side')}>
+            <select
+              className={fieldShell}
+              value={side}
+              disabled={submitMutation.isPending}
+              onChange={(event) => {
+                setSide(event.target.value as OrderSide);
+                setOutcome(null);
+              }}
+            >
+              <option value="buy">{t('paperTrading.ticket.sides.buy')}</option>
+              <option value="sell">{t('paperTrading.ticket.sides.sell')}</option>
+            </select>
+          </Field>
 
-      <label className="order-ticket__field">
-        <span>{t('paperTrading.ticket.quantity')}</span>
-        <input
-          type="number"
-          min={1}
-          step={1}
-          value={quantityText}
-          disabled={submitMutation.isPending}
-          onChange={(event) => {
-            setQuantityText(event.target.value);
-            setOutcome(null);
-          }}
-          required
-        />
-      </label>
+          <Field label={t('paperTrading.ticket.quantity')}>
+            <input
+              type="number"
+              className={fieldShell}
+              min={1}
+              step={1}
+              value={quantityText}
+              disabled={submitMutation.isPending}
+              onChange={(event) => {
+                setQuantityText(event.target.value);
+                setOutcome(null);
+              }}
+              required
+            />
+          </Field>
 
-      <div className="order-ticket__actions">
-        <button type="button" onClick={handlePreview} disabled={!canPreview}>
-          {t('paperTrading.ticket.preview')}
-        </button>
-        <button type="submit" disabled={!canConfirm}>
-          {t('paperTrading.ticket.confirm')}
-        </button>
-      </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="secondary" onClick={handlePreview} disabled={!canPreview}>
+              {t('paperTrading.ticket.preview')}
+            </Button>
+            <Button type="submit" variant="primary" disabled={!canConfirm}>
+              {t('paperTrading.ticket.confirm')}
+            </Button>
+          </div>
+        </div>
+      </Card>
 
       <EstimatePanel
         estimate={storedEstimate?.estimate ?? null}

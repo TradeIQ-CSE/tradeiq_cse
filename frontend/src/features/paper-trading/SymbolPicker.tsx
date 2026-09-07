@@ -4,7 +4,9 @@ import { useQuery } from '@tanstack/react-query';
 import { getEnvelope } from '../../lib/api';
 import { readErrorText } from './error-text';
 import { SecurityListItem } from '../markets/types';
-import './paper-trading.css';
+import { Field } from './ui';
+import { fieldShell } from './ui-styles';
+import { cx } from '../../utils/cx';
 
 const SEARCH_DEBOUNCE_MS = 300;
 const MAX_RESULTS = 8;
@@ -139,11 +141,11 @@ export function SymbolPicker({ value, onChange, disabled }: SymbolPickerProps) {
   }
 
   return (
-    <div className="order-ticket__symbol-picker" ref={containerRef} onBlur={handleBlur}>
-      <label className="order-ticket__field">
-        <span>{t('paperTrading.ticket.symbol')}</span>
+    <div className="relative" ref={containerRef} onBlur={handleBlur}>
+      <Field label={t('paperTrading.ticket.symbol')}>
         <input
           type="text"
+          className={fieldShell}
           role="combobox"
           aria-expanded={showDropdown}
           aria-controls={listboxId}
@@ -165,16 +167,20 @@ export function SymbolPicker({ value, onChange, disabled }: SymbolPickerProps) {
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
         />
-      </label>
+      </Field>
 
       {showDropdown && (
-        <ul className="order-ticket__symbol-results" id={listboxId} role="listbox">
+        <ul
+          className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-2lg border border-border-table bg-background-primary-default py-1 shadow-lg"
+          id={listboxId}
+          role="listbox"
+        >
           {isError ? (
-            <li className="order-ticket__symbol-empty" role="alert">
+            <li className="px-3 py-2 text-body-medium text-status-rose-text" role="alert">
               {readErrorText(error, t('paperTrading.ticket.symbolError'))}
             </li>
           ) : results.length === 0 ? (
-            <li className="order-ticket__symbol-empty">
+            <li className="px-3 py-2 text-body-medium text-text-secondary">
               {isFetching ? t('paperTrading.ticket.symbolSearching') : t('paperTrading.ticket.symbolNoMatches')}
             </li>
           ) : (
@@ -184,11 +190,10 @@ export function SymbolPicker({ value, onChange, disabled }: SymbolPickerProps) {
                 id={`${listboxId}-option-${index}`}
                 role="option"
                 aria-selected={index === activeIndex}
-                className={
-                  index === activeIndex
-                    ? 'order-ticket__symbol-option order-ticket__symbol-option--active'
-                    : 'order-ticket__symbol-option'
-                }
+                className={cx(
+                  'flex cursor-pointer items-baseline gap-2 px-3 py-2',
+                  index === activeIndex && 'bg-background-secondary-hover',
+                )}
                 onMouseEnter={() => setActiveIndex(index)}
                 // Prevents the input from blurring before the click below is
                 // processed — the option is not itself focusable, so without
@@ -197,8 +202,10 @@ export function SymbolPicker({ value, onChange, disabled }: SymbolPickerProps) {
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => selectResult(security)}
               >
-                <span className="order-ticket__symbol-ticker">{security.symbol}</span>
-                <span className="order-ticket__symbol-company">{security.company_name}</span>
+                <span className="text-body-medium text-text-primary">{security.symbol}</span>
+                <span className="truncate text-body-2-medium text-text-tertiary">
+                  {security.company_name}
+                </span>
               </li>
             ))
           )}

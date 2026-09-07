@@ -2,7 +2,15 @@ import { useTranslation } from 'react-i18next';
 import { localeFor } from '../../i18n';
 import { formatMoney, formatSignedMoney } from './format';
 import { OrderEstimate } from './types';
-import './paper-trading.css';
+import {
+  Card,
+  CardHeading,
+  CardProgress,
+  ErrorCard,
+  NoticeCard,
+  StateMessage,
+} from './ui';
+import { toneClass } from './ui-styles';
 
 interface EstimatePanelProps {
   estimate: OrderEstimate | null;
@@ -32,14 +40,10 @@ export function EstimatePanel({ estimate, isPending, isStale, errorKey }: Estima
 
   if (isPending) {
     return (
-      <div className="paper-trading-card estimate-panel" aria-busy="true">
-        <span
-          className="paper-trading-card__progress"
-          role="status"
-          aria-label={t('paperTrading.ticket.estimate.loading')}
-        />
-        <p className="paper-trading-page__state">{t('paperTrading.ticket.estimate.loading')}</p>
-      </div>
+      <Card busy>
+        <CardProgress label={t('paperTrading.ticket.estimate.loading')} />
+        <StateMessage>{t('paperTrading.ticket.estimate.loading')}</StateMessage>
+      </Card>
     );
   }
 
@@ -48,94 +52,111 @@ export function EstimatePanel({ estimate, isPending, isStale, errorKey }: Estima
   // from the exact same order-messages.ts map so the two paths never say
   // different things about, say, INSUFFICIENT_CASH.
   if (errorKey) {
-    return (
-      <div className="paper-trading-card paper-trading-card--error estimate-panel" role="alert">
-        {t(errorKey)}
-      </div>
-    );
+    return <ErrorCard role="alert">{t(errorKey)}</ErrorCard>;
   }
 
   if (!estimate) {
-    return (
-      <div className="paper-trading-card paper-trading-card--notice estimate-panel">
-        {t('paperTrading.ticket.estimate.empty')}
-      </div>
-    );
+    return <NoticeCard>{t('paperTrading.ticket.estimate.empty')}</NoticeCard>;
   }
 
   return (
-    <div className="paper-trading-card estimate-panel">
+    <Card>
+      <CardHeading
+        title={t('paperTrading.ticket.estimate.title')}
+        subtitle={isStale ? undefined : t('paperTrading.ticket.estimate.subtitle')}
+      />
+
       {isStale && (
-        <p className="estimate-panel__stale" role="status">
+        <p
+          className="mx-4 mb-3 rounded-lg bg-status-yellow-background px-3 py-2 text-body-2-medium text-status-yellow-text"
+          role="status"
+        >
           {t('paperTrading.ticket.estimate.stale')}
         </p>
       )}
 
-      <div className="paper-trading-card__heading">
-        <h2>{t('paperTrading.ticket.estimate.title')}</h2>
-      </div>
-
-      <dl className="estimate-panel__summary">
-        <div className="estimate-panel__summary-row">
-          <dt>{t('paperTrading.ticket.estimate.price')}</dt>
-          <dd>{formatMoney(estimate.price, locale)}</dd>
+      <dl className="grid grid-cols-1 gap-x-6 gap-y-2 px-4 pb-4 sm:grid-cols-2">
+        <div className="flex items-baseline justify-between gap-3">
+          <dt className="text-body-medium text-text-secondary">
+            {t('paperTrading.ticket.estimate.price')}
+          </dt>
+          <dd className="text-body-medium tabular-nums text-text-primary">
+            {formatMoney(estimate.price, locale)}
+          </dd>
         </div>
-        <div className="estimate-panel__summary-row">
-          <dt>{t('paperTrading.ticket.estimate.priceAsOf')}</dt>
-          <dd>{estimate.price_as_of}</dd>
+        <div className="flex items-baseline justify-between gap-3">
+          <dt className="text-body-medium text-text-secondary">
+            {t('paperTrading.ticket.estimate.priceAsOf')}
+          </dt>
+          <dd className="text-body-medium tabular-nums text-text-primary">{estimate.price_as_of}</dd>
         </div>
-        <div className="estimate-panel__summary-row">
-          <dt>{t('paperTrading.ticket.estimate.settlementDate')}</dt>
-          <dd>{estimate.settlement_date}</dd>
+        <div className="flex items-baseline justify-between gap-3">
+          <dt className="text-body-medium text-text-secondary">
+            {t('paperTrading.ticket.estimate.settlementDate')}
+          </dt>
+          <dd className="text-body-medium tabular-nums text-text-primary">
+            {estimate.settlement_date}
+          </dd>
         </div>
-        <div className="estimate-panel__summary-row">
-          <dt>{t('paperTrading.ticket.estimate.grossConsideration')}</dt>
-          <dd>{formatMoney(estimate.gross_consideration, locale)}</dd>
+        <div className="flex items-baseline justify-between gap-3">
+          <dt className="text-body-medium text-text-secondary">
+            {t('paperTrading.ticket.estimate.grossConsideration')}
+          </dt>
+          <dd className="text-body-medium tabular-nums text-text-primary">
+            {formatMoney(estimate.gross_consideration, locale)}
+          </dd>
         </div>
       </dl>
 
-      <div className="estimate-panel__fees">
-        <div className="estimate-row estimate-row--head">
-          <span>{t('paperTrading.ticket.estimate.feeColumns.type')}</span>
-          <span>{t('paperTrading.ticket.estimate.feeColumns.rate')}</span>
-          <span>{t('paperTrading.ticket.estimate.feeColumns.amount')}</span>
-        </div>
-
-        {estimate.fees.map((fee) => (
-          <div className="estimate-row" key={fee.type}>
-            <span data-label={t('paperTrading.ticket.estimate.feeColumns.type')}>
-              {t(`paperTrading.ticket.estimate.feeTypes.${fee.type}`)}
-            </span>
-            <span data-label={t('paperTrading.ticket.estimate.feeColumns.rate')}>
-              {formatRate(fee.rate_percent, locale)}
-            </span>
-            <span data-label={t('paperTrading.ticket.estimate.feeColumns.amount')}>
-              {formatMoney(fee.amount, locale)}
-            </span>
-          </div>
-        ))}
-
-        {/* Only two cells here — there is no "rate" for a total. The amount
-            is placed in the desktop grid's third column via CSS
-            (.estimate-row--total in paper-trading.css) rather than by
-            rendering an empty middle <span>, which would collapse to a
-            blank line in the stacked mobile layout below 480px. */}
-        <div className="estimate-row estimate-row--total">
-          <span data-label={t('paperTrading.ticket.estimate.feeColumns.type')}>
-            {t('paperTrading.ticket.estimate.feeTotal')}
-          </span>
-          <span data-label={t('paperTrading.ticket.estimate.feeColumns.amount')}>
-            {formatMoney(estimate.fee_total, locale)}
-          </span>
-        </div>
+      <div className="overflow-x-auto border-t border-separator-border">
+        <table className="bui-table bui-table-sm">
+          <thead>
+            <tr>
+              <th scope="col">{t('paperTrading.ticket.estimate.feeColumns.type')}</th>
+              <th scope="col" className="text-right">
+                {t('paperTrading.ticket.estimate.feeColumns.rate')}
+              </th>
+              <th scope="col" className="text-right">
+                {t('paperTrading.ticket.estimate.feeColumns.amount')}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {estimate.fees.map((fee) => (
+              <tr key={fee.type}>
+                <td>{t(`paperTrading.ticket.estimate.feeTypes.${fee.type}`)}</td>
+                <td className="text-right tabular-nums">{formatRate(fee.rate_percent, locale)}</td>
+                <td className="text-right tabular-nums">{formatMoney(fee.amount, locale)}</td>
+              </tr>
+            ))}
+            {/* There is no "rate" for a total, so that cell is simply empty
+                rather than carrying a placeholder figure. */}
+            <tr>
+              {/* `.bui-table th` paints the column-header background, which on
+                  a row header reads as a stray block mid-table — overridden
+                  inline because that rule is more specific than a utility. */}
+              <th
+                scope="row"
+                className="text-text-primary"
+                style={{ backgroundColor: 'transparent' }}
+              >
+                {t('paperTrading.ticket.estimate.feeTotal')}
+              </th>
+              <td />
+              <td className="text-right tabular-nums">{formatMoney(estimate.fee_total, locale)}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
-      <div className="estimate-panel__cash-effect">
-        <span>{t('paperTrading.ticket.estimate.cashEffect')}</span>
-        <span className={estimate.cash_effect < 0 ? 'negative-text' : 'positive-text'}>
+      <div className="flex items-baseline justify-between gap-3 border-t border-separator-border px-4 py-3">
+        <span className="text-body-medium text-text-secondary">
+          {t('paperTrading.ticket.estimate.cashEffect')}
+        </span>
+        <span className={`text-headline-medium tabular-nums ${toneClass(estimate.cash_effect)}`}>
           {formatSignedMoney(estimate.cash_effect, locale)}
         </span>
       </div>
-    </div>
+    </Card>
   );
 }

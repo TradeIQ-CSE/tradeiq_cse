@@ -1,10 +1,17 @@
 import { FormEvent, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../lib/api';
+import { Button } from '../../components/base/buttons/button';
 import { fieldErrors } from '../auth/field-errors';
+import {
+  Card,
+  CardHeading,
+  ErrorCard,
+  Field,
+} from './ui';
+import { fieldShell } from './ui-styles';
 import { Portfolio } from './types';
 import { useCreatePortfolio } from './usePortfolios';
-import './paper-trading.css';
 
 // docs/api/paper-trading-v1.md §5.1.
 const NAME_MAX_LENGTH = 100;
@@ -77,48 +84,51 @@ export function CreatePortfolioForm({ onCreated }: CreatePortfolioFormProps) {
   }
 
   return (
-    <form className="portfolio-create-form" onSubmit={handleSubmit}>
-      <h2>{t('portfolio.create.title')}</h2>
-      {formError && <p className="portfolio-create-form__error">{formError}</p>}
+    <Card className="max-w-xl">
+      <CardHeading title={t('portfolio.create.title')} />
 
-      <label className="portfolio-create-form__field">
-        <span>{t('portfolio.create.name')}</span>
-        <input
-          type="text"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          minLength={1}
-          maxLength={NAME_MAX_LENGTH}
-          required
-        />
-        {fieldMessages.name?.map((message) => (
-          <span className="portfolio-create-form__field-error" key={message}>
-            {message}
-          </span>
-        ))}
-      </label>
+      <form className="flex flex-col gap-4 px-4 pb-4" onSubmit={handleSubmit}>
+        {formError && <ErrorCard role="alert">{formError}</ErrorCard>}
 
-      <label className="portfolio-create-form__field">
-        <span>{t('portfolio.create.startingCapital')}</span>
-        <input
-          type="number"
-          value={startingCapital}
-          onChange={(event) => setStartingCapital(event.target.value)}
-          min={MIN_STARTING_CAPITAL}
-          max={MAX_STARTING_CAPITAL}
-          step="0.0001"
-          required
-        />
-        {fieldMessages.starting_capital?.map((message) => (
-          <span className="portfolio-create-form__field-error" key={message}>
-            {message}
-          </span>
-        ))}
-      </label>
+        <Field label={t('portfolio.create.name')}>
+          <input
+            type="text"
+            className={fieldShell}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            minLength={1}
+            maxLength={NAME_MAX_LENGTH}
+            required
+          />
+          {fieldMessages.name?.map((message) => (
+            <span className="text-body-2-medium text-status-rose-text" key={message}>
+              {message}
+            </span>
+          ))}
+        </Field>
 
-      <button type="submit" disabled={mutation.isPending}>
-        {t('portfolio.create.submit')}
-      </button>
-    </form>
+        <Field label={t('portfolio.create.startingCapital')}>
+          <input
+            type="number"
+            className={fieldShell}
+            value={startingCapital}
+            onChange={(event) => setStartingCapital(event.target.value)}
+            min={MIN_STARTING_CAPITAL}
+            max={MAX_STARTING_CAPITAL}
+            step="0.0001"
+            required
+          />
+          {fieldMessages.starting_capital?.map((message) => (
+            <span className="text-body-2-medium text-status-rose-text" key={message}>
+              {message}
+            </span>
+          ))}
+        </Field>
+
+        <Button type="submit" variant="primary" className="self-start" disabled={mutation.isPending}>
+          {t('portfolio.create.submit')}
+        </Button>
+      </form>
+    </Card>
   );
 }
