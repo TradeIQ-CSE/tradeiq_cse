@@ -21,8 +21,10 @@ export class ApiError extends Error {
 }
 
 export interface PageMeta {
-  page: number;
-  page_size: number;
+  // Optional: the paper-trading positions/summary meta shape
+  // (docs/api/paper-trading-v1.md §7) is `{ as_of, total }` with no pagination.
+  page?: number;
+  page_size?: number;
   total: number;
   // Trading date the rows are priced at, and the selectable bounds.
   as_of?: string | null;

@@ -24,9 +24,13 @@ const SignupPage = lazy(() =>
     default: module.SignupPage,
   })),
 );
+const Portfolio = lazy(() =>
+  import('../features/paper-trading/PortfolioPage').then((module) => ({
+    default: module.PortfolioPage,
+  })),
+);
 const Dashboard = lazy(() => import('../pages/investor/Dashboard'));
 const Watchlist = lazy(() => import('../pages/investor/Watchlist'));
-const Portfolio = lazy(() => import('../pages/investor/Portfolio'));
 const Orders = lazy(() => import('../pages/investor/Orders'));
 const Analytics = lazy(() => import('../pages/investor/Analytics'));
 const AdminHome = lazy(() => import('../pages/admin/AdminHome'));
