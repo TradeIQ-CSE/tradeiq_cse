@@ -47,6 +47,17 @@ const twMerge = extendTailwindMerge({
 export const cx = twMerge;
 
 /**
+ * The same function under Shadcn's name.
+ *
+ * Shadcn and the shadcn.io registry emit `import { cn } from "@/lib/utils"`,
+ * and components.json points that alias here. Exporting the alias means a
+ * chart body lifted from that registry compiles without hand-editing every
+ * import — see the Shadcn compatibility block in styles/theme.css for the
+ * matching token aliases.
+ */
+export const cn = twMerge;
+
+/**
  * Identity helper that gives the Tailwind IntelliSense extension a hook for
  * sorting classes inside style objects (the extension doesn't sort inside
  * plain object literals otherwise).
