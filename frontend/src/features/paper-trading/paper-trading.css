@@ -304,7 +304,8 @@
 /* --- tables --------------------------------------------------------------- */
 
 .positions-row,
-.cash-ledger-row {
+.cash-ledger-row,
+.orders-row {
   display: grid;
   align-items: center;
   gap: 8px;
@@ -323,13 +324,19 @@
   grid-template-columns: 1.2fr 1fr 1fr 1fr;
 }
 
+.orders-row {
+  grid-template-columns: 1.3fr 1fr 0.7fr 1fr 0.9fr 0.9fr;
+}
+
 .positions-row > span:not(:first-child),
-.cash-ledger-row > span:not(:first-child) {
+.cash-ledger-row > span:not(:first-child),
+.orders-row > span:not(:first-child) {
   text-align: right;
 }
 
 .positions-row--head,
-.cash-ledger-row--head {
+.cash-ledger-row--head,
+.orders-row--head {
   color: var(--text-muted);
   font-size: 10px;
   text-transform: uppercase;
@@ -337,15 +344,25 @@
 }
 
 .positions-row--skeleton,
-.cash-ledger-row--skeleton {
+.cash-ledger-row--skeleton,
+.orders-row--skeleton {
   min-height: 30px;
   background: rgba(255, 255, 255, 0.02);
 }
 
 .positions-table__body,
-.cash-ledger__body {
+.cash-ledger__body,
+.orders-table__body {
   display: flex;
   flex-direction: column;
+}
+
+.orders-row-group {
+  border-bottom: 0.8px solid var(--border-faint);
+}
+
+.orders-row-group .orders-row {
+  border-bottom: none;
 }
 
 /* --- gain / loss ---------------------------------------------------------- */
@@ -375,19 +392,22 @@
    their own label from the data-label attribute the markup already sets. */
 @media (max-width: 480px) {
   .positions-row,
-  .cash-ledger-row {
+  .cash-ledger-row,
+  .orders-row {
     grid-template-columns: 1fr;
     gap: 4px;
     padding: 10px 0;
   }
 
   .positions-row--head,
-  .cash-ledger-row--head {
+  .cash-ledger-row--head,
+  .orders-row--head {
     display: none;
   }
 
   .positions-row > span,
-  .cash-ledger-row > span {
+  .cash-ledger-row > span,
+  .orders-row > span {
     display: flex;
     justify-content: space-between;
     gap: 8px;
@@ -395,7 +415,8 @@
   }
 
   .positions-row > span::before,
-  .cash-ledger-row > span::before {
+  .cash-ledger-row > span::before,
+  .orders-row > span::before {
     content: attr(data-label);
     color: var(--text-muted);
     font-size: 10px;
@@ -403,11 +424,414 @@
   }
 
   .positions-row > span:not([data-label]),
-  .cash-ledger-row > span:not([data-label]) {
+  .cash-ledger-row > span:not([data-label]),
+  .orders-row > span:not([data-label]) {
     justify-content: flex-end;
   }
 
   .portfolio-page__date {
     margin-left: 0;
+  }
+}
+
+/* --- order ticket ---------------------------------------------------------- */
+
+.order-ticket {
+  display: flex;
+  flex-direction: column;
+  gap: 10.5px;
+  max-width: 480px;
+}
+
+.order-ticket h2 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-heading);
+}
+
+.order-ticket__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.order-ticket__field input,
+.order-ticket__field select {
+  padding: 6px 9px;
+  border-radius: var(--radius-sm);
+  border: 0.8px solid var(--border-subtle-3);
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  font-size: 11px;
+  font-family: inherit;
+}
+
+.order-ticket__field input:disabled,
+.order-ticket__field select:disabled {
+  opacity: 0.5;
+}
+
+.order-ticket__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.order-ticket__actions button {
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  border: 0.8px solid var(--border-subtle-3);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.order-ticket__actions button[type='submit'] {
+  border: none;
+  background: var(--accent-gradient);
+  color: #fff;
+}
+
+.order-ticket__actions button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* --- symbol picker ---------------------------------------------------------- */
+
+.order-ticket__symbol-picker {
+  position: relative;
+}
+
+.order-ticket__symbol-results {
+  position: absolute;
+  z-index: 5;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin: 2px 0 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--bg-card);
+  border: 0.8px solid var(--border-subtle-2);
+  border-radius: var(--radius-card);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.order-ticket__symbol-results li + li {
+  margin-top: 2px;
+}
+
+/* No <button> here on purpose — a role="option" element in a listbox is not
+   separately focusable, so it is styled directly on the <li>. Mouse hover
+   and keyboard ArrowUp/ArrowDown both land on the same
+   `--active` class (see SymbolPicker.tsx's onMouseEnter/activeIndex). */
+.order-ticket__symbol-option {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text-primary);
+}
+
+.order-ticket__symbol-option--active {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.order-ticket__symbol-ticker {
+  font-weight: 600;
+  color: var(--text-heading);
+}
+
+.order-ticket__symbol-company {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.order-ticket__symbol-empty {
+  padding: 6px 8px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* --- result banner ---------------------------------------------------------- */
+
+.order-ticket__banner {
+  padding: 10px 12px;
+  border-radius: var(--radius-card);
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.order-ticket__banner-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.order-ticket__banner-detail,
+.order-ticket__banner-note {
+  margin: 0;
+  font-size: 10px;
+}
+
+.order-ticket__banner--success {
+  border: 0.8px solid rgba(60, 200, 130, 0.35);
+  color: var(--positive);
+}
+
+/* A rejected order is a recorded, auditable submission, not a failure — this
+   reads as a caution, not the same red used for a genuine ApiError below. */
+.order-ticket__banner--warning {
+  border: 0.8px solid rgba(230, 180, 60, 0.4);
+  color: var(--text-primary);
+}
+
+.order-ticket__banner--warning .order-ticket__banner-title {
+  color: #e6b43c;
+}
+
+.order-ticket__banner--error {
+  border: 0.8px solid rgba(255, 100, 103, 0.35);
+  color: var(--negative);
+}
+
+/* --- estimate panel ---------------------------------------------------------- */
+
+.estimate-panel__stale {
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(230, 180, 60, 0.12);
+  color: #e6b43c;
+  font-size: 10px;
+}
+
+.estimate-panel__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+}
+
+.estimate-panel__summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.estimate-panel__summary-row dt {
+  color: var(--text-muted);
+}
+
+.estimate-panel__summary-row dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.estimate-panel__fees {
+  display: flex;
+  flex-direction: column;
+}
+
+.estimate-row {
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 0.8px solid var(--border-faint);
+  font-size: 11px;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.estimate-row > span:not(:first-child) {
+  text-align: right;
+}
+
+.estimate-row--head {
+  color: var(--text-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.estimate-row--total {
+  font-weight: 600;
+  color: var(--text-heading);
+  border-bottom: none;
+  border-top: 0.8px solid var(--border-subtle-3);
+}
+
+/* This row only has a label and an amount (no "rate" cell) — place the
+   amount in the grid's third column explicitly rather than rendering an
+   empty middle <span> just to hold the column open. */
+.estimate-row--total > span:last-child {
+  grid-column: 3;
+}
+
+.estimate-panel__cash-effect {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 0.8px solid var(--border-faint);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Below ~480px the fee breakdown becomes stacked label/value cards, matching
+   the .positions-row / .cash-ledger-row collapse above, rather than a table
+   that would need horizontal scroll to read. */
+@media (max-width: 480px) {
+  .estimate-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 10px 0;
+  }
+
+  .estimate-row--head {
+    display: none;
+  }
+
+  /* Undo the desktop-only explicit column-3 placement above — at 1 column
+     wide it would otherwise open a phantom 3rd track and push the amount
+     off to the right. */
+  .estimate-row--total > span:last-child {
+    grid-column: auto;
+  }
+
+  .estimate-row > span {
+    display: flex;
+    justify-content: space-between;
+    text-align: right;
+  }
+
+  .estimate-row > span::before {
+    content: attr(data-label);
+    color: var(--text-muted);
+    font-size: 10px;
+    text-align: left;
+  }
+
+  .estimate-panel__summary-row {
+    flex-direction: column;
+    gap: 1px;
+  }
+}
+
+/* --- orders history --------------------------------------------------------- */
+
+.orders-filter {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.orders-filter select {
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  border: 0.8px solid var(--border-subtle-3);
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  font-size: 11px;
+  font-family: inherit;
+}
+
+.orders-status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.orders-status-badge--filled {
+  background: rgba(60, 200, 130, 0.12);
+  color: var(--positive);
+}
+
+/* A rejected order is a recorded, auditable submission, not a failure — the
+   same caution treatment as .order-ticket__banner--warning, never the red
+   used for a genuine error. */
+.orders-status-badge--rejected {
+  background: rgba(230, 180, 60, 0.12);
+  color: #e6b43c;
+}
+
+.orders-row__expand button {
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  border: 0.8px solid var(--border-subtle-3);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.orders-row__reason {
+  margin: 0 0 8px;
+  padding: 0 0 0 2px;
+  color: #e6b43c;
+  font-size: 10px;
+}
+
+.order-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-sm);
+}
+
+.order-detail__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.order-detail__row dt {
+  color: var(--text-muted);
+}
+
+.order-detail__row dd {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+/* Below ~480px the orders table becomes stacked label/value cards, matching
+   the .positions-row / .cash-ledger-row collapse above. */
+@media (max-width: 480px) {
+  .orders-filter {
+    margin-left: 0;
+  }
+
+  .order-detail__row {
+    flex-direction: column;
+    gap: 1px;
   }
 }
