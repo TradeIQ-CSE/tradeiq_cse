@@ -18,7 +18,7 @@ import {
   chartDateLabel,
   chartTickLabel,
 } from './candlestick';
-import './candlestick-chart.css';
+import { chartPalette } from './chart-theme';
 
 interface CandlestickChartProps {
   data: readonly ChartDatum[];
@@ -76,8 +76,8 @@ function CandlestickTooltip({
   if (!active || !point) return null;
 
   return (
-    <div className="candlestick-tooltip">
-      <div className="candlestick-tooltip__date">{chartDateLabel(point, locale)}</div>
+    <div className="rounded-lg border border-border-table bg-background-primary-default px-3.5 py-2.5 text-caption-1-medium text-text-primary shadow-lg">
+      <div className="mb-1 text-text-secondary">{chartDateLabel(point, locale)}</div>
       <div>
         {labels.open}: {point.open === null ? '—' : formatNumber(point.open, locale)}
       </div>
@@ -125,28 +125,32 @@ export function CandlestickChart({
   ];
 
   return (
-    <div className="candlestick-chart" role="group" aria-label={accessibleLabel}>
-      <div className="candlestick-chart__price" aria-hidden="true">
+    <div
+      className="relative h-[320px] w-full min-w-0 max-w-full overflow-hidden sm:h-[360px]"
+      role="group"
+      aria-label={accessibleLabel}
+    >
+      <div className="h-[230px] w-full min-w-0 max-w-full sm:h-[265px]" aria-hidden="true">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={[...data]}
             margin={{ top: 10, right: 8, left: 0, bottom: 0 }}
           >
-            <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.04)" />
+            <CartesianGrid vertical={false} stroke={chartPalette.grid} strokeOpacity={0.35} />
             <XAxis
               dataKey="date"
               hide
-              stroke="#45556c"
+              stroke={chartPalette.axis}
             />
             <YAxis
               domain={priceDomain}
               width={54}
-              stroke="#45556c"
+              stroke={chartPalette.axis}
               tickCount={4}
               tickFormatter={(value: number) => formatNumber(value, locale)}
-              tick={{ fill: '#90a1b9', fontSize: 10, fontFamily: 'monospace' }}
-              tickLine={{ stroke: '#45556c' }}
-              axisLine={{ stroke: 'rgba(255,255,255,0.06)' }}
+              tick={{ fill: chartPalette.tick, fontSize: 10, fontFamily: 'monospace' }}
+              tickLine={{ stroke: chartPalette.axis }}
+              axisLine={{ stroke: chartPalette.axis }}
             />
             <Tooltip
               content={
@@ -165,7 +169,7 @@ export function CandlestickChart({
               <ErrorBar
                 dataKey={candleWick}
                 width={0}
-                stroke="#90a1b9"
+                stroke={chartPalette.neutral}
                 strokeWidth={1.25}
               />
             </Bar>
@@ -173,22 +177,24 @@ export function CandlestickChart({
         </ResponsiveContainer>
       </div>
 
-      <div className="candlestick-chart__volume-label">{labels.volume}</div>
-      <div className="candlestick-chart__volume" aria-hidden="true">
+      <div className="h-[15px] pl-[55px] text-caption-2-medium uppercase tracking-wider text-text-tertiary">
+        {labels.volume}
+      </div>
+      <div className="h-[75px] w-full min-w-0 max-w-full sm:h-[80px]" aria-hidden="true">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={[...data]}
             margin={{ top: 0, right: 8, left: 0, bottom: 0 }}
           >
-            <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.035)" />
+            <CartesianGrid vertical={false} stroke={chartPalette.grid} strokeOpacity={0.3} />
             <XAxis
               dataKey="date"
               minTickGap={28}
-              stroke="#45556c"
+              stroke={chartPalette.axis}
               tickFormatter={(day: string) => chartTickLabel(day, locale)}
-              tick={{ fill: '#64748b', fontSize: 9 }}
+              tick={{ fill: chartPalette.tick, fontSize: 9 }}
               tickLine={false}
-              axisLine={{ stroke: 'rgba(255,255,255,0.06)' }}
+              axisLine={{ stroke: chartPalette.axis }}
             />
             <YAxis width={54} hide />
             <Bar dataKey="volume" isAnimationActive={false} maxBarSize={12}>
@@ -204,7 +210,7 @@ export function CandlestickChart({
         </ResponsiveContainer>
       </div>
 
-      <table className="candlestick-chart__table">
+      <table className="sr-only">
         <caption>{accessibleLabel}</caption>
         <thead>
           <tr>
