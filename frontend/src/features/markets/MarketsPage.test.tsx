@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom';
 import { renderWithProviders, screen, waitFor } from '../../test/render';
 import { server } from '../../test/server';
 import { securitiesFixture } from '../../test/fixtures/securities';
+import { AppShell } from '../../components/layout/AppShell';
 import { MarketsPage } from './MarketsPage';
 import i18n from '../../i18n';
 
@@ -132,7 +133,14 @@ describe('MarketsPage', () => {
       http.get('*/securities', () => HttpResponse.json(envelope(45))),
     );
 
-    renderWithProviders(<MarketsPage />);
+    // The search box itself now lives in the shared topbar, not the page —
+    // MarketsPage only publishes its value into it via useTopbarSearch — so
+    // this is the one test in the file that needs the real shell mounted.
+    renderWithProviders(
+      <AppShell>
+        <MarketsPage />
+      </AppShell>,
+    );
 
     await screen.findByText(securitiesFixture[0].symbol);
 

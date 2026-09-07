@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { AppShell } from '../../components/layout/AppShell';
+import { useTopbarSearch } from '../../components/layout/useTopbarSearch';
 import { ApiError } from '../../lib/api';
 import { localeFor } from '../../i18n';
 import watchAddIcon from '../../assets/icons/watch-add.svg';
@@ -64,14 +64,12 @@ export function MarketsPage() {
     setCurrentPage(1);
   }
 
+  useTopbarSearch(searchQuery, (value) => {
+    setSearchQuery(value);
+    setCurrentPage(1);
+  });
+
   return (
-    <AppShell
-      search={searchQuery}
-      onSearchChange={(value) => {
-        setSearchQuery(value);
-        setCurrentPage(1);
-      }}
-    >
       <div className="markets-page">
         <header className="markets-page__header">
           <h1>{t('markets.title')}</h1>
@@ -328,6 +326,5 @@ export function MarketsPage() {
           </footer>
         )}
       </div>
-    </AppShell>
   );
 }

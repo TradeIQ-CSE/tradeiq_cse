@@ -1,64 +1,67 @@
-import React, { useState } from 'react';
-import { Layout, Drawer, Grid } from 'antd';
+import { useCallback, useEffect, useState } from 'react';
+import { Drawer, Grid } from 'antd';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
-import './app-shell.css';
-
-const { Content } = Layout;
+import { CommandPalette } from './CommandPalette';
+import { ShellContext, TopbarSearchConfig } from './ShellContext';
+import { cx } from '../../utils/cx';
 
 interface AppShellProps {
   children: React.ReactNode;
-  search?: string;
-  onSearchChange?: (value: string) => void;
 }
 
-export const AppShell: React.FC<AppShellProps> = ({
-  children,
-  search,
-  onSearchChange,
-}) => {
+export function AppShell({ children }: AppShellProps) {
   const screens = Grid.useBreakpoint();
   // md is false when viewport < 768px (i.e. mobile sizes)
   const isMobile = screens.md === false;
   const [drawerVisible, setDrawerVisible] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [topbarSearch, setTopbarSearch] = useState<TopbarSearchConfig | null>(null);
 
-  const toggleDrawer = () => setDrawerVisible((visible) => !visible);
+  const openPalette = useCallback(() => setPaletteOpen(true), []);
+
+  useEffect(() => {
+    function onShortcut(event: KeyboardEvent) {
+      if (event.key.toLowerCase() === 'k' && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        openPalette();
+      }
+    }
+    window.addEventListener('keydown', onShortcut);
+    return () => window.removeEventListener('keydown', onShortcut);
+  }, [openPalette]);
 
   return (
-    <Layout className="app-shell">
-      {isMobile ? (
-        <Drawer
-          placement="left"
-          onClose={() => setDrawerVisible(false)}
-          open={drawerVisible}
-          styles={{ body: { padding: 0, backgroundColor: 'var(--bg-panel)' } }}
-          width={192}
-          closable={false}
-        >
-          <Sidebar isMobile onClose={() => setDrawerVisible(false)} />
-        </Drawer>
-      ) : (
-        <Layout.Sider
-          width={192}
-          theme="dark"
-          className="app-shell__sider"
-          trigger={null}
-        >
-          <Sidebar />
-        </Layout.Sider>
-      )}
+    <ShellContext.Provider value={{ topbarSearch, setTopbarSearch }}>
+      <div className={cx('flex h-screen w-full bg-background-primary-default', !isMobile && 'gap-3 p-3')}>
+        {isMobile ? (
+          <Drawer
+            placement="left"
+            onClose={() => setDrawerVisible(false)}
+            open={drawerVisible}
+            styles={{ body: { padding: 0 } }}
+            width={260}
+            closable={false}
+          >
+            <Sidebar isMobile onClose={() => setDrawerVisible(false)} onOpenSearch={openPalette} />
+          </Drawer>
+        ) : (
+          <Sidebar onOpenSearch={openPalette} />
+        )}
 
-      <Layout className={`app-shell__main${isMobile ? ' app-shell__main--mobile' : ''}`}>
-        <Topbar
-          isMobile={isMobile}
-          onMenuClick={toggleDrawer}
-          search={search}
-          onSearchChange={onSearchChange}
-        />
-        <Content className="app-shell__content">{children}</Content>
-      </Layout>
-    </Layout>
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <Topbar
+            isMobile={isMobile}
+            onMenuClick={() => setDrawerVisible(true)}
+            onOpenSearch={openPalette}
+          />
+          <main className="min-w-0 flex-1 overflow-y-auto p-6">{children}</main>
+        </div>
+      </div>
+
+      <CommandPalette isOpen={paletteOpen} onOpenChange={setPaletteOpen} />
+    </ShellContext.Provider>
   );
-};
+}
 
 export default AppShell;
