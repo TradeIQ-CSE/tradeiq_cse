@@ -8,7 +8,12 @@ import {
   ChartDatum,
   chartDateLabel,
 } from './candlestick';
+import { chartPalette } from './chart-theme';
 import { CandlestickChart } from './CandlestickChart';
+
+// Asserting against palette fields rather than literal colours: these are
+// now CSS custom properties that follow the theme, and what this suite
+// protects is which branch a candle takes, not what the green resolves to.
 
 function point(overrides: Partial<ChartDatum>): ChartDatum {
   return {
@@ -35,7 +40,7 @@ describe('candleBody', () => {
     const p = point({ open: null, close: 104 });
     expect(candleGeometryOpen(p)).toBe(104);
     expect(candleBody(p)).toEqual([104, 104]);
-    expect(candleColor(p)).toBe('#90a1b9');
+    expect(candleColor(p)).toBe(chartPalette.neutral);
     expect(p.open).toBeNull();
   });
 });
@@ -56,15 +61,15 @@ describe('candleWick', () => {
 
 describe('candleColor', () => {
   it('is the up colour when close is above open', () => {
-    expect(candleColor(point({ open: 100, close: 105 }))).toBe('#00d492');
+    expect(candleColor(point({ open: 100, close: 105 }))).toBe(chartPalette.up);
   });
 
   it('is the down colour when close is below open', () => {
-    expect(candleColor(point({ open: 105, close: 100 }))).toBe('#ff6467');
+    expect(candleColor(point({ open: 105, close: 100 }))).toBe(chartPalette.down);
   });
 
   it('is the flat colour when close equals open', () => {
-    expect(candleColor(point({ open: 100, close: 100 }))).toBe('#90a1b9');
+    expect(candleColor(point({ open: 100, close: 100 }))).toBe(chartPalette.neutral);
   });
 });
 

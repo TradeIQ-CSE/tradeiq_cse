@@ -141,7 +141,9 @@ describe('SecurityDetailPage', () => {
     });
 
     await user.click(
-      screen.getByRole('button', {
+      // BoardUI's SegmentedControl is a radiogroup, so each timeframe is a
+      // radio rather than a toggle button.
+      screen.getByRole('radio', {
         name: t('securityDetail.timeframes.weekly'),
       }),
     );
@@ -216,7 +218,7 @@ describe('SecurityDetailPage', () => {
       screen.getByRole('button', { name: t('securityDetail.actions.apply') }),
     );
     await user.click(
-      screen.getByRole('button', { name: t('securityDetail.timeframes.monthly') }),
+      screen.getByRole('radio', { name: t('securityDetail.timeframes.monthly') }),
     );
     await waitFor(() => {
       expect(requests.at(-1)?.searchParams.get('timeframe')).toBe('monthly');

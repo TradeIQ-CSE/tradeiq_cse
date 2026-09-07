@@ -1,17 +1,40 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
+import { RiArrowLeftLine } from '@remixicon/react';
 import { CandlestickChart } from '../../components/charts/CandlestickChart';
+import { Button } from '../../components/base/buttons/button';
+import { Chip } from '../../components/base/badges/chip';
+import {
+  SegmentedControl,
+  SegmentedControlItem,
+} from '../../components/base/segmented-control/segmented-control';
+import { cx } from '../../utils/cx';
 import { localeFor } from '../../i18n';
 import { ApiError } from '../../lib/api';
 import { formatCount, formatPrice, formatSigned, formatVolume } from './format';
 import { normalizeOhlcvBars } from './ohlcv-chart';
-import { OhlcvRange, OhlcvTimeframe, SecurityDetail } from './types';
+import { ListingStatus, OhlcvRange, OhlcvTimeframe, SecurityDetail } from './types';
 import { useSecurityDetail, useSecurityOhlcv } from './useSecurityDetail';
-import './security-detail.css';
 
 const TIMEFRAMES: OhlcvTimeframe[] = ['daily', 'weekly', 'monthly'];
 const RANGE_ERROR_ID = 'security-range-error';
+
+// Shared with the paper-trading screens in spirit but not in code: those
+// primitives live in features/paper-trading/ui.tsx, and a cross-feature import
+// would couple two features that only happen to look alike. Promoting them to
+// a shared module is Phase 7 cleanup.
+const FIELD_SHELL =
+  'rounded-2lg bg-background-tertiary-default px-3 py-2 text-body-regular text-text-primary ' +
+  'ring-1 ring-inset ring-border-button-default outline-none ' +
+  'hover:ring-2 hover:ring-border-button-hover focus:ring-2 focus:ring-border-button-active ' +
+  'disabled:cursor-not-allowed disabled:bg-input-disabled-background disabled:text-input-disabled-text';
+
+const STATUS_COLOR: Record<ListingStatus, 'lime' | 'yellow' | 'rose'> = {
+  listed: 'lime',
+  suspended: 'yellow',
+  delisted: 'rose',
+};
 
 function isoDateLabel(day: string | null, locale: string): string {
   if (!day) return '—';
@@ -23,12 +46,27 @@ function isoDateLabel(day: string | null, locale: string): string {
   }).format(new Date(`${day}T00:00:00Z`));
 }
 
+// The <dt>/<dd> pair must stay wrapped in this one element: the tests reach a
+// value through its label's parentElement.
 function InfoItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="security-info__item">
-      <dt>{label}</dt>
-      <dd>{value}</dd>
+    <div className="flex items-baseline justify-between gap-3 border-b border-separator-border py-2 last:border-b-0">
+      <dt className="text-body-medium text-text-secondary">{label}</dt>
+      <dd className="text-right text-body-medium tabular-nums text-text-primary">{value}</dd>
     </div>
+  );
+}
+
+function BackLink() {
+  const { t } = useTranslation();
+  return (
+    <Link
+      className="inline-flex w-fit items-center gap-1 text-body-medium text-text-secondary hover:text-text-primary"
+      to="/markets"
+    >
+      <RiArrowLeftLine className="size-4" aria-hidden />
+      {t('securityDetail.back')}
+    </Link>
   );
 }
 
@@ -42,93 +80,84 @@ function DetailState({
   onRetry?: () => void;
 }) {
   const { t } = useTranslation();
-  const displaySymbol =
-    symbol.trim() || t('securityDetail.states.notFound.fallbackSymbol');
+  const displaySymbol = symbol.trim() || t('securityDetail.states.notFound.fallbackSymbol');
+
   return (
-    <main className="security-detail-page">
-      <Link className="security-detail-page__back" to="/markets">
-        ← {t('securityDetail.back')}
-      </Link>
+    <div className="flex flex-col gap-5">
+      <BackLink />
       <section
-        className={`security-detail-state security-detail-state--${kind}`}
+        className="flex flex-col items-center gap-2 rounded-2xl border border-border-table bg-background-primary-default px-6 py-16 text-center"
         aria-live="polite"
       >
         {kind === 'loading' ? (
           <>
-            <span className="security-detail-state__spinner" aria-hidden="true" />
-            <h1>{t('securityDetail.states.loading')}</h1>
+            <span
+              className="size-6 animate-spin rounded-full border-2 border-border-button-default border-t-accent-500"
+              aria-hidden="true"
+            />
+            <h1 className="text-headline-medium text-text-secondary">
+              {t('securityDetail.states.loading')}
+            </h1>
           </>
         ) : (
           <>
-            <h1>
-              {t(`securityDetail.states.${kind}.title`, {
-                symbol: displaySymbol,
-              })}
+            <h1 className="text-title-2-medium text-text-primary">
+              {t(`securityDetail.states.${kind}.title`, { symbol: displaySymbol })}
             </h1>
-            <p>{t(`securityDetail.states.${kind}.description`)}</p>
+            <p className="max-w-prose text-body-medium text-text-secondary">
+              {t(`securityDetail.states.${kind}.description`)}
+            </p>
             {kind === 'unavailable' && onRetry && (
-              <button type="button" onClick={onRetry}>
+              <Button variant="secondary" className="mt-2" onClick={onRetry}>
                 {t('securityDetail.actions.retry')}
-              </button>
+              </Button>
             )}
           </>
         )}
       </section>
-    </main>
+    </div>
   );
 }
 
-function SecuritySummary({
-  detail,
-  locale,
-}: {
-  detail: SecurityDetail;
-  locale: string;
-}) {
+function SecuritySummary({ detail, locale }: { detail: SecurityDetail; locale: string }) {
   const { t } = useTranslation();
   const latest = detail.latest;
-  const changePositive = latest?.change !== null && (latest?.change ?? 0) >= 0;
-  const changeClass =
-    latest?.change === null || latest?.change === undefined
-      ? ''
-      : changePositive
-        ? 'security-summary__change--positive'
-        : 'security-summary__change--negative';
+  const change = latest?.change ?? null;
+  const changeTone =
+    change === null ? 'text-text-primary' : change >= 0 ? 'text-status-lime-text' : 'text-status-rose-text';
 
   return (
-    <section className="security-summary">
-      <div className="security-summary__identity">
-        <div className="security-summary__symbol-line">
-          <h1>{detail.symbol}</h1>
-          <span
-            className={`security-summary__status security-summary__status--${detail.listing_status}`}
-          >
+    <section className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-border-table bg-background-primary-default p-5">
+      <div className="flex min-w-0 flex-col gap-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-title-1-medium text-text-primary">{detail.symbol}</h1>
+          <Chip variant="subtle" color={STATUS_COLOR[detail.listing_status]}>
             {t(`securityDetail.listingStatus.${detail.listing_status}`)}
-          </span>
+          </Chip>
         </div>
-        <p>{detail.company_name}</p>
+        <p className="text-body-medium text-text-secondary">{detail.company_name}</p>
       </div>
 
-      <div className="security-summary__price">
+      <div className="flex flex-col items-end gap-0.5">
         {latest ? (
           <>
-            <div className="security-summary__price-line">
-              <span className="security-summary__currency">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-body-2-medium text-text-tertiary">
                 {t('securityDetail.currency')}
               </span>
-              <strong>{formatPrice(latest.close, locale)}</strong>
+              <strong className="text-title-2-medium tabular-nums text-text-primary">
+                {formatPrice(latest.close, locale)}
+              </strong>
             </div>
-            <div className={`security-summary__change ${changeClass}`}>
-              {latest.change === null
-                ? '—'
-                : formatSigned(latest.change, 2, locale)}
+            <div className={cx('text-body-medium tabular-nums', changeTone)}>
+              {latest.change === null ? '—' : formatSigned(latest.change, 2, locale)}
               {latest.change_pct === null
                 ? ''
                 : ` (${formatSigned(latest.change_pct, 2, locale)}%)`}
             </div>
           </>
         ) : (
-          <span className="security-summary__no-price">
+          <span className="text-body-medium text-text-tertiary">
             {t('securityDetail.states.noLatestPrice')}
           </span>
         )}
@@ -146,12 +175,7 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
   const [draftFrom, setDraftFrom] = useState('');
   const [draftTo, setDraftTo] = useState('');
   const [clientRangeError, setClientRangeError] = useState<string | null>(null);
-  const chartQuery = useSecurityOhlcv(
-    symbol,
-    timeframe,
-    committedRange,
-    detailQuery.isSuccess,
-  );
+  const chartQuery = useSecurityOhlcv(symbol, timeframe, committedRange, detailQuery.isSuccess);
 
   useEffect(() => {
     if (!chartQuery.data) return;
@@ -184,10 +208,9 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
   const detail = detailQuery.data;
   const chartApiError = chartQuery.error instanceof ApiError ? chartQuery.error : null;
   const serverFieldErrors =
-    chartApiError?.body.code === 'VALIDATION_FAILED'
-      ? (chartApiError.body.fields ?? [])
-      : [];
+    chartApiError?.body.code === 'VALIDATION_FAILED' ? (chartApiError.body.fields ?? []) : [];
   const rangeHasError = clientRangeError !== null || serverFieldErrors.length > 0;
+  const rangeDisabled = !detail.data_from || !detail.data_to;
   const coverage =
     detail.data_from && detail.data_to
       ? t('securityDetail.info.coverageValue', {
@@ -203,10 +226,7 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
       setClientRangeError(t('securityDetail.range.fromAfterTo'));
       return;
     }
-    setCommittedRange({
-      from: draftFrom || undefined,
-      to: draftTo || undefined,
-    });
+    setCommittedRange({ from: draftFrom || undefined, to: draftTo || undefined });
   }
 
   function resetRange() {
@@ -216,20 +236,25 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
     setCommittedRange({});
   }
 
+  // No <main> here: AppShell already renders one around every routed page, and
+  // a second would nest the landmark inside itself.
   return (
-    <main className="security-detail-page">
-      <Link className="security-detail-page__back" to="/markets">
-        ← {t('securityDetail.back')}
-      </Link>
+    <div className="flex flex-col gap-5">
+      <BackLink />
 
       <SecuritySummary detail={detail} locale={locale} />
 
-      <div className="security-detail-layout">
-        <section className="security-chart-card" aria-busy={chartQuery.isFetching}>
-          <div className="security-chart-card__header">
-            <div>
-              <h2>{t('securityDetail.chart.title')}</h2>
-              <p>
+      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <section
+          className="relative overflow-hidden rounded-2xl border border-border-table bg-background-primary-default"
+          aria-busy={chartQuery.isFetching}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3 px-4 pt-4 pb-3">
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <h2 className="text-headline-medium text-text-primary">
+                {t('securityDetail.chart.title')}
+              </h2>
+              <p className="text-body-2-medium text-text-tertiary">
                 {chartQuery.data?.from && chartQuery.data.to
                   ? t('securityDetail.chart.range', {
                       from: isoDateLabel(chartQuery.data.from, locale),
@@ -239,34 +264,38 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
               </p>
             </div>
 
-            <div
-              className="security-timeframes"
-              role="group"
+            <SegmentedControl
               aria-label={t('securityDetail.chart.timeframeLabel')}
+              selectedKeys={new Set([timeframe])}
+              onSelectionChange={(keys) => {
+                const [next] = [...keys];
+                if (next) setTimeframe(next as OhlcvTimeframe);
+              }}
             >
               {TIMEFRAMES.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={value === timeframe ? 'security-timeframes__active' : ''}
-                  aria-pressed={value === timeframe}
-                  onClick={() => setTimeframe(value)}
-                >
+                <SegmentedControlItem key={value} id={value}>
                   {t(`securityDetail.timeframes.${value}`)}
-                </button>
+                </SegmentedControlItem>
               ))}
-            </div>
+            </SegmentedControl>
           </div>
 
-          <form className="security-range" onSubmit={commitRange} noValidate>
-            <label>
-              <span>{t('securityDetail.range.from')}</span>
+          <form
+            className="flex flex-wrap items-end gap-3 px-4 pb-3"
+            onSubmit={commitRange}
+            noValidate
+          >
+            <label className="flex flex-col gap-1">
+              <span className="text-body-2-medium text-text-secondary">
+                {t('securityDetail.range.from')}
+              </span>
               <input
                 type="date"
+                className={FIELD_SHELL}
                 value={draftFrom}
                 min={detail.data_from ?? undefined}
                 max={draftTo || detail.data_to || undefined}
-                disabled={!detail.data_from || !detail.data_to}
+                disabled={rangeDisabled}
                 aria-invalid={rangeHasError}
                 aria-describedby={rangeHasError ? RANGE_ERROR_ID : undefined}
                 onChange={(event) => {
@@ -275,14 +304,17 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
                 }}
               />
             </label>
-            <label>
-              <span>{t('securityDetail.range.to')}</span>
+            <label className="flex flex-col gap-1">
+              <span className="text-body-2-medium text-text-secondary">
+                {t('securityDetail.range.to')}
+              </span>
               <input
                 type="date"
+                className={FIELD_SHELL}
                 value={draftTo}
                 min={draftFrom || detail.data_from || undefined}
                 max={detail.data_to ?? undefined}
-                disabled={!detail.data_from || !detail.data_to}
+                disabled={rangeDisabled}
                 aria-invalid={rangeHasError}
                 aria-describedby={rangeHasError ? RANGE_ERROR_ID : undefined}
                 onChange={(event) => {
@@ -291,16 +323,22 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
                 }}
               />
             </label>
-            <div className="security-range__actions">
-              <button type="submit">{t('securityDetail.actions.apply')}</button>
-              <button type="button" className="security-range__reset" onClick={resetRange}>
+            <div className="flex items-center gap-2">
+              <Button type="submit" variant="secondary" size="small">
+                {t('securityDetail.actions.apply')}
+              </Button>
+              <Button type="button" variant="ghost" size="small" onClick={resetRange}>
                 {t('securityDetail.actions.reset')}
-              </button>
+              </Button>
             </div>
           </form>
 
           {rangeHasError && (
-            <div id={RANGE_ERROR_ID} className="security-range__error" role="alert">
+            <div
+              id={RANGE_ERROR_ID}
+              className="mx-4 mb-3 rounded-lg bg-status-rose-background px-3 py-2 text-body-2-medium text-status-rose-text"
+              role="alert"
+            >
               {clientRangeError && <p>{clientRangeError}</p>}
               {serverFieldErrors.map((field) => (
                 <p key={`${field.field}-${field.reason}`}>
@@ -313,29 +351,38 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
             </div>
           )}
 
-          <div className="security-chart-card__body" aria-live="polite">
+          <div className="border-t border-separator-border px-4 py-4" aria-live="polite">
             {chartQuery.isPending ? (
-              <div className="security-chart-state">
-                <span className="security-detail-state__spinner" aria-hidden="true" />
-                <p>{t('securityDetail.chart.loading')}</p>
+              <div className="flex flex-col items-center gap-2 py-16 text-center">
+                <span
+                  className="size-6 animate-spin rounded-full border-2 border-border-button-default border-t-accent-500"
+                  aria-hidden="true"
+                />
+                <p className="text-body-medium text-text-secondary">
+                  {t('securityDetail.chart.loading')}
+                </p>
               </div>
             ) : chartQuery.isError ? (
-              <div className="security-chart-state security-chart-state--error">
-                <p>
+              <div className="flex flex-col items-center gap-3 py-16 text-center">
+                <p className="text-body-medium text-status-rose-text">
                   {serverFieldErrors.length > 0
                     ? t('securityDetail.chart.validationFailed')
-                    : chartApiError?.body.message ?? t('securityDetail.chart.unavailable')}
+                    : (chartApiError?.body.message ?? t('securityDetail.chart.unavailable'))}
                 </p>
                 {serverFieldErrors.length === 0 && (
-                  <button type="button" onClick={() => void chartQuery.refetch()}>
+                  <Button variant="secondary" onClick={() => void chartQuery.refetch()}>
                     {t('securityDetail.actions.retry')}
-                  </button>
+                  </Button>
                 )}
               </div>
             ) : chartData.length === 0 ? (
-              <div className="security-chart-state">
-                <h3>{t('securityDetail.chart.empty.title')}</h3>
-                <p>{t('securityDetail.chart.empty.description')}</p>
+              <div className="flex flex-col items-center gap-1 py-16 text-center">
+                <h3 className="text-headline-medium text-text-primary">
+                  {t('securityDetail.chart.empty.title')}
+                </h3>
+                <p className="text-body-medium text-text-secondary">
+                  {t('securityDetail.chart.empty.description')}
+                </p>
               </div>
             ) : (
               <CandlestickChart
@@ -359,8 +406,10 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
           </div>
         </section>
 
-        <aside className="security-info-card">
-          <h2>{t('securityDetail.info.title')}</h2>
+        <aside className="rounded-2xl border border-border-table bg-background-primary-default p-4">
+          <h2 className="mb-2 text-headline-medium text-text-primary">
+            {t('securityDetail.info.title')}
+          </h2>
           <dl>
             <InfoItem label={t('securityDetail.info.sector')} value={detail.sector?.name ?? '—'} />
             <InfoItem label={t('securityDetail.info.cseCode')} value={detail.cse_code ?? '—'} />
@@ -374,9 +423,7 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
             />
             <InfoItem
               label={t('securityDetail.info.volume')}
-              value={
-                detail.latest ? formatVolume(detail.latest.volume, locale) : '—'
-              }
+              value={detail.latest ? formatVolume(detail.latest.volume, locale) : '—'}
             />
             <InfoItem
               label={t('securityDetail.info.sharesOutstanding')}
@@ -410,7 +457,7 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
           </dl>
         </aside>
       </div>
-    </main>
+    </div>
   );
 }
 
