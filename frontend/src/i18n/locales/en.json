@@ -202,7 +202,7 @@
       "badge": "Colombo Stock Exchange",
       "headlineLine1": "The professional edge",
       "headlineLine2": "for CSE investors.",
-      "subtitle": "Advanced charting, model-driven signals, portfolio analytics and paper trading, built for Sri Lankan investors.",
+      "subtitle": "Market data, historical charting, strategy backtesting and paper trading, built for Sri Lankan investors.",
       "getStarted": "Get started free",
       "signIn": "Sign in →",
       "dataNote": "End-of-day data · Delayed"
@@ -217,16 +217,24 @@
       "descriptionCounted": "Browse all {{formattedCount}} securities listed on the CSE with real end-of-day prices, search, and OHLC breakdowns."
     },
     "insights": {
-      "panelTitle": "Direction Probabilities · 1-Week",
-      "panelBadge": "Statistical model",
-      "bull": "↑ Bull",
-      "flat": "→ Flat",
-      "bear": "↓ Bear",
-      "eyebrow": "AI insights",
-      "headingLine1": "Model-driven signals,",
-      "headingLine2": "not gut feeling.",
-      "description": "See Up / Flat / Down probability splits for every major CSE symbol. Understand your open positions through the same lens, updated each trading day.",
-      "cta": "See AI insights →"
+      "eyebrow": "What you get",
+      "description": "Every price on TradeIQ comes from official CSE end-of-day data. Test a strategy against it, track a paper portfolio with it, and see exactly which session a figure came from.",
+      "heading": "Built on the data, not on a hunch.",
+      "planned": "Planned",
+      "capabilities": {
+        "charting": {
+          "title": "Historical charting",
+          "description": "Daily, weekly and monthly OHLC for every listed security, over any range the data covers."
+        },
+        "portfolio": {
+          "title": "Portfolio analytics",
+          "description": "Positions, realised and unrealised P&L and a full cash ledger for every paper portfolio."
+        },
+        "signals": {
+          "title": "Model-driven signals",
+          "description": "Direction probabilities from a statistical model. Not built yet — no signal is shown anywhere until it is."
+        }
+      }
     },
     "backtesting": {
       "eyebrow": "Strategy Backtesting",
@@ -249,8 +257,6 @@
       },
       "selectStrategy": "Select Rules",
       "parameters": "Parameters",
-      "sampleResults": "Sample results",
-      "totalReturn": "Total Return",
       "rules": {
         "priceFalls": "Buy: price falls to",
         "takeProfit": "Sell: take profit",
@@ -258,9 +264,7 @@
         "endOfPeriod": "Sell: end of period"
       },
       "takeProfitPct": "Take Profit",
-      "stopLossPct": "Stop Loss",
-      "maxDrawdown": "Max Drawdown",
-      "volatility": "Volatility"
+      "stopLossPct": "Stop Loss"
     },
     "cta": {
       "heading": "Start trading smarter today.",

@@ -1,15 +1,15 @@
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { localeFor } from '../../i18n';
+import { cx } from '../../utils/cx';
 import { useSecurities } from '../markets/useSecurities';
 import { formatCount, formatPrice, formatSigned } from '../markets/format';
+import { LANDING_CONTAINER } from './LandingPage';
 
 // The landing preview shows the first page of the same GET /securities feed the
 // Markets page uses, rather than a hardcoded list: the prices here were being
 // read as real by anyone looking at the page.
 const PREVIEW_COUNT = 5;
-
-const SPARK_UP = 'M0,18 L7,14 14,15 21,9 28,10 34,2';
-const SPARK_DOWN = 'M0,4 L7,8 14,7 21,13 28,12 34,20';
 
 export function LandingMarketData() {
   const { t, i18n } = useTranslation();
@@ -25,14 +25,15 @@ export function LandingMarketData() {
   const total = data?.meta?.total ?? 0;
 
   return (
-    <section className="landing-market-data">
-      <div className="landing-market-data__intro">
-        <span className="landing-section-eyebrow">{t('landing.marketData.eyebrow')}</span>
-        <h2 className="landing-section-heading">
-          <span>{t('landing.marketData.headingLine1')}</span>
-          <span>{t('landing.marketData.headingLine2')}</span>
+    <section className={cx(LANDING_CONTAINER, 'grid items-center gap-10 lg:grid-cols-2')}>
+      <div className="flex flex-col items-start">
+        <span className="text-body-medium text-status-blue-text">
+          {t('landing.marketData.eyebrow')}
+        </span>
+        <h2 className="mt-3 text-3xl font-semibold leading-tight tracking-tight text-text-primary sm:text-4xl">
+          {t('landing.marketData.headingLine1')} {t('landing.marketData.headingLine2')}
         </h2>
-        <p className="landing-section-copy">
+        <p className="mt-4 max-w-prose text-lg leading-relaxed text-text-secondary">
           {total > 0
             ? t('landing.marketData.descriptionCounted', {
                 count: total,
@@ -40,71 +41,84 @@ export function LandingMarketData() {
               })
             : t('landing.marketData.description')}
         </p>
-        <a className="landing-section-link" href="/markets">
+        <Link
+          to="/markets"
+          className="mt-5 text-body-medium text-status-blue-text hover:underline"
+        >
           {t('landing.marketData.cta')}
-        </a>
+        </Link>
       </div>
 
-      <div className="landing-market-data__card">
-        <div className="landing-market-data__card-head">
-          <span className="landing-market-data__card-title">{t('landing.marketData.cardTitle')}</span>
-          <div className="landing-market-data__chips">
-            <span className="landing-market-data__chip landing-market-data__chip--active">
-              {t('markets.filters.all')}
-            </span>
-          </div>
+      <div className="overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default">
+        <div className="border-b border-separator-border px-4 py-3">
+          <span className="text-headline-medium text-text-primary">
+            {t('landing.marketData.cardTitle')}
+          </span>
         </div>
 
         {isError ? (
-          <p className="landing-market-data__state">{t('markets.states.unreachable')}</p>
+          <p className="px-4 py-10 text-center text-body-medium text-text-secondary">
+            {t('markets.states.unreachable')}
+          </p>
         ) : isPending ? (
-          Array.from({ length: PREVIEW_COUNT }).map((_, i) => (
-            <div className="landing-market-data__row landing-market-data__row--skeleton" key={i} />
-          ))
+          <div className="flex flex-col gap-2 p-4">
+            {Array.from({ length: PREVIEW_COUNT }).map((_, index) => (
+              <div
+                key={index}
+                className="h-11 animate-pulse rounded-lg bg-background-tertiary-default"
+              />
+            ))}
+          </div>
         ) : (
-          securities.map((security) => {
-            const positive = (security.change_pct ?? 0) >= 0;
-            return (
-              <div key={security.symbol} className="landing-market-data__row">
-                <span className="landing-market-data__avatar">{security.symbol.charAt(0)}</span>
-                <div className="landing-market-data__name">
-                  {/*
-                    Full symbol, as on the Markets page: the class suffix is
-                    significant (AAF.N0000 and AAF.X0000 are distinct
-                    securities), so it must not be trimmed for display.
-                  */}
-                  <p className="landing-market-data__symbol">{security.symbol}</p>
-                  <p className="landing-market-data__company">{security.company_name}</p>
-                </div>
-                <div className="landing-market-data__price">
-                  <p className="landing-market-data__price-value">
-                    {security.price !== null ? formatPrice(security.price, locale) : t('markets.empty')}
-                  </p>
-                  <p
-                    className={
-                      positive
-                        ? 'landing-hero-mockup__index-change--up'
-                        : 'landing-hero-mockup__index-change--down'
-                    }
-                  >
-                    {security.change_pct !== null
-                      ? `${formatSigned(security.change_pct, 2, locale)}%`
-                      : t('markets.empty')}
-                  </p>
-                </div>
-                <svg className="landing-market-data__spark" viewBox="0 0 34 22" aria-hidden="true">
-                  <path
-                    d={positive ? SPARK_UP : SPARK_DOWN}
-                    fill="none"
-                    stroke={positive ? 'var(--positive)' : 'var(--negative)'}
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-            );
-          })
+          <ul className="flex flex-col">
+            {securities.map((security) => {
+              const positive = (security.change_pct ?? 0) >= 0;
+              return (
+                <li
+                  key={security.symbol}
+                  className="flex items-center gap-3 border-b border-separator-border px-4 py-3 last:border-b-0"
+                >
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-background-secondary-default text-body-medium text-text-secondary">
+                    {security.symbol.charAt(0)}
+                  </span>
+                  <div className="flex min-w-0 flex-col">
+                    {/*
+                      Full symbol, as on the Markets page: the class suffix is
+                      significant (AAF.N0000 and AAF.X0000 are distinct
+                      securities), so it must not be trimmed for display.
+                    */}
+                    <span className="truncate text-body-medium text-text-primary">
+                      {security.symbol}
+                    </span>
+                    <span className="truncate text-body-2-medium text-text-tertiary">
+                      {security.company_name}
+                    </span>
+                  </div>
+                  <div className="ml-auto flex flex-col items-end">
+                    <span className="text-body-medium tabular-nums text-text-primary">
+                      {security.price !== null
+                        ? formatPrice(security.price, locale)
+                        : t('markets.empty')}
+                    </span>
+                    {/* No sparkline: the two that used to sit here were a pair
+                        of fixed paths, identical for every rising and every
+                        falling row, which drew a price history that was not
+                        this security's. */}
+                    <span
+                      className={cx(
+                        'text-body-2-medium tabular-nums',
+                        positive ? 'text-status-lime-text' : 'text-status-rose-text',
+                      )}
+                    >
+                      {security.change_pct !== null
+                        ? `${formatSigned(security.change_pct, 2, locale)}%`
+                        : t('markets.empty')}
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </div>
     </section>

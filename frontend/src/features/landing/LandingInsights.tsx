@@ -1,61 +1,70 @@
 import { useTranslation } from 'react-i18next';
-import modelIcon from '../../assets/icons/model.svg';
+import { RiLineChartLine, RiPieChartLine, RiSparkling2Line } from '@remixicon/react';
+import { Chip } from '../../components/base/badges/chip';
+import { cx } from '../../utils/cx';
+import { LANDING_CONTAINER } from './LandingPage';
 
-type Tone = 'bull' | 'flat' | 'bear';
-
-const PROBABILITIES: { symbol: string; bull: number; flat: number; bear: number; tone: Tone }[] = [
-  { symbol: 'JKH', bull: 54, flat: 19, bear: 27, tone: 'bull' },
-  { symbol: 'COMB', bull: 32, flat: 38, bear: 30, tone: 'flat' },
-  { symbol: 'DIAL', bull: 49, flat: 24, bear: 27, tone: 'bull' },
-  { symbol: 'LOLC', bull: 21, flat: 28, bear: 51, tone: 'bear' },
-  { symbol: 'HNB', bull: 44, flat: 28, bear: 28, tone: 'bull' },
-  { symbol: 'CTC', bull: 35, flat: 38, bear: 27, tone: 'flat' },
-];
+/**
+ * What this section used to be: six CSE symbols — JKH, COMB, DIAL, LOLC, HNB,
+ * CTC — each with an invented up/flat/down probability split, under a heading
+ * that called them a statistical model's output and copy that said they were
+ * updated every trading day.
+ *
+ * None of it existed. The ML service is unbuilt (#61-#64 are open), so those
+ * were fabricated predictions about real, named, publicly traded securities on
+ * a public page. The plan is explicit that the landing page describes only
+ * what is implemented or is clearly identified as upcoming, and this is the
+ * clearest case of it on the site.
+ *
+ * The capability is still worth stating, because it is genuinely planned — so
+ * it is stated as planned, with nothing standing in for the numbers.
+ */
+const CAPABILITIES = [
+  { key: 'charting', icon: RiLineChartLine, available: true },
+  { key: 'portfolio', icon: RiPieChartLine, available: true },
+  { key: 'signals', icon: RiSparkling2Line, available: false },
+] as const;
 
 export function LandingInsights() {
   const { t } = useTranslation();
 
   return (
-    <section className="landing-insights">
-      <div className="landing-insights__panel">
-        <div className="landing-insights__panel-head">
-          <img src={modelIcon} alt="" width={14} height={14} />
-          <span className="landing-insights__panel-title">{t('landing.insights.panelTitle')}</span>
-          <span className="landing-insights__panel-badge">{t('landing.insights.panelBadge')}</span>
-        </div>
+    <section className={cx(LANDING_CONTAINER, 'flex flex-col items-center text-center')}>
+      <span className="text-body-medium text-status-blue-text">
+        {t('landing.insights.eyebrow')}
+      </span>
+      <h2 className="mt-3 max-w-2xl text-3xl font-semibold leading-tight tracking-tight text-text-primary sm:text-4xl">
+        {t('landing.insights.heading')}
+      </h2>
+      <p className="mt-4 max-w-2xl text-lg leading-relaxed text-text-secondary">
+        {t('landing.insights.description')}
+      </p>
 
-        {PROBABILITIES.map((row) => (
-          <div key={row.symbol} className="landing-insights__row">
-            <span className="landing-insights__symbol">{row.symbol}</span>
-            <span className="landing-insights__bar">
-              <span className="landing-insights__seg landing-insights__seg--bull" style={{ width: `${row.bull}%` }}>
-                {row.bull}%
-              </span>
-              <span className="landing-insights__seg landing-insights__seg--flat" style={{ width: `${row.flat}%` }}>
-                {row.flat}%
-              </span>
-              <span className="landing-insights__seg landing-insights__seg--bear" style={{ width: `${row.bear}%` }}>
-                {row.bear}%
-              </span>
+      <ul className="mt-10 grid w-full gap-4 sm:grid-cols-3">
+        {CAPABILITIES.map(({ key, icon: Icon, available }) => (
+          <li
+            key={key}
+            className="flex flex-col items-start gap-3 rounded-2xl border border-border-button-default bg-background-primary-default p-5 text-left"
+          >
+            <span className="flex size-10 items-center justify-center rounded-lg bg-background-secondary-default">
+              <Icon className="size-5 text-foreground-icon-primary" aria-hidden />
             </span>
-            <span className={`landing-insights__label landing-insights__label--${row.tone}`}>
-              {t(`landing.insights.${row.tone}`)}
-            </span>
-          </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-headline-medium text-text-primary">
+                {t(`landing.insights.capabilities.${key}.title`)}
+              </h3>
+              {!available && (
+                <Chip variant="caption" color="soft">
+                  {t('landing.insights.planned')}
+                </Chip>
+              )}
+            </div>
+            <p className="text-body-regular leading-relaxed text-text-secondary">
+              {t(`landing.insights.capabilities.${key}.description`)}
+            </p>
+          </li>
         ))}
-      </div>
-
-      <div className="landing-insights__intro">
-        <span className="landing-section-eyebrow">{t('landing.insights.eyebrow')}</span>
-        <h2 className="landing-section-heading">
-          <span>{t('landing.insights.headingLine1')}</span>
-          <span>{t('landing.insights.headingLine2')}</span>
-        </h2>
-        <p className="landing-section-copy">{t('landing.insights.description')}</p>
-        <a className="landing-section-link" href="/markets">
-          {t('landing.insights.cta')}
-        </a>
-      </div>
+      </ul>
     </section>
   );
 }
