@@ -14,6 +14,7 @@
     "lint": "pnpm -r --if-present run lint",
     "test": "pnpm -r --if-present run test",
     "test:e2e": "pnpm -r --if-present run test:e2e",
+    "smoke:compose": "bash scripts/compose-smoke.sh",
     "typecheck": "pnpm -r --if-present run typecheck",
     "format": "pnpm -r --if-present run format"
   }
