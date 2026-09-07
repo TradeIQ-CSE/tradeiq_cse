@@ -4,19 +4,21 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import appConfig from './config/app.config';
 import databaseConfig from './config/database.config';
+import ingestionConfig from './config/ingestion.config';
 import { validate } from './config/env.validation';
 import { HealthModule } from './health/health.module';
 import { MarketOverviewModule } from './market-overview/market-overview.module';
 import { PaperTradingQuotesModule } from './paper-trading-quotes/paper-trading-quotes.module';
 import { SecuritiesModule } from './securities/securities.module';
 import { BacktestRunsModule } from './backtest-runs/backtest-runs.module';
+import { EodIngestionModule } from './eod-ingestion/eod-ingestion.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
-      load: [appConfig, databaseConfig],
+      load: [appConfig, databaseConfig, ingestionConfig],
       validate,
     }),
     TypeOrmModule.forRootAsync({
@@ -42,6 +44,7 @@ import { BacktestRunsModule } from './backtest-runs/backtest-runs.module';
     PaperTradingQuotesModule,
     SecuritiesModule,
     BacktestRunsModule,
+    EodIngestionModule,
   ],
 })
 export class AppModule {}

@@ -79,6 +79,7 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@localhost:5432/market_data
+      MARKET_INGESTION_TOKEN: test-only-market-ingestion-token
       AUTH_DATABASE_URL: postgresql://auth:changeme@localhost:5432/auth
       JWT_SECRET: test-only-ci-secret
       # 32 zero bytes, base64. Test-only: CI never stores a real address.
@@ -196,11 +197,14 @@ jobs:
                     (SELECT count(*) FROM market_data.daily_prices) || ',' ||
                     (SELECT count(*) FROM market_data.trading_calendar) || ',' ||
                     (SELECT count(*) FROM market_data.index_values) || ',' ||
-                    (SELECT count(*) FROM market_data.ingestion_runs)"
+                    (SELECT count(*) FROM market_data.ingestion_runs) || ',' ||
+                    (SELECT count(*) FROM market_data.price_aggregates) || ',' ||
+                    (SELECT count(*) FROM market_data.securities WHERE cse_code = symbol)"
           COUNTS=$(psql "$DATA_INGESTION_MARKET_DATA_DATABASE_URL" -tAc "$Q")
           echo "counts=$COUNTS"
-          # single ingestion_runs row after two runs => idempotent, no dupes
-          test "$COUNTS" = "6,42,7,14,1"
+          # One run and 18 aggregate rows after two seed executions proves
+          # regeneration is idempotent; every canonical symbol is its CSE code.
+          test "$COUNTS" = "6,42,7,14,1,18,6"
 
       - name: Market API E2E against seeded data
         working-directory: services/market-trading
