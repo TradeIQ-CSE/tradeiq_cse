@@ -43,6 +43,8 @@ function DetailState({
   onRetry?: () => void;
 }) {
   const { t } = useTranslation();
+  const displaySymbol =
+    symbol.trim() || t('securityDetail.states.notFound.fallbackSymbol');
   return (
     <AppShell>
       <main className="security-detail-page">
@@ -61,7 +63,9 @@ function DetailState({
           ) : (
             <>
               <h1>
-                {t(`securityDetail.states.${kind}.title`, { symbol })}
+                {t(`securityDetail.states.${kind}.title`, {
+                  symbol: displaySymbol,
+                })}
               </h1>
               <p>{t(`securityDetail.states.${kind}.description`)}</p>
               {kind === 'unavailable' && onRetry && (
@@ -417,7 +421,18 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
 
 export function SecurityDetailPage() {
   const { symbol = '' } = useParams<{ symbol: string }>();
+  const normalizedSymbol = symbol.trim();
+
+  if (!normalizedSymbol) {
+    return <DetailState kind="notFound" symbol="" />;
+  }
+
   // The key remounts local controls synchronously when only the route param
   // changes, so a new symbol can never inherit the previous symbol's range.
-  return <SecurityDetailView key={symbol.toLocaleUpperCase('en-US')} symbol={symbol} />;
+  return (
+    <SecurityDetailView
+      key={normalizedSymbol.toLocaleUpperCase('en-US')}
+      symbol={normalizedSymbol}
+    />
+  );
 }

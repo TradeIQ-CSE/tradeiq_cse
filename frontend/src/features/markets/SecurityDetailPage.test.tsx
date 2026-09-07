@@ -36,6 +36,28 @@ function DetailWithNavigation() {
 }
 
 describe('SecurityDetailPage', () => {
+  it('renders not found without requesting data for an encoded blank symbol', () => {
+    let detailRequests = 0;
+    server.use(
+      http.get('*/securities/:symbol', () => {
+        detailRequests += 1;
+        return HttpResponse.json({ data: securityDetailFixture });
+      }),
+    );
+
+    renderPage('/markets/%20');
+
+    expect(
+      screen.getByRole('heading', { name: 'Security was not found' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', {
+        name: t('securityDetail.states.loading'),
+      }),
+    ).not.toBeInTheDocument();
+    expect(detailRequests).toBe(0);
+  });
+
   it('loads a lowercase URL and renders the API canonical symbol and real detail values', async () => {
     renderPage();
 

@@ -148,6 +148,7 @@
       "noLatestPrice": "No latest price available",
       "notFound": {
         "title": "{{symbol}} was not found",
+        "fallbackSymbol": "Security",
         "description": "This symbol is not available in the CSE securities dataset."
       },
       "unavailable": {
