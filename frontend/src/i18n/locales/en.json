@@ -85,7 +85,7 @@
       "next": "Next"
     },
     "unavailable": {
-      "marketOverview": "Coming soon: needs GET /market/overview"
+      "marketCap": "Market-cap filtering is not supported by the securities endpoint"
     },
     "empty": "—",
     "tradingDate": "Trading date",
@@ -97,6 +97,18 @@
     "stats": {
       "listed": "Listed securities",
       "asOf": "Latest session"
+    },
+    "movers": {
+      "title": "Top movers",
+      "subtitle": "Biggest gainers, losers and most traded for the session.",
+      "loading": "Loading top movers",
+      "empty": "No ranked movers for this session.",
+      "unreachable": "Could not load top movers.",
+      "lists": {
+        "gainers": "Gainers",
+        "losers": "Losers",
+        "most_active": "Most active"
+      }
     }
   },
   "securityDetail": {
