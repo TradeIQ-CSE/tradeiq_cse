@@ -35,9 +35,18 @@ const Portfolio = lazy(() =>
     default: module.PortfolioPage,
   })),
 );
+const PaperTrading = lazy(() =>
+  import('../features/paper-trading/PaperTradingPage').then((module) => ({
+    default: module.PaperTradingPage,
+  })),
+);
+const Orders = lazy(() =>
+  import('../features/paper-trading/OrdersPage').then((module) => ({
+    default: module.OrdersPage,
+  })),
+);
 const Dashboard = lazy(() => import('../pages/investor/Dashboard'));
 const Watchlist = lazy(() => import('../pages/investor/Watchlist'));
-const Orders = lazy(() => import('../pages/investor/Orders'));
 const Analytics = lazy(() => import('../pages/investor/Analytics'));
 const AdminHome = lazy(() => import('../pages/admin/AdminHome'));
 const BacktestWizard = lazy(() =>
@@ -136,7 +145,7 @@ export function AppRoutes() {
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/analytics" element={<Analytics />} />
-          <Route path="/paper-trading" element={<PlannedFeature title="Paper Trading" />} />
+          <Route path="/paper-trading" element={<PaperTrading />} />
           <Route path="/ai-insights" element={<PlannedFeature title="Machine Learning Insights" />} />
           <Route path="/reports" element={<PlannedFeature title="Reports" />} />
           <Route

@@ -18,12 +18,12 @@ describe('AppRoutes', () => {
     expect(await screen.findByRole('heading', { name: t('markets.title') })).toBeInTheDocument();
   });
 
-  it('renders the planned-feature placeholder for /paper-trading', async () => {
+  it('renders the order ticket for /paper-trading', async () => {
     renderWithProviders(<AppRoutes />, { initialEntries: ['/paper-trading'] });
 
-    expect(await screen.findByRole('heading', { name: 'Paper Trading' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: t('paperTrading.page.title') })).toBeInTheDocument();
     expect(
-      screen.getByText('This interface is planned and is not available in the current build.'),
+      await screen.findByRole('heading', { name: t('paperTrading.ticket.title') }),
     ).toBeInTheDocument();
   });
 
@@ -34,7 +34,7 @@ describe('AppRoutes', () => {
     });
 
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Paper Trading' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: t('paperTrading.page.title') })).not.toBeInTheDocument();
   });
 
   it('still renders /markets while anonymous', async () => {

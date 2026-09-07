@@ -372,5 +372,120 @@
       },
       "unreachable": "Could not reach the identity-auth API."
     }
+  },
+  "orders": {
+    "codes": {
+      "insufficientCash": "This order needs more cash than the portfolio currently holds.",
+      "insufficientHoldings": "This order needs more shares than the portfolio currently holds.",
+      "transactionLimitExceeded": "This order's value exceeds the maximum allowed per transaction.",
+      "securityNotFound": "No security was found for this symbol.",
+      "securityNotTradable": "This security is suspended or delisted and cannot be traded.",
+      "priceUnavailable": "No usable closing price is available for this security.",
+      "stalePrice": "The latest available price for this security is older than the current market session.",
+      "validationFailed": "The order details are invalid. Check the symbol, side and quantity.",
+      "portfolioNotFound": "This portfolio could not be found.",
+      "orderNotFound": "This order could not be found.",
+      "idempotencyKeyReused": "This submission could not be matched to a previous attempt. A new attempt has been prepared — try again.",
+      "dependencyUnavailable": "The market-data service is temporarily unavailable. You can safely retry.",
+      "internal": "Something went wrong while processing this order.",
+      "unknown": "This order could not be processed for an unknown reason."
+    },
+    "page": {
+      "title": "Order history"
+    },
+    "tableTitle": "Orders",
+    "status": {
+      "filled": "Filled",
+      "rejected": "Rejected"
+    },
+    "filter": {
+      "label": "Status",
+      "all": "All orders"
+    },
+    "columns": {
+      "placedAt": "Placed",
+      "symbol": "Symbol",
+      "side": "Side",
+      "quantity": "Quantity",
+      "status": "Status"
+    },
+    "quantityPartial": "{{filled}} of {{quantity}}",
+    "expand": "Show details",
+    "collapse": "Hide details",
+    "detail": {
+      "loading": "Loading order details…",
+      "unreachable": "Could not load order details.",
+      "noFill": "This order was not executed.",
+      "price": "Execution price",
+      "fillDate": "Fill date",
+      "settlementDate": "Settlement date",
+      "grossConsideration": "Gross consideration",
+      "feeTotal": "Total fees",
+      "cashEffect": "Cash effect",
+      "realizedPnl": "Realized P/L"
+    },
+    "empty": "No orders yet.",
+    "emptyFiltered": "No orders match this filter.",
+    "loading": "Loading orders…",
+    "unreachable": "Could not reach the identity-auth API.",
+    "pagination": {
+      "page": "Page {{page}} of {{lastPage}}",
+      "previous": "Previous",
+      "next": "Next"
+    }
+  },
+  "paperTrading": {
+    "page": {
+      "title": "Place an order"
+    },
+    "ticket": {
+      "title": "Order ticket",
+      "symbol": "Symbol",
+      "symbolPlaceholder": "Search by symbol or company",
+      "symbolSearching": "Searching…",
+      "symbolNoMatches": "No securities match this search.",
+      "symbolError": "Could not search securities. Check your connection and try again.",
+      "side": "Side",
+      "sides": {
+        "buy": "Buy",
+        "sell": "Sell"
+      },
+      "quantity": "Quantity",
+      "preview": "Preview order",
+      "confirm": "Confirm order",
+      "estimate": {
+        "title": "Estimate",
+        "loading": "Getting an estimate…",
+        "empty": "Enter a symbol and quantity, then preview to see an estimate.",
+        "stale": "Order details changed since this estimate. Preview again before confirming.",
+        "price": "Price",
+        "priceAsOf": "Price as of",
+        "settlementDate": "Settlement date",
+        "grossConsideration": "Gross consideration",
+        "feeTotal": "Total fees",
+        "cashEffect": "Cash effect",
+        "feeColumns": {
+          "type": "Fee",
+          "rate": "Rate",
+          "amount": "Amount"
+        },
+        "feeTypes": {
+          "brokerage": "Brokerage",
+          "cse": "CSE fee",
+          "cds": "CDS fee",
+          "sec_cess": "SEC cess",
+          "stl": "Share transaction levy"
+        }
+      },
+      "result": {
+        "filledTitle": "{{side}} order filled — {{quantity}} {{symbol}}",
+        "filledDetail": "Executed at {{price}}. Cash effect {{cashEffect}}. Settles {{date}}.",
+        "rejectedTitle": "Order for {{symbol}} was not filled",
+        "recorded": "This order was recorded and appears in your order history."
+      },
+      "errors": {
+        "unreachable": "Could not reach the identity-auth API."
+      }
+    }
   }
 }
