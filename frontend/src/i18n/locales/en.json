@@ -85,13 +85,19 @@
       "next": "Next"
     },
     "unavailable": {
-      "marketOverview": "Coming soon: needs GET /market/overview",
-      "sectors": "Sector data is not yet available in the seeded dataset"
+      "marketOverview": "Coming soon: needs GET /market/overview"
     },
     "empty": "—",
     "tradingDate": "Trading date",
     "asOf": "as of {{date}}",
-    "viewDetails": "View {{symbol}} details"
+    "viewDetails": "View {{symbol}} details",
+    "notice": {
+      "eod": "Prices reflect end-of-day data. There is no live market feed."
+    },
+    "stats": {
+      "listed": "Listed securities",
+      "asOf": "Latest session"
+    }
   },
   "securityDetail": {
     "back": "Back to markets",
