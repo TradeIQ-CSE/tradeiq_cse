@@ -54,6 +54,15 @@ export function useSelectedPortfolio(
   // the fallback below immediately re-select it, 404 again, and spin.
   const rejected = useRef<Set<string>>(new Set());
 
+  // The last portfolio the user picked outright, written synchronously at the
+  // moment of the pick. A 404-recovery effect committed while A was selected
+  // can still flush *after* the user has moved to B: React 18 flushes pending
+  // passive effects before it renders the next update, and that effect's
+  // closure — along with `paramPortfolioId` and `searchParams` — is pinned to
+  // A. Clearing on that path would throw away B and wipe the stored id, so
+  // `clearSelection` compares against this instead of anything it closes over.
+  const lastExplicitSelection = useRef<string | null>(null);
+
   const setParam = useCallback(
     (portfolioId: string | null) => {
       setSearchParams(
@@ -85,6 +94,7 @@ export function useSelectedPortfolio(
       // An explicit pick clears any earlier rejection: the user may well be
       // choosing a portfolio that has since come back.
       rejected.current.delete(portfolioId);
+      lastExplicitSelection.current = portfolioId;
       writeStoredPortfolioId(portfolioId);
       setParam(portfolioId);
     },
@@ -93,7 +103,21 @@ export function useSelectedPortfolio(
 
   const clearSelection = useCallback(
     (rejectedPortfolioId?: string | null) => {
+      // The id really was rejected, so record it either way — the fallback
+      // must not re-pick it even when this call turns out to be stale.
       if (rejectedPortfolioId) rejected.current.add(rejectedPortfolioId);
+
+      // Stale call: the user has since chosen a different portfolio, and that
+      // choice outranks a 404 raised against the one they left.
+      if (
+        rejectedPortfolioId &&
+        lastExplicitSelection.current &&
+        lastExplicitSelection.current !== rejectedPortfolioId
+      ) {
+        return;
+      }
+
+      lastExplicitSelection.current = null;
       writeStoredPortfolioId(null);
       setParam(null);
     },
