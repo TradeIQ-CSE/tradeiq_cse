@@ -901,3 +901,40 @@
     display: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Shadcn compatibility
+ *
+ * Shadcn and the shadcn.io chart registry are the only realistic source for
+ * chart types BoardUI does not ship free (bar list, heatmap, sankey). Their
+ * markup is written against Shadcn's semantic token names, which this theme
+ * does not define — `stroke-border`, `fill-muted-foreground` and friends would
+ * silently resolve to nothing.
+ *
+ * These aliases map that vocabulary onto BoardUI's, so a chart body lifted
+ * from that registry comes out in BoardUI's palette instead of importing a
+ * second colour system. `cn` in utils/cx.ts is the matching import alias.
+ *
+ * --color-border deliberately maps to border/button/default rather than
+ * border/table: Shadcn uses it for chart grid rules via `stroke-border`, and
+ * border/table is slate-800 in dark — the same value as the card a chart sits
+ * on, which would draw the grid invisibly.
+ * ------------------------------------------------------------------------ */
+@theme inline {
+  --color-background:       var(--color-background-primary-default);
+  --color-foreground:       var(--color-text-primary);
+  --color-card:             var(--color-background-primary-default);
+  --color-card-foreground:  var(--color-text-primary);
+  --color-muted:            var(--color-background-secondary-default);
+  --color-muted-foreground: var(--color-text-tertiary);
+  --color-border:           var(--color-border-button-default);
+  --color-accent:           var(--color-background-secondary-hover);
+  --color-ring:             var(--color-border-focus-ring);
+
+  /* Shadcn charts reference --chart-1..5 unprefixed. */
+  --chart-1: var(--color-chart-1);
+  --chart-2: var(--color-chart-2);
+  --chart-3: var(--color-chart-3);
+  --chart-4: var(--color-chart-4);
+  --chart-5: var(--color-chart-5);
+}
