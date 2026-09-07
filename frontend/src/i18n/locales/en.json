@@ -214,7 +214,8 @@
       "description": "Browse every security listed on the CSE with real end-of-day prices, search, and OHLC breakdowns.",
       "cta": "Explore the markets →",
       "cardTitle": "CSE Securities",
-      "descriptionCounted": "Browse all {{formattedCount}} securities listed on the CSE with real end-of-day prices, search, and OHLC breakdowns."
+      "descriptionCounted": "Browse all {{formattedCount}} securities listed on the CSE with real end-of-day prices, search, and OHLC breakdowns.",
+      "sample": "Sample data"
     },
     "insights": {
       "eyebrow": "What you get",

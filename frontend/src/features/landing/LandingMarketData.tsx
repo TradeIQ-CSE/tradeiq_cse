@@ -2,27 +2,16 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { localeFor } from '../../i18n';
 import { cx } from '../../utils/cx';
-import { useSecurities } from '../markets/useSecurities';
 import { formatCount, formatPrice, formatSigned } from '../markets/format';
+import { Chip } from '../../components/base/badges/chip';
 import { LANDING_CONTAINER } from './LandingPage';
-
-// The landing preview shows the first page of the same GET /securities feed the
-// Markets page uses, rather than a hardcoded list: the prices here were being
-// read as real by anyone looking at the page.
-const PREVIEW_COUNT = 5;
+import { PREVIEW_COUNT, useMarketPreview } from './useMarketPreview';
 
 export function LandingMarketData() {
   const { t, i18n } = useTranslation();
   const locale = localeFor(i18n.resolvedLanguage ?? i18n.language);
 
-  const { data, isPending, isError } = useSecurities({
-    sort: 'symbol',
-    page: 1,
-    page_size: PREVIEW_COUNT,
-  });
-
-  const securities = data?.data ?? [];
-  const total = data?.meta?.total ?? 0;
+  const { securities, source, asOf, total, isPending } = useMarketPreview();
 
   return (
     <section className={cx(LANDING_CONTAINER, 'grid items-center gap-10 lg:grid-cols-2')}>
@@ -34,7 +23,7 @@ export function LandingMarketData() {
           {t('landing.marketData.headingLine1')} {t('landing.marketData.headingLine2')}
         </h2>
         <p className="mt-4 max-w-prose text-lg leading-relaxed text-text-secondary">
-          {total > 0
+          {total !== null
             ? t('landing.marketData.descriptionCounted', {
                 count: total,
                 formattedCount: formatCount(total, locale),
@@ -50,17 +39,26 @@ export function LandingMarketData() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default">
-        <div className="border-b border-separator-border px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-separator-border px-4 py-3">
           <span className="text-headline-medium text-text-primary">
             {t('landing.marketData.cardTitle')}
           </span>
+          {/* The one thing this card must always say: whether these are real
+              figures for a real session, or the offline sample. */}
+          {source === 'sample' ? (
+            <Chip variant="caption" color="yellow">
+              {t('landing.marketData.sample')}
+            </Chip>
+          ) : (
+            asOf && (
+              <span className="text-body-2-medium text-text-tertiary">
+                {t('markets.asOf', { date: asOf })}
+              </span>
+            )
+          )}
         </div>
 
-        {isError ? (
-          <p className="px-4 py-10 text-center text-body-medium text-text-secondary">
-            {t('markets.states.unreachable')}
-          </p>
-        ) : isPending ? (
+        {isPending ? (
           <div className="flex flex-col gap-2 p-4">
             {Array.from({ length: PREVIEW_COUNT }).map((_, index) => (
               <div
