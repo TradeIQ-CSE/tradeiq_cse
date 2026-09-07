@@ -45,4 +45,16 @@ describe('AppRoutes', () => {
 
     expect(await screen.findByRole('heading', { name: t('markets.title') })).toBeInTheDocument();
   });
+
+  it('renders a lowercase security-detail URL publicly with the canonical symbol', async () => {
+    renderWithProviders(<AppRoutes />, {
+      initialEntries: ['/markets/jkh.n0000'],
+      auth: { status: 'anonymous' },
+    });
+
+    expect(
+      await screen.findByRole('heading', { name: 'JKH.N0000' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Sign in' })).not.toBeInTheDocument();
+  });
 });

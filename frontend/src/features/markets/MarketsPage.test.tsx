@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import userEvent from '@testing-library/user-event';
+import { useLocation } from 'react-router-dom';
 import { renderWithProviders, screen, waitFor } from '../../test/render';
 import { server } from '../../test/server';
 import { securitiesFixture } from '../../test/fixtures/securities';
@@ -11,6 +12,11 @@ import i18n from '../../i18n';
 // assertion on a translated string can never drift from what the component
 // actually renders.
 const t = i18n.t.bind(i18n);
+
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="location-probe">{location.pathname}</output>;
+}
 
 function envelope(total: number) {
   return {
@@ -204,6 +210,38 @@ describe('MarketsPage', () => {
     await user.click(watchButton);
 
     expect(watchButton).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('makes every data row a keyboard-focusable detail link without coupling the watch button', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <>
+        <MarketsPage />
+        <LocationProbe />
+      </>,
+      { initialEntries: ['/markets'] },
+    );
+
+    const first = securitiesFixture[0];
+    const link = await screen.findByRole('link', {
+      name: t('markets.viewDetails', { symbol: first.symbol }),
+    });
+    const [watchButton] = screen.getAllByRole('button', {
+      name: t('markets.watch.add'),
+    });
+
+    expect(link).toHaveAttribute('href', `/markets/${encodeURIComponent(first.symbol)}`);
+    expect(link.tabIndex).toBe(0);
+    link.focus();
+    expect(link).toHaveFocus();
+
+    await user.click(watchButton);
+    expect(screen.getByTestId('location-probe')).toHaveTextContent('/markets');
+
+    await user.click(link);
+    expect(screen.getByTestId('location-probe')).toHaveTextContent(
+      `/markets/${first.symbol}`,
+    );
   });
 
   it('keeps previous rows visible during a page change instead of replacing them with a spinner', async () => {

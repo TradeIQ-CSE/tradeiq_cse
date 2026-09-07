@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { AppShell } from '../../components/layout/AppShell';
 import { ApiError } from '../../lib/api';
 import { localeFor } from '../../i18n';
@@ -210,62 +211,73 @@ export function MarketsPage() {
                       const positive = (security.change ?? 0) >= 0;
                       const isWatched = watchedSymbols.has(security.symbol);
                       return (
-                        <div className="markets-row" key={security.symbol}>
-                          <div className="markets-row__symbol">
-                            <span className="markets-row__ticker">
-                              {security.symbol}
-                            </span>
-                            <span className="markets-row__company">
-                              {security.company_name}
-                            </span>
-                          </div>
-                          <span className="markets-row__sector">
-                            {security.sector?.name ?? dash}
-                          </span>
-                          <span className="markets-row__cap">
-                            {band ? t(`markets.cap.${band}`) : dash}
-                          </span>
-                          <span className="markets-col--right markets-mono markets-row__price">
-                            {security.price !== null
-                              ? formatPrice(security.price, locale)
-                              : dash}
-                          </span>
-                          <span
-                            className={`markets-col--right markets-mono ${
-                              security.change === null
-                                ? ''
-                                : positive
-                                  ? 'markets-positive'
-                                  : 'markets-negative'
-                            }`}
+                        <div
+                          className="markets-row markets-row--data"
+                          key={security.symbol}
+                        >
+                          <Link
+                            className="markets-row__link"
+                            to={`/markets/${encodeURIComponent(security.symbol)}`}
+                            aria-label={t('markets.viewDetails', {
+                              symbol: security.symbol,
+                            })}
                           >
-                            {security.change !== null
-                              ? formatSigned(security.change, 2, locale)
-                              : dash}
-                          </span>
-                          <span
-                            className={`markets-col--right markets-mono ${
-                              security.change_pct === null
-                                ? ''
-                                : positive
-                                  ? 'markets-positive'
-                                  : 'markets-negative'
-                            }`}
-                          >
-                            {security.change_pct !== null
-                              ? `${formatSigned(security.change_pct, 2, locale)}%`
-                              : dash}
-                          </span>
-                          <span className="markets-col--right markets-mono markets-row__volume">
-                            {security.volume !== null
-                              ? formatVolume(security.volume, locale)
-                              : dash}
-                          </span>
-                          <span className="markets-col--right markets-mono markets-row__volume">
-                            {security.pe_ratio !== null
-                              ? formatPrice(security.pe_ratio, locale)
-                              : dash}
-                          </span>
+                            <div className="markets-row__symbol">
+                              <span className="markets-row__ticker">
+                                {security.symbol}
+                              </span>
+                              <span className="markets-row__company">
+                                {security.company_name}
+                              </span>
+                            </div>
+                            <span className="markets-row__sector">
+                              {security.sector?.name ?? dash}
+                            </span>
+                            <span className="markets-row__cap">
+                              {band ? t(`markets.cap.${band}`) : dash}
+                            </span>
+                            <span className="markets-col--right markets-mono markets-row__price">
+                              {security.price !== null
+                                ? formatPrice(security.price, locale)
+                                : dash}
+                            </span>
+                            <span
+                              className={`markets-col--right markets-mono ${
+                                security.change === null
+                                  ? ''
+                                  : positive
+                                    ? 'markets-positive'
+                                    : 'markets-negative'
+                              }`}
+                            >
+                              {security.change !== null
+                                ? formatSigned(security.change, 2, locale)
+                                : dash}
+                            </span>
+                            <span
+                              className={`markets-col--right markets-mono ${
+                                security.change_pct === null
+                                  ? ''
+                                  : positive
+                                    ? 'markets-positive'
+                                    : 'markets-negative'
+                              }`}
+                            >
+                              {security.change_pct !== null
+                                ? `${formatSigned(security.change_pct, 2, locale)}%`
+                                : dash}
+                            </span>
+                            <span className="markets-col--right markets-mono markets-row__volume">
+                              {security.volume !== null
+                                ? formatVolume(security.volume, locale)
+                                : dash}
+                            </span>
+                            <span className="markets-col--right markets-mono markets-row__volume">
+                              {security.pe_ratio !== null
+                                ? formatPrice(security.pe_ratio, locale)
+                                : dash}
+                            </span>
+                          </Link>
                           <span className="markets-col--right">
                             <button
                               type="button"

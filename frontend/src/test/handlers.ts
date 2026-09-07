@@ -6,12 +6,24 @@ import {
   summaryFixture,
 } from './fixtures/paper-trading';
 import { securitiesFixture } from './fixtures/securities';
+import {
+  dailyOhlcvFixture,
+  securityDetailFixture,
+} from './fixtures/security-detail';
 
 // Default handlers used by every test unless overridden with `server.use(...)`.
 // Shapes mirror lib/api.ts exactly: a success body is the whole envelope
 // (`{ data, meta }`), a failure body is `{ error: { code, message, trace_id } }`
 // because `getEnvelope` throws `new ApiError(body.error)`.
 export const handlers = [
+  http.get('*/securities/:symbol/ohlcv', () => {
+    return HttpResponse.json({ data: dailyOhlcvFixture });
+  }),
+
+  http.get('*/securities/:symbol', () => {
+    return HttpResponse.json({ data: securityDetailFixture });
+  }),
+
   http.get('*/securities', () => {
     return HttpResponse.json({
       data: securitiesFixture,

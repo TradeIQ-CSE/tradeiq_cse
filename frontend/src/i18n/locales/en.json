@@ -79,7 +79,82 @@
     },
     "empty": "—",
     "tradingDate": "Trading date",
-    "asOf": "as of {{date}}"
+    "asOf": "as of {{date}}",
+    "viewDetails": "View {{symbol}} details"
+  },
+  "securityDetail": {
+    "back": "Back to markets",
+    "currency": "LKR",
+    "listingStatus": {
+      "listed": "Listed",
+      "suspended": "Suspended",
+      "delisted": "Delisted"
+    },
+    "timeframes": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly"
+    },
+    "actions": {
+      "apply": "Apply range",
+      "reset": "Default range",
+      "retry": "Try again"
+    },
+    "range": {
+      "from": "From",
+      "to": "To",
+      "fromAfterTo": "The start date must be on or before the end date.",
+      "fieldError": "{{field}}: {{reason}}"
+    },
+    "chart": {
+      "title": "Price history",
+      "range": "{{from}} – {{to}} · end-of-day data",
+      "rangeUnavailable": "No coverage dates available",
+      "timeframeLabel": "Chart timeframe",
+      "accessibleLabel": "{{timeframe}} OHLCV history for {{symbol}}",
+      "values": {
+        "date": "Date",
+        "open": "Open",
+        "high": "High",
+        "low": "Low",
+        "close": "Close",
+        "adjustedClose": "Adjusted close",
+        "volume": "Volume"
+      },
+      "loading": "Loading price history…",
+      "validationFailed": "Check the selected range and try again.",
+      "unavailable": "Price history is temporarily unavailable.",
+      "empty": {
+        "title": "No bars in this range",
+        "description": "There are no complete bars for the selected timeframe and dates. Choose another range without widening it automatically."
+      }
+    },
+    "info": {
+      "title": "Security information",
+      "sector": "Sector",
+      "cseCode": "CSE code",
+      "listingStatus": "Listing status",
+      "lastTrade": "Last trade",
+      "volume": "Latest volume",
+      "sharesOutstanding": "Shares outstanding",
+      "coverage": "Data coverage",
+      "coverageValue": "{{from}} – {{to}}",
+      "peRatio": "P/E ratio",
+      "pbRatio": "P/B ratio",
+      "ratioDate": "Ratio effective date"
+    },
+    "states": {
+      "loading": "Loading security…",
+      "noLatestPrice": "No latest price available",
+      "notFound": {
+        "title": "{{symbol}} was not found",
+        "description": "This symbol is not available in the CSE securities dataset."
+      },
+      "unavailable": {
+        "title": "Security details are unavailable",
+        "description": "The market data service could not load this security. Try again in a moment."
+      }
+    }
   },
   "landing": {
     "nav": {
