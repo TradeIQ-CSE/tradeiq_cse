@@ -1,42 +1,46 @@
-/* Design tokens extracted from Figma (TradeIQ CSE, "Market" frame,
-   node 76:792) via get_design_context. */
+/* Legacy tokens for screens not yet migrated to BoardUI components.
+ * Every value below aliases a BoardUI semantic token (styles/theme.css)
+ * instead of holding its own hex, so unmigrated screens pick up the real
+ * theme (light/dark, and the blue accent replacing the old purple) for
+ * free as ThemeProvider flips the `.dark` class — see
+ * docs/plans/frontend-boardui-refresh.md, "one canonical token source".
+ * color-scheme is intentionally not set here: BoardUI's globals.css
+ * already sets it per-mode, and it must not be hardcoded to dark.
+ */
 :root {
-  /* The UI is dark-only, so tell the browser to render native controls dark
-     too. Without this, form widgets default to their light rendering and a
-     date input's calendar indicator is a near-black glyph on a near-black
-     field. Also covers scrollbars and the date picker popup itself. */
-  color-scheme: dark;
+  --bg-app: var(--color-background-primary-default);
+  --bg-panel: var(--color-background-secondary-default);
+  --bg-card: var(--color-background-secondary-default);
 
-  --bg-app: #0b0c19;
-  --bg-panel: #0d0e1d;
-  --bg-card: #12131f;
+  --border-subtle: var(--color-separator-border);
+  --border-subtle-2: var(--color-separator-border);
+  --border-subtle-3: var(--color-separator-border);
+  --border-faint: var(--color-separator-border);
+  --border-divider: var(--color-separator-border-strong);
 
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-subtle-2: rgba(255, 255, 255, 0.05);
-  --border-subtle-3: rgba(255, 255, 255, 0.07);
-  --border-faint: rgba(255, 255, 255, 0.03);
-  --border-divider: rgba(255, 255, 255, 0.08);
+  --text-heading: var(--color-text-primary);
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+  --text-muted: var(--color-text-tertiary);
+  --text-faint: var(--color-text-tertiary);
+  --text-label: var(--color-text-secondary);
 
-  --text-heading: #f1f5f9;
-  --text-primary: #e2e8f0;
-  --text-secondary: #90a1b9;
-  --text-muted: #64748b;
-  --text-faint: #45556c;
-  --text-label: #314158;
+  --accent: var(--color-accent-500);
+  --accent-2: var(--color-accent-600);
+  --accent-text: var(--color-accent-500);
+  --accent-soft: color-mix(in oklab, var(--color-accent-500) 15%, transparent);
+  --accent-soft-strong: color-mix(in oklab, var(--color-accent-500) 20%, transparent);
+  --accent-soft-active: color-mix(in oklab, var(--color-accent-500) 28%, transparent);
+  --accent-border: color-mix(in oklab, var(--color-accent-500) 35%, transparent);
+  --accent-gradient: var(--color-accent-500);
 
-  --accent: #7c3aed;
-  --accent-2: #4f46e5;
-  --accent-text: #a78bfa;
-  --accent-soft: rgba(124, 58, 237, 0.15);
-  --accent-soft-strong: rgba(124, 58, 237, 0.2);
-  --accent-soft-active: rgba(124, 58, 237, 0.28);
-  --accent-border: rgba(124, 58, 237, 0.35);
-  --accent-gradient: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+  /* Financial green/red, not BoardUI's own (lime-based) success token —
+   * these two don't ride the automatic .dark flip other aliases above get
+   * for free, so they're restated below for dark. */
+  --positive: var(--color-green-700);
+  --negative: var(--color-red-600);
 
-  --positive: #00d492;
-  --negative: #ff6467;
-
-  --focus-ring: 2px solid var(--accent-text);
+  --focus-ring: 2px solid var(--color-border-focus-ring);
 
   --radius-pill: 10.5px;
   --radius-sm: 8.5px;
@@ -56,6 +60,11 @@
     "Nirmala UI", sans-serif;
   --font-mono:
     ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+}
+
+.dark {
+  --positive: var(--color-green-400);
+  --negative: var(--color-red-400);
 }
 
 * {
