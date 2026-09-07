@@ -4,21 +4,24 @@ import { readErrorText } from './error-text';
 import { localeFor } from '../../i18n';
 import { changeDirection, formatMoney, formatPercent, formatQuantity, formatSignedMoney } from './format';
 import { usePositions } from './usePortfolios';
-import './paper-trading.css';
+import {
+  Card,
+  CardHeading,
+  CardProgress,
+  DirectionGlyph,
+  ErrorCard,
+  NoticeCard,
+  SkeletonRow,
+  StateMessage,
+} from './ui';
+import { toneClass } from './ui-styles';
 
 interface PositionsTableProps {
   portfolioId: string;
   asOf?: string;
 }
 
-function DirectionGlyph({ direction }: { direction: 'up' | 'down' | 'flat' }) {
-  if (direction === 'flat') return null;
-  return (
-    <span className={`direction-glyph direction-glyph--${direction}`} aria-hidden="true">
-      {direction === 'up' ? '▲' : '▼'}
-    </span>
-  );
-}
+const COLUMN_COUNT = 7;
 
 export function PositionsTable({ portfolioId, asOf }: PositionsTableProps) {
   const { t, i18n } = useTranslation();
@@ -39,100 +42,94 @@ export function PositionsTable({ portfolioId, asOf }: PositionsTableProps) {
     // instead of rendering an empty table.
     if (error instanceof ApiError && error.body.code === 'PRICE_UNAVAILABLE') {
       return (
-        <div className="paper-trading-card paper-trading-card--notice">
+        <NoticeCard>
           {t('portfolio.positions.priceUnavailable', {
             date: asOf || t('portfolio.summary.latestSession'),
           })}
-        </div>
+        </NoticeCard>
       );
     }
-    return (
-      <div className="paper-trading-card paper-trading-card--error">
-        {readErrorText(error, t('portfolio.positions.unreachable'))}
-      </div>
-    );
+    return <ErrorCard>{readErrorText(error, t('portfolio.positions.unreachable'))}</ErrorCard>;
   }
 
   const rows = data?.data ?? [];
   const resolvedAsOf = data?.meta?.as_of ?? null;
 
   return (
-    <div className="paper-trading-card" aria-busy={isFetching}>
-      {isFetching && (
-        <span
-          className="paper-trading-card__progress"
-          role="status"
-          aria-label={t('portfolio.positions.loading')}
-        />
-      )}
+    <Card busy={isFetching}>
+      {isFetching && <CardProgress label={t('portfolio.positions.loading')} />}
 
-      <div className="paper-trading-card__heading">
-        <h2>{t('portfolio.positions.title')}</h2>
-        {resolvedAsOf && (
-          <span className="paper-trading-card__subtitle">
-            {t('portfolio.summary.asOf', { date: resolvedAsOf })}
-          </span>
-        )}
-      </div>
+      <CardHeading
+        title={t('portfolio.positions.title')}
+        subtitle={resolvedAsOf ? t('portfolio.summary.asOf', { date: resolvedAsOf }) : undefined}
+      />
 
       {!isPending && rows.length === 0 ? (
-        <div className="paper-trading-page__state">{t('portfolio.positions.empty')}</div>
+        <StateMessage>{t('portfolio.positions.empty')}</StateMessage>
       ) : (
-        <>
-          <div className="positions-row positions-row--head">
-            <span>{t('portfolio.positions.columns.symbol')}</span>
-            <span>{t('portfolio.positions.columns.quantity')}</span>
-            <span>{t('portfolio.positions.columns.averageCost')}</span>
-            <span>{t('portfolio.positions.columns.price')}</span>
-            <span>{t('portfolio.positions.columns.marketValue')}</span>
-            <span>{t('portfolio.positions.columns.unrealizedPnl')}</span>
-            <span>{t('portfolio.positions.columns.unrealizedReturnPct')}</span>
-          </div>
-
-          <div className="positions-table__body">
-            {isPending && !data
-              ? Array.from({ length: 4 }).map((_, index) => (
-                  <div className="positions-row positions-row--skeleton" key={index} />
-                ))
-              : rows.map((position) => {
-                  const direction = changeDirection(position.unrealized_pnl);
-                  return (
-                    <div className="positions-row" key={position.symbol}>
-                      <span data-label={t('portfolio.positions.columns.symbol')}>
-                        {position.symbol}
-                      </span>
-                      <span data-label={t('portfolio.positions.columns.quantity')}>
-                        {formatQuantity(position.quantity, locale)}
-                      </span>
-                      <span data-label={t('portfolio.positions.columns.averageCost')}>
-                        {formatMoney(position.average_cost, locale)}
-                      </span>
-                      <span data-label={t('portfolio.positions.columns.price')}>
-                        {formatMoney(position.price, locale)}
-                      </span>
-                      <span data-label={t('portfolio.positions.columns.marketValue')}>
-                        {formatMoney(position.market_value, locale)}
-                      </span>
-                      <span
-                        className={`positions-row__pnl positions-row__pnl--${direction}`}
-                        data-label={t('portfolio.positions.columns.unrealizedPnl')}
-                      >
-                        <DirectionGlyph direction={direction} />
-                        {formatSignedMoney(position.unrealized_pnl, locale)}
-                      </span>
-                      <span
-                        className={`positions-row__pnl positions-row__pnl--${direction}`}
-                        data-label={t('portfolio.positions.columns.unrealizedReturnPct')}
-                      >
-                        <DirectionGlyph direction={direction} />
-                        {formatPercent(position.unrealized_return_pct, locale)}
-                      </span>
-                    </div>
-                  );
-                })}
-          </div>
-        </>
+        <div className="overflow-x-auto">
+          <table className="bui-table">
+            <thead>
+              <tr>
+                <th scope="col">{t('portfolio.positions.columns.symbol')}</th>
+                <th scope="col" className="text-right">
+                  {t('portfolio.positions.columns.quantity')}
+                </th>
+                <th scope="col" className="text-right">
+                  {t('portfolio.positions.columns.averageCost')}
+                </th>
+                <th scope="col" className="text-right">
+                  {t('portfolio.positions.columns.price')}
+                </th>
+                <th scope="col" className="text-right">
+                  {t('portfolio.positions.columns.marketValue')}
+                </th>
+                <th scope="col" className="text-right">
+                  {t('portfolio.positions.columns.unrealizedPnl')}
+                </th>
+                <th scope="col" className="text-right">
+                  {t('portfolio.positions.columns.unrealizedReturnPct')}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {isPending && !data
+                ? Array.from({ length: 4 }).map((_, index) => (
+                    <SkeletonRow columns={COLUMN_COUNT} key={index} />
+                  ))
+                : rows.map((position) => {
+                    const direction = changeDirection(position.unrealized_pnl);
+                    const tone = toneClass(position.unrealized_pnl);
+                    return (
+                      <tr key={position.symbol}>
+                        <td className="text-text-primary">{position.symbol}</td>
+                        <td className="text-right tabular-nums">
+                          {formatQuantity(position.quantity, locale)}
+                        </td>
+                        <td className="text-right tabular-nums">
+                          {formatMoney(position.average_cost, locale)}
+                        </td>
+                        <td className="text-right tabular-nums">
+                          {formatMoney(position.price, locale)}
+                        </td>
+                        <td className="text-right tabular-nums">
+                          {formatMoney(position.market_value, locale)}
+                        </td>
+                        <td className={`text-right tabular-nums ${tone}`}>
+                          <DirectionGlyph direction={direction} />
+                          {formatSignedMoney(position.unrealized_pnl, locale)}
+                        </td>
+                        <td className={`text-right tabular-nums ${tone}`}>
+                          <DirectionGlyph direction={direction} />
+                          {formatPercent(position.unrealized_return_pct, locale)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+            </tbody>
+          </table>
+        </div>
       )}
-    </div>
+    </Card>
   );
 }

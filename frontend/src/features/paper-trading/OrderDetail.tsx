@@ -3,19 +3,20 @@ import { localeFor } from '../../i18n';
 import { readErrorText } from './error-text';
 import { changeDirection, formatMoney, formatSignedMoney } from './format';
 import { useOrder } from './useOrders';
-import './paper-trading.css';
+import { DirectionGlyph, ErrorCard } from './ui';
+import { toneClass } from './ui-styles';
 
 interface OrderDetailProps {
   portfolioId: string;
   orderId: string;
 }
 
-function DirectionGlyph({ direction }: { direction: 'up' | 'down' | 'flat' }) {
-  if (direction === 'flat') return null;
+function DetailRow({ term, children }: { term: string; children: React.ReactNode }) {
   return (
-    <span className={`direction-glyph direction-glyph--${direction}`} aria-hidden="true">
-      {direction === 'up' ? '▲' : '▼'}
-    </span>
+    <div className="flex items-baseline justify-between gap-3">
+      <dt className="text-body-medium text-text-secondary">{term}</dt>
+      <dd className="text-body-medium tabular-nums text-text-primary">{children}</dd>
+    </div>
   );
 }
 
@@ -38,18 +39,14 @@ export function OrderDetail({ portfolioId, orderId }: OrderDetailProps) {
 
   if (isPending) {
     return (
-      <div className="order-detail" role="status">
+      <p className="text-body-medium text-text-secondary" role="status">
         {t('orders.detail.loading')}
-      </div>
+      </p>
     );
   }
 
   if (isError) {
-    return (
-      <div className="order-detail paper-trading-card--error">
-        {readErrorText(error, t('orders.detail.unreachable'))}
-      </div>
-    );
+    return <ErrorCard>{readErrorText(error, t('orders.detail.unreachable'))}</ErrorCard>;
   }
 
   const fill = data?.data.fill;
@@ -58,46 +55,35 @@ export function OrderDetail({ portfolioId, orderId }: OrderDetailProps) {
   // has nothing further to show here — its reason is already rendered
   // inline on the row itself, without needing this fetch.
   if (!fill) {
-    return <div className="order-detail">{t('orders.detail.noFill')}</div>;
+    return <p className="text-body-medium text-text-secondary">{t('orders.detail.noFill')}</p>;
   }
 
   const pnlDirection = fill.realized_pnl !== null ? changeDirection(fill.realized_pnl) : 'flat';
 
   return (
-    <dl className="order-detail">
-      <div className="order-detail__row">
-        <dt>{t('orders.detail.price')}</dt>
-        <dd>{formatMoney(fill.price, locale)}</dd>
-      </div>
-      <div className="order-detail__row">
-        <dt>{t('orders.detail.fillDate')}</dt>
-        <dd>{fill.fill_date}</dd>
-      </div>
-      <div className="order-detail__row">
-        <dt>{t('orders.detail.settlementDate')}</dt>
-        <dd>{fill.settlement_date}</dd>
-      </div>
-      <div className="order-detail__row">
-        <dt>{t('orders.detail.grossConsideration')}</dt>
-        <dd>{formatMoney(fill.gross_consideration, locale)}</dd>
-      </div>
-      <div className="order-detail__row">
-        <dt>{t('orders.detail.feeTotal')}</dt>
-        <dd>{formatMoney(fill.fee_total, locale)}</dd>
-      </div>
-      <div className="order-detail__row">
-        <dt>{t('orders.detail.cashEffect')}</dt>
-        <dd className={fill.cash_effect < 0 ? 'negative-text' : 'positive-text'}>
+    <dl className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2">
+      <DetailRow term={t('orders.detail.price')}>{formatMoney(fill.price, locale)}</DetailRow>
+      <DetailRow term={t('orders.detail.fillDate')}>{fill.fill_date}</DetailRow>
+      <DetailRow term={t('orders.detail.settlementDate')}>{fill.settlement_date}</DetailRow>
+      <DetailRow term={t('orders.detail.grossConsideration')}>
+        {formatMoney(fill.gross_consideration, locale)}
+      </DetailRow>
+      <DetailRow term={t('orders.detail.feeTotal')}>{formatMoney(fill.fee_total, locale)}</DetailRow>
+
+      <div className="flex items-baseline justify-between gap-3">
+        <dt className="text-body-medium text-text-secondary">{t('orders.detail.cashEffect')}</dt>
+        <dd className={`text-body-medium tabular-nums ${toneClass(fill.cash_effect)}`}>
           {formatSignedMoney(fill.cash_effect, locale)}
         </dd>
       </div>
+
       {/* realized_pnl is only ever non-null on a sell that closed a FIFO lot
           (§3.3) — a buy's fill always carries `null` here, so this row is
           simply omitted for a buy rather than shown as a meaningless zero. */}
       {fill.realized_pnl !== null && (
-        <div className="order-detail__row">
-          <dt>{t('orders.detail.realizedPnl')}</dt>
-          <dd className={fill.realized_pnl < 0 ? 'negative-text' : 'positive-text'}>
+        <div className="flex items-baseline justify-between gap-3">
+          <dt className="text-body-medium text-text-secondary">{t('orders.detail.realizedPnl')}</dt>
+          <dd className={`text-body-medium tabular-nums ${toneClass(fill.realized_pnl)}`}>
             <DirectionGlyph direction={pnlDirection} />
             {formatSignedMoney(fill.realized_pnl, locale)}
           </dd>

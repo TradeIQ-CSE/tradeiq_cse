@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../lib/api';
+import { Button } from '../../components/base/buttons/button';
+import { Chip } from '../../components/base/badges/chip';
 import { readErrorText } from './error-text';
 import { localeFor } from '../../i18n';
 import { formatDateTime, formatQuantity } from './format';
@@ -8,13 +10,25 @@ import { mapOrderCode } from './order-messages';
 import { OrderDetail } from './OrderDetail';
 import { OrderStatus } from './types';
 import { useOrders } from './useOrders';
-import './paper-trading.css';
+import {
+  Card,
+  CardHeading,
+  CardProgress,
+  ErrorCard,
+  Field,
+  Pager,
+  SkeletonRow,
+  StateMessage,
+} from './ui';
+import { fieldShell } from './ui-styles';
 
 interface OrdersTableProps {
   portfolioId: string;
 }
 
 type StatusFilter = OrderStatus | 'all';
+
+const COLUMN_COUNT = 6;
 
 export function OrdersTable({ portfolioId }: OrdersTableProps) {
   const { t, i18n } = useTranslation();
@@ -57,138 +71,140 @@ export function OrdersTable({ portfolioId }: OrdersTableProps) {
       // before the parent unmounts this component.
       return null;
     }
-    return (
-      <div className="paper-trading-card paper-trading-card--error">
-        {readErrorText(error, t('orders.unreachable'))}
-      </div>
-    );
+    return <ErrorCard>{readErrorText(error, t('orders.unreachable'))}</ErrorCard>;
   }
 
   return (
-    <div className="paper-trading-card" aria-busy={isFetching}>
-      {isFetching && (
-        <span
-          className="paper-trading-card__progress"
-          role="status"
-          aria-label={t('orders.loading')}
-        />
-      )}
+    <Card busy={isFetching}>
+      {isFetching && <CardProgress label={t('orders.loading')} />}
 
-      <div className="paper-trading-card__heading">
-        <h2>{t('orders.tableTitle')}</h2>
-        <label className="orders-filter">
-          <span>{t('orders.filter.label')}</span>
-          <select value={status} onChange={(event) => setStatus(event.target.value as StatusFilter)}>
-            <option value="all">{t('orders.filter.all')}</option>
-            <option value="filled">{t('orders.status.filled')}</option>
-            <option value="rejected">{t('orders.status.rejected')}</option>
-          </select>
-        </label>
-      </div>
+      <CardHeading
+        title={t('orders.tableTitle')}
+        actions={
+          <Field label={t('orders.filter.label')} className="w-auto">
+            <select
+              className={fieldShell}
+              value={status}
+              onChange={(event) => setStatus(event.target.value as StatusFilter)}
+            >
+              <option value="all">{t('orders.filter.all')}</option>
+              <option value="filled">{t('orders.status.filled')}</option>
+              <option value="rejected">{t('orders.status.rejected')}</option>
+            </select>
+          </Field>
+        }
+      />
 
       {!isPending && rows.length === 0 ? (
-        <div className="paper-trading-page__state">
-          {status === 'all' ? t('orders.empty') : t('orders.emptyFiltered')}
-        </div>
+        <StateMessage>{status === 'all' ? t('orders.empty') : t('orders.emptyFiltered')}</StateMessage>
       ) : (
-        <>
-          <div className="orders-row orders-row--head">
-            <span>{t('orders.columns.placedAt')}</span>
-            <span>{t('orders.columns.symbol')}</span>
-            <span>{t('orders.columns.side')}</span>
-            <span>{t('orders.columns.quantity')}</span>
-            <span>{t('orders.columns.status')}</span>
-            <span aria-hidden="true" />
-          </div>
+        <div className="overflow-x-auto">
+          <table className="bui-table">
+            <thead>
+              <tr>
+                <th scope="col">{t('orders.columns.placedAt')}</th>
+                <th scope="col">{t('orders.columns.symbol')}</th>
+                <th scope="col">{t('orders.columns.side')}</th>
+                <th scope="col" className="text-right">
+                  {t('orders.columns.quantity')}
+                </th>
+                <th scope="col">{t('orders.columns.status')}</th>
+                <th scope="col" className="text-right">
+                  <span className="sr-only">{t('orders.columns.actions')}</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {isPending && !data
+                ? Array.from({ length: 4 }).map((_, index) => (
+                    <SkeletonRow columns={COLUMN_COUNT} key={index} />
+                  ))
+                : rows.map((order) => {
+                    const isExpanded = expandedId === order.order_id;
+                    const panelId = `order-detail-${order.order_id}`;
+                    const quantityText =
+                      order.filled_quantity !== order.quantity
+                        ? t('orders.quantityPartial', {
+                            filled: formatQuantity(order.filled_quantity, locale),
+                            quantity: formatQuantity(order.quantity, locale),
+                          })
+                        : formatQuantity(order.quantity, locale);
 
-          <div className="orders-table__body">
-            {isPending && !data
-              ? Array.from({ length: 4 }).map((_, index) => (
-                  <div className="orders-row orders-row--skeleton" key={index} />
-                ))
-              : rows.map((order) => {
-                  const isExpanded = expandedId === order.order_id;
-                  const panelId = `order-detail-${order.order_id}`;
-                  const quantityText =
-                    order.filled_quantity !== order.quantity
-                      ? t('orders.quantityPartial', {
-                          filled: formatQuantity(order.filled_quantity, locale),
-                          quantity: formatQuantity(order.quantity, locale),
-                        })
-                      : formatQuantity(order.quantity, locale);
+                    return (
+                      <Fragment key={order.order_id}>
+                        <tr>
+                          <td className="tabular-nums">{formatDateTime(order.placed_at, locale)}</td>
+                          <td className="text-text-primary">{order.symbol}</td>
+                          <td>{t(`paperTrading.ticket.sides.${order.side}`)}</td>
+                          <td className="text-right tabular-nums">{quantityText}</td>
+                          <td>
+                            <div className="flex flex-col items-start gap-1">
+                              <Chip
+                                variant="subtle"
+                                color={order.status === 'filled' ? 'lime' : 'rose'}
+                                data-status={order.status}
+                              >
+                                {t(`orders.status.${order.status}`)}
+                              </Chip>
+                              {/* A rejected order is a persisted, auditable
+                                  record, not an error — never branched on
+                                  isError, and always worded through the exact
+                                  same map the order ticket used at submit
+                                  time (order-messages.ts). */}
+                              {order.status === 'rejected' && (
+                                <span className="text-body-2-medium text-text-tertiary" role="status">
+                                  {t(mapOrderCode(order.rejection_code ?? 'INTERNAL'))}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="text-right">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="small"
+                              aria-expanded={isExpanded}
+                              aria-controls={panelId}
+                              onClick={() => setExpandedId(isExpanded ? null : order.order_id)}
+                            >
+                              {isExpanded ? t('orders.collapse') : t('orders.expand')}
+                            </Button>
+                          </td>
+                        </tr>
 
-                  return (
-                    <div className="orders-row-group" key={order.order_id}>
-                      <div className="orders-row">
-                        <span data-label={t('orders.columns.placedAt')}>
-                          {formatDateTime(order.placed_at, locale)}
-                        </span>
-                        <span data-label={t('orders.columns.symbol')}>{order.symbol}</span>
-                        <span data-label={t('orders.columns.side')}>
-                          {t(`paperTrading.ticket.sides.${order.side}`)}
-                        </span>
-                        <span data-label={t('orders.columns.quantity')}>{quantityText}</span>
-                        <span data-label={t('orders.columns.status')}>
-                          <span className={`orders-status-badge orders-status-badge--${order.status}`}>
-                            {t(`orders.status.${order.status}`)}
-                          </span>
-                        </span>
-                        <span className="orders-row__expand">
-                          <button
-                            type="button"
-                            aria-expanded={isExpanded}
-                            aria-controls={panelId}
-                            onClick={() => setExpandedId(isExpanded ? null : order.order_id)}
-                          >
-                            {isExpanded ? t('orders.collapse') : t('orders.expand')}
-                          </button>
-                        </span>
-                      </div>
-
-                      {/* A rejected order is a persisted, auditable record, not
-                          an error — never branched on isError, and always
-                          worded through the exact same map the order ticket
-                          used at submit time (order-messages.ts). */}
-                      {order.status === 'rejected' && (
-                        <p className="orders-row__reason" role="status">
-                          {t(mapOrderCode(order.rejection_code ?? 'INTERNAL'))}
-                        </p>
-                      )}
-
-                      <div id={panelId} hidden={!isExpanded}>
-                        {isExpanded && (
-                          <OrderDetail portfolioId={portfolioId} orderId={order.order_id} />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-          </div>
-        </>
+                        {/* The detail is its own full-width row rather than
+                            markup nested inside a cell: an expanded panel
+                            spans every column, and a <dl> is not valid inside
+                            the inline content of a <td> beside other cells. */}
+                        <tr id={panelId} hidden={!isExpanded}>
+                          <td colSpan={COLUMN_COUNT} className="bg-background-secondary-default">
+                            {isExpanded && (
+                              <OrderDetail portfolioId={portfolioId} orderId={order.order_id} />
+                            )}
+                          </td>
+                        </tr>
+                      </Fragment>
+                    );
+                  })}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {!isError && total > 0 && (
-        <footer className="paper-trading-page__footer">
-          <span>
-            {t('orders.pagination.page', {
-              page: formatQuantity(page, locale),
-              lastPage: formatQuantity(lastPage, locale),
-            })}
-          </span>
-          <div className="paper-trading-page__pager">
-            <button type="button" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-              {t('orders.pagination.previous')}
-            </button>
-            <button
-              type="button"
-              disabled={page >= lastPage}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              {t('orders.pagination.next')}
-            </button>
-          </div>
-        </footer>
+        <Pager
+          label={t('orders.pagination.page', {
+            page: formatQuantity(page, locale),
+            lastPage: formatQuantity(lastPage, locale),
+          })}
+          previousLabel={t('orders.pagination.previous')}
+          nextLabel={t('orders.pagination.next')}
+          canGoPrevious={page > 1}
+          canGoNext={page < lastPage}
+          onPrevious={() => setPage((p) => p - 1)}
+          onNext={() => setPage((p) => p + 1)}
+        />
       )}
-    </div>
+    </Card>
   );
 }

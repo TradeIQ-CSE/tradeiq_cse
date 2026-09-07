@@ -371,7 +371,8 @@
         "next": "Next"
       },
       "unreachable": "Could not reach the identity-auth API."
-    }
+    },
+    "subtitle": "Holdings, cash and performance for the selected paper portfolio."
   },
   "orders": {
     "codes": {
@@ -391,7 +392,8 @@
       "unknown": "This order could not be processed for an unknown reason."
     },
     "page": {
-      "title": "Order history"
+      "title": "Order history",
+      "subtitle": "Every order you have submitted in this portfolio, filled or rejected."
     },
     "tableTitle": "Orders",
     "status": {
@@ -407,7 +409,8 @@
       "symbol": "Symbol",
       "side": "Side",
       "quantity": "Quantity",
-      "status": "Status"
+      "status": "Status",
+      "actions": "Details"
     },
     "quantityPartial": "{{filled}} of {{quantity}}",
     "expand": "Show details",
@@ -436,7 +439,8 @@
   },
   "paperTrading": {
     "page": {
-      "title": "Place an order"
+      "title": "Place an order",
+      "notice": "Simulated trading against end-of-day prices. No real money and no live market feed."
     },
     "ticket": {
       "title": "Order ticket",
@@ -475,7 +479,8 @@
           "cds": "CDS fee",
           "sec_cess": "SEC cess",
           "stl": "Share transaction levy"
-        }
+        },
+        "subtitle": "Indicative figures for this order, quoted from the last close."
       },
       "result": {
         "filledTitle": "{{side}} order filled — {{quantity}} {{symbol}}",

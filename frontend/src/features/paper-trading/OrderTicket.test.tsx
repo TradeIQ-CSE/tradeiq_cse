@@ -140,7 +140,10 @@ describe('OrderTicket', () => {
     );
     const region = banner.closest('[role]');
     expect(region).toHaveAttribute('role', 'status');
-    expect(region).toHaveClass('order-ticket__banner--warning');
+    // Warning treatment (yellow), never the error one (rose) — the two are
+    // distinct BoardUI status tokens, and a rejected order must not be
+    // dressed as a failed request.
+    expect(region).toHaveClass('bg-status-yellow-background');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 
     // The mapped reason — the exact text the equivalent 422 estimate error

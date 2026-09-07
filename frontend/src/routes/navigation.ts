@@ -50,7 +50,6 @@ export const NAV_ROUTES: NavRoute[] = [
     path: '/paper-trading',
     icon: RiFlaskLine,
     group: 'trading',
-    planned: true,
   },
   {
     key: 'backtesting',
