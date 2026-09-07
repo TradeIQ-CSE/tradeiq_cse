@@ -45,4 +45,24 @@ describe('AppRoutes', () => {
 
     expect(await screen.findByRole('heading', { name: t('markets.title') })).toBeInTheDocument();
   });
+
+  it('renders a lowercase security-detail URL publicly with the canonical symbol', async () => {
+    renderWithProviders(<AppRoutes />, {
+      initialEntries: ['/markets/jkh.n0000'],
+      auth: { status: 'anonymous' },
+    });
+
+    // This route crosses both a lazy module boundary and the mocked detail
+    // request. Give slower CI workers room to resolve both before asserting
+    // the canonical API symbol; Testing Library's one-second default made
+    // this integration check timing-sensitive under the full suite.
+    expect(
+      await screen.findByRole(
+        'heading',
+        { name: 'JKH.N0000' },
+        { timeout: 5_000 },
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Sign in' })).not.toBeInTheDocument();
+  });
 });

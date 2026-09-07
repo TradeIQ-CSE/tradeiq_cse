@@ -10,15 +10,45 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { OHLCPoint } from '../../data/fixtures/ohlc';
-import { candleBody, candleColor, candleWick } from './candlestick';
+import {
+  candleBody,
+  candleColor,
+  candleWick,
+  ChartDatum,
+  chartDateLabel,
+  chartTickLabel,
+} from './candlestick';
+import './candlestick-chart.css';
 
 interface CandlestickChartProps {
-  data: readonly OHLCPoint[];
+  data: readonly ChartDatum[];
+  locale?: string;
+  accessibleLabel?: string;
+  labels?: Partial<CandlestickChartLabels>;
 }
 
+interface CandlestickChartLabels {
+  date: string;
+  open: string;
+  high: string;
+  low: string;
+  close: string;
+  adjustedClose: string;
+  volume: string;
+}
+
+const DEFAULT_LABELS: CandlestickChartLabels = {
+  date: 'Date',
+  open: 'Open',
+  high: 'High',
+  low: 'Low',
+  close: 'Close',
+  adjustedClose: 'Adjusted close',
+  volume: 'Volume',
+};
+
 interface TooltipPayloadItem {
-  payload: OHLCPoint;
+  payload: ChartDatum;
 }
 
 interface CandlestickTooltipProps
@@ -26,39 +56,65 @@ interface CandlestickTooltipProps
   payload?: TooltipPayloadItem[];
 }
 
-function CandlestickTooltip({ active, payload }: CandlestickTooltipProps) {
+function formatNumber(value: number, locale: string, decimals = 2): string {
+  return value.toLocaleString(locale, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+}
+
+function CandlestickTooltip({
+  active,
+  payload,
+  locale,
+  labels,
+}: CandlestickTooltipProps & {
+  locale: string;
+  labels: CandlestickChartLabels;
+}) {
   const point = payload?.[0]?.payload;
   if (!active || !point) return null;
 
   return (
-    <div
-      style={{
-        backgroundColor: '#12131f',
-        border: '1px solid rgba(255,255,255,0.08)',
-        padding: '10px 14px',
-        borderRadius: '6px',
-        color: '#e2e8f0',
-        fontSize: '12px',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-      }}
-    >
-      <div
-        style={{ fontWeight: 700, marginBottom: '6px', color: '#90a1b9' }}
-      >
-        Date: {point.date}
+    <div className="candlestick-tooltip">
+      <div className="candlestick-tooltip__date">{chartDateLabel(point, locale)}</div>
+      <div>
+        {labels.open}: {point.open === null ? '—' : formatNumber(point.open, locale)}
       </div>
-      <div>Open: {point.open.toFixed(2)}</div>
-      <div>High: {point.high.toFixed(2)}</div>
-      <div>Low: {point.low.toFixed(2)}</div>
+      <div>
+        {labels.high}: {formatNumber(point.high, locale)}
+      </div>
+      <div>
+        {labels.low}: {formatNumber(point.low, locale)}
+      </div>
       <div style={{ color: candleColor(point) }}>
-        Close: {point.close.toFixed(2)}
+        {labels.close}: {formatNumber(point.close, locale)}
       </div>
-      <div>Volume: {point.volume.toLocaleString()}</div>
+      {point.adjustedClose !== undefined && (
+        <div>
+          {labels.adjustedClose}:{' '}
+          {point.adjustedClose === null
+            ? '—'
+            : formatNumber(point.adjustedClose, locale)}
+        </div>
+      )}
+      <div>
+        {labels.volume}: {point.volume.toLocaleString(locale)}
+      </div>
     </div>
   );
 }
 
-export function CandlestickChart({ data }: CandlestickChartProps) {
+export function CandlestickChart({
+  data,
+  locale = 'en-US',
+  accessibleLabel = 'OHLCV price and volume chart',
+  labels: labelOverrides,
+}: CandlestickChartProps) {
+  const labels = { ...DEFAULT_LABELS, ...labelOverrides };
+  const showsAdjustedClose = data.some(
+    (point) => point.adjustedClose !== undefined,
+  );
   const prices = data.flatMap((point) => [point.low, point.high]);
   const minimumPrice = prices.length > 0 ? Math.min(...prices) : 0;
   const maximumPrice = prices.length > 0 ? Math.max(...prices) : 1;
@@ -69,46 +125,118 @@ export function CandlestickChart({ data }: CandlestickChartProps) {
   ];
 
   return (
-    <div style={{ width: '100%', height: 320 }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={[...data]}
-          margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-        >
-          <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.04)" />
-          <XAxis
-            dataKey="date"
-            stroke="#45556c"
-            tick={{ fill: '#90a1b9', fontSize: 10 }}
-            tickLine={{ stroke: '#45556c' }}
-            axisLine={{ stroke: 'rgba(255,255,255,0.06)' }}
-          />
-          <YAxis
-            domain={priceDomain}
-            stroke="#45556c"
-            tick={{ fill: '#90a1b9', fontSize: 10, fontFamily: 'monospace' }}
-            tickLine={{ stroke: '#45556c' }}
-            axisLine={{ stroke: 'rgba(255,255,255,0.06)' }}
-          />
-          <Tooltip content={<CandlestickTooltip />} />
-          <Bar
-            dataKey={candleBody}
-            isAnimationActive={false}
-            maxBarSize={12}
-            minPointSize={2}
+    <div className="candlestick-chart" role="group" aria-label={accessibleLabel}>
+      <div className="candlestick-chart__price" aria-hidden="true">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={[...data]}
+            margin={{ top: 10, right: 8, left: 0, bottom: 0 }}
           >
-            {data.map((point) => (
-              <Cell key={point.date} fill={candleColor(point)} />
-            ))}
-            <ErrorBar
-              dataKey={candleWick}
-              width={0}
-              stroke="#90a1b9"
-              strokeWidth={1.25}
+            <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.04)" />
+            <XAxis
+              dataKey="date"
+              hide
+              stroke="#45556c"
             />
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+            <YAxis
+              domain={priceDomain}
+              width={54}
+              stroke="#45556c"
+              tickCount={4}
+              tickFormatter={(value: number) => formatNumber(value, locale)}
+              tick={{ fill: '#90a1b9', fontSize: 10, fontFamily: 'monospace' }}
+              tickLine={{ stroke: '#45556c' }}
+              axisLine={{ stroke: 'rgba(255,255,255,0.06)' }}
+            />
+            <Tooltip
+              content={
+                <CandlestickTooltip locale={locale} labels={labels} />
+              }
+            />
+            <Bar
+              dataKey={candleBody}
+              isAnimationActive={false}
+              maxBarSize={12}
+              minPointSize={2}
+            >
+              {data.map((point) => (
+                <Cell key={point.date} fill={candleColor(point)} />
+              ))}
+              <ErrorBar
+                dataKey={candleWick}
+                width={0}
+                stroke="#90a1b9"
+                strokeWidth={1.25}
+              />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="candlestick-chart__volume-label">{labels.volume}</div>
+      <div className="candlestick-chart__volume" aria-hidden="true">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={[...data]}
+            margin={{ top: 0, right: 8, left: 0, bottom: 0 }}
+          >
+            <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.035)" />
+            <XAxis
+              dataKey="date"
+              minTickGap={28}
+              stroke="#45556c"
+              tickFormatter={(day: string) => chartTickLabel(day, locale)}
+              tick={{ fill: '#64748b', fontSize: 9 }}
+              tickLine={false}
+              axisLine={{ stroke: 'rgba(255,255,255,0.06)' }}
+            />
+            <YAxis width={54} hide />
+            <Bar dataKey="volume" isAnimationActive={false} maxBarSize={12}>
+              {data.map((point) => (
+                <Cell
+                  key={`${point.date}-${point.periodEnd ?? ''}-volume`}
+                  fill={candleColor(point)}
+                  fillOpacity={0.45}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <table className="candlestick-chart__table">
+        <caption>{accessibleLabel}</caption>
+        <thead>
+          <tr>
+            <th>{labels.date}</th>
+            <th>{labels.open}</th>
+            <th>{labels.high}</th>
+            <th>{labels.low}</th>
+            <th>{labels.close}</th>
+            {showsAdjustedClose && <th>{labels.adjustedClose}</th>}
+            <th>{labels.volume}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((point) => (
+            <tr key={`${point.date}-${point.periodEnd ?? ''}-accessible`}>
+              <th>{chartDateLabel(point, locale)}</th>
+              <td>{point.open === null ? '—' : formatNumber(point.open, locale)}</td>
+              <td>{formatNumber(point.high, locale)}</td>
+              <td>{formatNumber(point.low, locale)}</td>
+              <td>{formatNumber(point.close, locale)}</td>
+              {showsAdjustedClose && (
+                <td>
+                  {point.adjustedClose === undefined || point.adjustedClose === null
+                    ? '—'
+                    : formatNumber(point.adjustedClose, locale)}
+                </td>
+              )}
+              <td>{point.volume.toLocaleString(locale)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

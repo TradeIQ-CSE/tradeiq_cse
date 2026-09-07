@@ -14,6 +14,11 @@ const MarketsPage = lazy(() =>
     default: module.MarketsPage,
   })),
 );
+const SecurityDetailPage = lazy(() =>
+  import('../features/markets/SecurityDetailPage').then((module) => ({
+    default: module.SecurityDetailPage,
+  })),
+);
 const LoginPage = lazy(() =>
   import('../features/auth/LoginPage').then((module) => ({
     default: module.LoginPage,
@@ -98,6 +103,7 @@ export function AppRoutes() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/markets" element={<MarketsPage />} />
+        <Route path="/markets/:symbol" element={<SecurityDetailPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route
