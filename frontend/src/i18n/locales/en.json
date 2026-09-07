@@ -296,7 +296,9 @@
       "displayName": "Display name",
       "email": "Email",
       "password": "Password",
-      "passwordHint": "At least 12 characters"
+      "passwordHint": "At least 12 characters",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
     },
     "validation": {
       "displayNameRequired": "Enter a display name",
