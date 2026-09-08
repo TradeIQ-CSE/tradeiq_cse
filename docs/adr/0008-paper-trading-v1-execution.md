@@ -1,6 +1,7 @@
 # ADR 0008: Deterministic EOD paper-trading execution
 
-- **Status:** Proposed for review
+- **Status:** Accepted; ownership and boundary decisions superseded by
+  [ADR 0009](./0009-market-trading-owns-paper-trading.md)
 - **Date:** 2026-08-27
 - **Source:** TIQ-57 / GitHub issue #36
 - **Contract:** [paper-trading-v1.md](../api/paper-trading-v1.md)
@@ -15,6 +16,11 @@ identifiers and retry behavior.
 The initial auth schema contains the main portfolio and fill tables, but it
 stores market UUIDs that the market API deliberately does not expose and lacks
 idempotency and sell-to-lot allocation records.
+
+> **Partially superseded.** The first two bullets no longer hold: ADR 0009
+> gives `market-trading` the user-specific paper-trading records, and the REST
+> execution quote is now an in-process call. Every execution rule below —
+> dates, fees, FIFO, rounding, idempotency — stands unchanged.
 
 ## Decision
 
@@ -48,4 +54,5 @@ idempotency and sell-to-lot allocation records.
 - [CSE transaction fee table](https://cdn.cse.lk/pdf/investor-portal/invest-sri-lanka.pdf)
 - [CSE amendment shortening equity settlement from T+3 to T+2](https://cdn.cse.lk/cmt/upload_report_file/f0OBhgMTj67atw5b_21May2024093353GMT_1716284033845.pdf)
 - [ADR 0001: service and store naming](./0001-service-and-store-naming.md)
+- [ADR 0009: `market-trading` owns paper trading](./0009-market-trading-owns-paper-trading.md)
 - [Structured error envelope](../api/error-envelope.md)

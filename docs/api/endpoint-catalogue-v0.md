@@ -27,6 +27,14 @@ All four endpoints are **public market-data reads**: no authentication, read-onl
 (SRS 3.1.1.1, 3.1.2.2). Served by `market-trading` from the `market_data` database
 (schema v2; ERD v2).
 
+This catalogue is not the whole of `market-trading`. The service also serves the
+authenticated paper-trading surface — portfolios, orders, fills, positions and
+summaries — specified in [paper-trading-v1.md](./paper-trading-v1.md), and the
+authenticated backtest routes under `/api/v1/backtests`, whose owner comes only
+from the verified token. Those moved into `market-trading` with
+[ADR 0009](../adr/0009-market-trading-owns-paper-trading.md); the four endpoints
+below are unaffected by that move.
+
 ## 2. Conventions
 
 ### 2.1 Response envelopes

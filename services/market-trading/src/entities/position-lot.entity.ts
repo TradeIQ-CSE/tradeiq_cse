@@ -1,7 +1,6 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
-// Maps market_data.position_lots, as reshaped by
-// services/identity-auth/src/db/migrations/1788150000000-AddPaperOrderExecution.ts
+// Maps market_data.position_lots (src/db/migrations/1788500000000-PaperTradingTables.ts)
 //
 // Positions are derived from open lots rather than stored: there is no
 // positions table.
