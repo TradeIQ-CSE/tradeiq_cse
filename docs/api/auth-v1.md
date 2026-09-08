@@ -247,7 +247,7 @@ Byte-identical to the response for a real account with the wrong password.
 
 | Variable | Default | Notes |
 |---|---|---|
-| `JWT_SECRET` | — | Required. Signs access tokens here and verifies them in market-trading, so both services need the same value. Under `NODE_ENV=production` it must be at least 32 characters and must not be the development default shipped in `.env.example`; either is refused at boot. |
+| `JWT_SECRET` | — | Required. Signs access tokens here and verifies them in market-trading, so both services need the same value. Under `NODE_ENV=production` it must be at least 32 characters, contain at least 12 distinct characters, and not be the development default shipped in `.env.example`; each is refused at boot. The variety floor rejects a short secret padded out to clear the length rule — it is not a measure of entropy, so generate a real one: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. Any encoding is accepted. |
 | `AUTH_ACCESS_TOKEN_TTL` | `5m` | `expiresIn` on issued access tokens. |
 | `AUTH_REFRESH_TOKEN_TTL` | `15d` | Refresh row lifetime and cookie `Max-Age`. |
 | `AUTH_EMAIL_ENCRYPTION_KEY` | — | Required. 32 bytes, base64. Rotating it orphans existing rows. |

@@ -19,6 +19,19 @@ const KNOWN_WEAK_SECRETS = new Set([DEVELOPMENT_JWT_SECRET, 'changeme']);
 // the output size of SHA-256, the point past which a longer key adds nothing.
 export const MIN_PRODUCTION_JWT_SECRET_LENGTH = 32;
 
+// A length floor on its own invites padding: an operator stopped by "at least
+// 32 characters" can clear it with 'k' repeated 32 times, or by tacking x's
+// onto a short secret. Counting distinct characters costs nothing and catches
+// both, along with a repeated word.
+//
+// This is a guard against degenerate input, not a measure of entropy. Nothing
+// available at boot can tell 32 random bytes from a memorable string of the
+// same shape, so the threshold is deliberately loose: 32 random bytes carry
+// about 32 distinct characters in base64 and about 16 in hex, so a real secret
+// clears 12 with room to spare. A hex secret falls below it around once in
+// 7000, and the message says to generate another.
+export const MIN_PRODUCTION_JWT_SECRET_DISTINCT_CHARACTERS = 12;
+
 /**
  * Rejects a JWT_SECRET that is short or publicly known, but only when
  * NODE_ENV=production.
@@ -47,11 +60,13 @@ export function StrongInProduction(options?: ValidationOptions) {
           if (typeof value !== 'string') return false;
           return (
             value.length >= MIN_PRODUCTION_JWT_SECRET_LENGTH &&
+            new Set(value).size >=
+              MIN_PRODUCTION_JWT_SECRET_DISTINCT_CHARACTERS &&
             !KNOWN_WEAK_SECRETS.has(value)
           );
         },
         defaultMessage(args: ValidationArguments): string {
-          return `${args.property} must be at least ${MIN_PRODUCTION_JWT_SECRET_LENGTH} characters and must not be a published development default when NODE_ENV=production`;
+          return `${args.property} must be at least ${MIN_PRODUCTION_JWT_SECRET_LENGTH} characters long, contain at least ${MIN_PRODUCTION_JWT_SECRET_DISTINCT_CHARACTERS} distinct characters, and must not be a published development default when NODE_ENV=production. Generate one with: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`;
         },
       },
     });
