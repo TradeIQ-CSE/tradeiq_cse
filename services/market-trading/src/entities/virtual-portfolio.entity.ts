@@ -1,7 +1,7 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
-// Maps auth.virtual_portfolios (services/identity-auth/src/db/migrations/1786358400000-InitialSchema.ts)
-@Entity({ schema: 'auth', name: 'virtual_portfolios' })
+// Maps market_data.virtual_portfolios (services/identity-auth/src/db/migrations/1786358400000-InitialSchema.ts)
+@Entity({ schema: 'market_data', name: 'virtual_portfolios' })
 export class VirtualPortfolio {
   @PrimaryColumn('uuid', { name: 'portfolio_id' })
   portfolioId!: string;

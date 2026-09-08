@@ -45,11 +45,20 @@ export class AllExceptionsFilter implements ExceptionFilter {
         status < HttpStatus.INTERNAL_SERVER_ERROR ? exception.message : message;
     }
 
+    // Every 5xx is logged, but only a genuine 500 is redacted. A 503 carries a
+    // code the caller is meant to act on: error-envelope.md §2 makes
+    // DEPENDENCY_UNAVAILABLE the signal that a retry is safe, and
+    // paper-trading-v1.md §4 depends on that distinction, since a transient
+    // dependency failure must not consume the request's idempotency key.
+    // Collapsing it to INTERNAL told the caller the opposite.
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.error(
         `Unhandled exception [trace_id=${traceId}]`,
         exception instanceof Error ? exception.stack : String(exception),
       );
+    }
+
+    if (status === HttpStatus.INTERNAL_SERVER_ERROR) {
       code = 'INTERNAL';
       message = 'An unexpected error occurred.';
       fields = undefined;

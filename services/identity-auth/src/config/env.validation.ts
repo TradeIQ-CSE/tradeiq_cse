@@ -7,7 +7,6 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsUrl,
   Matches,
   Max,
   Min,
@@ -79,23 +78,6 @@ class EnvironmentVariables {
   @IsOptional()
   @IsBoolean()
   AUTH_REFRESH_COOKIE_SECURE?: boolean;
-
-  //: Base URL of the market-trading service, used for execution quotes.
-  @IsOptional()
-  // require_tld is off because compose injects http://market-trading:3001,
-  // a hostname with no TLD. The scheme is still required: without it a value
-  // like "market-trading:3001" would validate and then build a broken URL.
-  @IsUrl({
-    require_tld: false,
-    require_protocol: true,
-    protocols: ['http', 'https'],
-  })
-  MARKET_TRADING_URL?: string;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  MARKET_TRADING_TIMEOUT_MS?: number;
 }
 
 export function validate(config: Record<string, unknown>) {

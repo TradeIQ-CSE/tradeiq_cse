@@ -10,9 +10,11 @@ import { AppModule } from '../src/app.module';
 import { configureMarketTradingApp } from '../src/app.setup';
 import { DataSource } from 'typeorm';
 import { calculateMarketDigest } from '../src/eod-ingestion/eod-ingestion.validation';
+import { PaperTradingQuotesService } from '../src/paper-trading-quotes/paper-trading-quotes.service';
 
 describe('HealthModule (e2e)', () => {
   let app: NestExpressApplication;
+  let quotes: PaperTradingQuotesService;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -24,6 +26,7 @@ describe('HealthModule (e2e)', () => {
     // what actually ships rather than Nest's default exception rendering.
     configureMarketTradingApp(app);
     await app.init();
+    quotes = app.get(PaperTradingQuotesService);
   });
 
   afterAll(async () => {
@@ -301,36 +304,28 @@ describe('HealthModule (e2e)', () => {
     });
   });
 
-  // docs/api/paper-trading-v1.md §2.3 — the execution quote identity-auth
-  // prices paper orders from.
-  describe('/internal/paper-trading/quotes/{symbol} (GET)', () => {
-    const quote = (symbol: string) =>
-      request(app.getHttpServer()).get(
-        `/internal/paper-trading/quotes/${symbol}`,
-      );
-
-    // Strips trace_id, which is a fresh uuid per response.
-    const envelope = (body: { error: Record<string, unknown> }) => {
-      const { trace_id, ...rest } = body.error;
-      expect(trace_id).toEqual(expect.any(String));
-      return rest;
-    };
+  // docs/api/paper-trading-v1.md §2.3, §2.4 — the quote and valuation rules
+  // the order and portfolio paths price against.
+  //
+  // Called on the service rather than over HTTP: both callers now live in this
+  // process, so there are no internal endpoints left to request. The point of
+  // these cases is unchanged, and it is not the transport — the service unit
+  // tests mock manager.query, so this is the only place the quote and
+  // valuation SQL actually runs against seeded data.
+  describe('paper-trading quotes (§2.3)', () => {
+    const quote = (symbol: string) => quotes.getQuote(symbol);
 
     it('returns the contract worked example verbatim', async () => {
-      const response = await quote('COMB.N0000').expect(200);
-
       // This is the §2.3 sample response. The seeded fixture was built to
       // match it, so any drift in pricing, session resolution or T+2
       // settlement shows up here as a diff against the published contract.
-      expect(response.body).toEqual({
-        data: {
-          symbol: 'COMB.N0000',
-          listing_status: 'listed',
-          market_as_of: '2025-01-10',
-          price_as_of: '2025-01-10',
-          close: 142.72,
-          settlement_date: '2025-01-14',
-        },
+      await expect(quote('COMB.N0000')).resolves.toEqual({
+        symbol: 'COMB.N0000',
+        listing_status: 'listed',
+        market_as_of: '2025-01-10',
+        price_as_of: '2025-01-10',
+        close: 142.72,
+        settlement_date: '2025-01-14',
       });
     });
 
@@ -338,19 +333,19 @@ describe('HealthModule (e2e)', () => {
       // 2025-01-10 is a Friday, so settlement is Tuesday the 14th, not the
       // 12th. Asserted separately because it is the rule most likely to be
       // broken by a refactor of the calendar walk.
-      const response = await quote('HNB.N0000').expect(200);
+      const result = await quote('HNB.N0000');
 
-      expect(response.body.data.market_as_of).toBe('2025-01-10');
-      expect(response.body.data.settlement_date).toBe('2025-01-14');
+      expect(result.market_as_of).toBe('2025-01-10');
+      expect(result.settlement_date).toBe('2025-01-14');
     });
 
     it('matches the symbol case-insensitively and echoes the canonical form', async () => {
-      // The SPA sends whatever the user typed; canonical symbols are what
-      // cross the service boundary.
-      const response = await quote('comb.n0000').expect(200);
+      // The SPA sends whatever the user typed; canonical symbols are what the
+      // stored records carry.
+      const result = await quote('comb.n0000');
 
-      expect(response.body.data.symbol).toBe('COMB.N0000');
-      expect(response.body.data.close).toBe(142.72);
+      expect(result.symbol).toBe('COMB.N0000');
+      expect(result.close).toBe(142.72);
     });
 
     it('prices every seeded security at the same market session', async () => {
@@ -364,60 +359,50 @@ describe('HealthModule (e2e)', () => {
         'CTC.N0000',
       ];
 
-      const quotes = await Promise.all(
-        symbols.map(async (s) => (await quote(s).expect(200)).body.data),
-      );
+      const results = await Promise.all(symbols.map((s) => quote(s)));
 
-      expect(quotes.map((q) => q.market_as_of)).toEqual(
+      expect(results.map((q) => q.market_as_of)).toEqual(
         symbols.map(() => '2025-01-10'),
       );
       // Every fixture security trades on the last session, so none is stale.
-      expect(quotes.every((q) => q.price_as_of === q.market_as_of)).toBe(true);
-      expect(quotes.every((q) => typeof q.close === 'number')).toBe(true);
+      expect(results.every((q) => q.price_as_of === q.market_as_of)).toBe(true);
+      expect(results.every((q) => typeof q.close === 'number')).toBe(true);
     });
 
-    it('returns a SECURITY_NOT_FOUND envelope for an unknown symbol', async () => {
-      const response = await quote('NOPE.X0000').expect(404);
-
-      expect(envelope(response.body)).toEqual({
+    it('throws SECURITY_NOT_FOUND for an unknown symbol', async () => {
+      await expect(quote('NOPE.X0000')).rejects.toMatchObject({
         code: 'SECURITY_NOT_FOUND',
         message: 'Security not found.',
       });
     });
 
-    it('returns a VALIDATION_FAILED envelope with fields for an over-long symbol', async () => {
-      const response = await quote('A'.repeat(21)).expect(400);
-
-      expect(envelope(response.body)).toEqual({
-        code: 'VALIDATION_FAILED',
-        message: 'Request validation failed.',
-        fields: [
-          {
-            field: 'symbol',
-            reason: 'symbol must be shorter than or equal to 20 characters',
-          },
-        ],
+    // §6.2 — the order path needs the absence as a value, not an exception, so
+    // it can persist a rejected order rather than fail the request.
+    it('reports an unknown symbol as not found rather than throwing', async () => {
+      await expect(quotes.findQuote('NOPE.X0000')).resolves.toEqual({
+        found: false,
+      });
+      await expect(quotes.findQuote('comb.n0000')).resolves.toMatchObject({
+        found: true,
+        quote: { symbol: 'COMB.N0000' },
       });
     });
 
     it('is deterministic across repeated calls', async () => {
-      const first = await quote('CTC.N0000').expect(200);
-      const second = await quote('CTC.N0000').expect(200);
+      const first = await quote('CTC.N0000');
+      const second = await quote('CTC.N0000');
 
-      expect(second.body).toEqual(first.body);
+      expect(second).toEqual(first);
     });
   });
-  // docs/api/paper-trading-v1.md §2.4. The service unit tests mock
-  // manager.query, so this is the only place the valuation SQL actually runs.
-  it('/internal/paper-trading/valuations (GET) prices a set of symbols at one session', async () => {
-    const response = await request(app.getHttpServer())
-      .get(
-        '/internal/paper-trading/valuations' +
-          '?symbols=JKH.N0000,comb.n0000,NOPE.X0000&as_of=2025-01-05',
-      )
-      .expect(200);
 
-    expect(response.body.data).toEqual({
+  it('prices a set of symbols at one session (§2.4)', async () => {
+    await expect(
+      quotes.getValuations(
+        ['JKH.N0000', 'comb.n0000', 'NOPE.X0000'],
+        '2025-01-05',
+      ),
+    ).resolves.toEqual({
       // 2025-01-05 is a Sunday; it settles back to the seeded session.
       as_of: '2025-01-03',
       prices: [
@@ -430,25 +415,20 @@ describe('HealthModule (e2e)', () => {
     });
   });
 
-  it('/internal/paper-trading/valuations (GET) returns the session with no symbols', async () => {
-    const response = await request(app.getHttpServer())
-      .get('/internal/paper-trading/valuations?as_of=2025-01-05')
-      .expect(200);
-
-    expect(response.body.data).toEqual({ as_of: '2025-01-03', prices: [] });
+  it('returns the session with no symbols (§2.4)', async () => {
+    await expect(quotes.getValuations([], '2025-01-05')).resolves.toEqual({
+      as_of: '2025-01-03',
+      prices: [],
+    });
   });
 
-  it('/internal/paper-trading/valuations (GET) rejects an as_of outside the data', async () => {
-    const response = await request(app.getHttpServer())
-      .get(
-        '/internal/paper-trading/valuations?symbols=JKH.N0000&as_of=2030-01-01',
-      )
-      .expect(400);
-
-    expect(response.body.error.code).toBe('VALIDATION_FAILED');
-    expect(response.body.error.fields).toEqual([
-      expect.objectContaining({ field: 'as_of' }),
-    ]);
+  it('rejects an as_of outside the data (§2.4)', async () => {
+    await expect(
+      quotes.getValuations(['JKH.N0000'], '2030-01-01'),
+    ).rejects.toMatchObject({
+      code: 'VALIDATION_FAILED',
+      fields: [expect.objectContaining({ field: 'as_of' })],
+    });
   });
 
   describe('/internal/v1/ingestions/eod', () => {
@@ -542,10 +522,7 @@ describe('HealthModule (e2e)', () => {
         }),
       );
 
-      const quote = await request(app.getHttpServer())
-        .get(`/internal/paper-trading/quotes/${symbol}`)
-        .expect(200);
-      expect(quote.body.data).toEqual(
+      await expect(quotes.getQuote(symbol)).resolves.toEqual(
         expect.objectContaining({
           symbol,
           market_as_of: tradeDate,

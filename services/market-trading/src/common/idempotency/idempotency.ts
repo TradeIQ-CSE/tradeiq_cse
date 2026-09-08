@@ -27,7 +27,7 @@ export function hashCanonicalRequest(
 }
 
 // docs/api/paper-trading-v1.md §4 — an opaque 8–128 character printable ASCII
-// value. auth.idempotency_records enforces the same length as a CHECK
+// value. market_data.idempotency_records enforces the same length as a CHECK
 // constraint, so validating here is what turns a bad key into
 // 400 VALIDATION_FAILED (§9.1) instead of a constraint violation surfacing as
 // a 500.
@@ -59,7 +59,7 @@ export async function reserveIdempotencyKey(
   requestHash: string,
 ): Promise<IdempotencyReservation> {
   const reserved: { idempotency_record_id: string }[] = await manager.query(
-    `INSERT INTO auth.idempotency_records
+    `INSERT INTO market_data.idempotency_records
        (idempotency_record_id, user_id, method, route, idempotency_key, request_hash, created_at)
      VALUES ($1, $2, $3, $4, $5, $6, now())
      ON CONFLICT (user_id, method, route, idempotency_key) DO NOTHING
@@ -80,7 +80,7 @@ export async function reserveIdempotencyKey(
 
   const existing: { request_hash: string; response_body: unknown }[] =
     await manager.query(
-      `SELECT request_hash, response_body FROM auth.idempotency_records
+      `SELECT request_hash, response_body FROM market_data.idempotency_records
        WHERE user_id = $1 AND method = $2 AND route = $3 AND idempotency_key = $4`,
       [scope.userId, scope.method, scope.route, scope.idempotencyKey],
     );
@@ -109,7 +109,7 @@ export async function completeIdempotencyKey(
   createdResourceId?: string,
 ): Promise<void> {
   await manager.query(
-    `UPDATE auth.idempotency_records
+    `UPDATE market_data.idempotency_records
      SET response_status = $1, response_body = $2, created_resource_id = $3
      WHERE idempotency_record_id = $4`,
     [

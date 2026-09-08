@@ -1,7 +1,8 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 
-// Error codes from docs/api/error-envelope.md §2. Extend this union as new
-// endpoints introduce codes from that registry.
+// Error codes from docs/api/error-envelope.md §2 and
+// docs/api/paper-trading-v1.md §9.1. Extend this union as new endpoints
+// introduce codes from those registries.
 export type ApiErrorCode =
   | 'VALIDATION_FAILED'
   | 'NOT_FOUND'
@@ -10,7 +11,30 @@ export type ApiErrorCode =
   | 'DEPENDENCY_UNAVAILABLE'
   | 'CONFLICT'
   | 'RATE_LIMITED'
+  | 'PORTFOLIO_NOT_FOUND'
+  | 'IDEMPOTENCY_KEY_REUSED'
+  | 'ORDER_NOT_FOUND'
+  | 'INSUFFICIENT_CASH'
+  | 'INSUFFICIENT_HOLDINGS'
+  | 'TRANSACTION_LIMIT_EXCEEDED'
+  | 'SECURITY_NOT_TRADABLE'
+  | 'PRICE_UNAVAILABLE'
+  | 'STALE_PRICE'
   | 'INTERNAL';
+
+// docs/api/paper-trading-v1.md §6.2 — the seven outcomes that a submitted
+// order records instead of failing. On POST /orders these are persisted on a
+// 201 order with status 'rejected'; on POST /orders/estimate the same
+// conditions are error envelopes (§9.1), because there is no order to attach
+// them to. Both paths derive from the one checker so they cannot disagree.
+export type OrderRejectionCode =
+  | 'INSUFFICIENT_CASH'
+  | 'INSUFFICIENT_HOLDINGS'
+  | 'TRANSACTION_LIMIT_EXCEEDED'
+  | 'SECURITY_NOT_FOUND'
+  | 'SECURITY_NOT_TRADABLE'
+  | 'PRICE_UNAVAILABLE'
+  | 'STALE_PRICE';
 
 export interface ApiErrorField {
   field: string;
@@ -70,5 +94,92 @@ export class IngestionUnavailableException extends ApiException {
 export class IngestionConflictException extends ApiException {
   constructor(message: string) {
     super(HttpStatus.CONFLICT, 'CONFLICT', message);
+  }
+}
+
+// docs/api/paper-trading-v1.md §9.1 — missing, deleted or other-user
+// portfolios are all reported identically so a portfolio id never discloses
+// another user's data.
+export class PortfolioNotFoundException extends ApiException {
+  constructor() {
+    super(HttpStatus.NOT_FOUND, 'PORTFOLIO_NOT_FOUND', 'Portfolio not found.');
+  }
+}
+
+// docs/api/paper-trading-v1.md §4 — same idempotency key reused with a
+// different canonical request.
+export class IdempotencyKeyReusedException extends ApiException {
+  constructor() {
+    super(
+      HttpStatus.CONFLICT,
+      'IDEMPOTENCY_KEY_REUSED',
+      'This idempotency key was already used with a different request.',
+    );
+  }
+}
+
+// docs/api/error-envelope.md §2 — a required internal service is temporarily
+// unavailable. Distinct from INTERNAL: the caller may safely retry, and
+// paper-trading-v1.md §4 relies on that distinction, since a transient
+// dependency failure must not consume the request's idempotency key.
+export class DependencyUnavailableException extends ApiException {
+  constructor() {
+    super(
+      HttpStatus.SERVICE_UNAVAILABLE,
+      'DEPENDENCY_UNAVAILABLE',
+      'A required service is temporarily unavailable.',
+    );
+  }
+}
+
+export class OrderNotFoundException extends ApiException {
+  constructor() {
+    super(HttpStatus.NOT_FOUND, 'ORDER_NOT_FOUND', 'Order not found.');
+  }
+}
+
+// docs/api/paper-trading-v1.md §3.4 — a held security with no close on the
+// effective session leaves the portfolio unvaluable, and §7 answers 422 rather
+// than pricing the position at zero or mixing dates across positions.
+//
+// Separate from OrderRejectedException('PRICE_UNAVAILABLE') despite sharing the
+// code: that one is an order the service refused to fill, this one is a view it
+// cannot compute. Nothing is persisted here.
+export class PriceUnavailableException extends ApiException {
+  constructor(symbols: readonly string[]) {
+    super(
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      'PRICE_UNAVAILABLE',
+      // Naming the symbols is what makes this actionable: the user can see
+      // which holding is unpriced instead of being told the whole portfolio
+      // failed. They are the user's own holdings, so this discloses nothing.
+      `No price is available for ${symbols.join(', ')} on the requested session.`,
+    );
+  }
+}
+
+// §9.1 — the estimate endpoint's rendering of a rejection. Unknown symbols are
+// 404; every other rejection is 422, a well-formed request refused by a domain
+// rule. Order submission never throws these: it persists them (§6.2).
+const REJECTION_MESSAGES: Record<OrderRejectionCode, string> = {
+  INSUFFICIENT_CASH: 'Portfolio does not have enough cash for this order.',
+  INSUFFICIENT_HOLDINGS: 'Portfolio does not hold enough of this security.',
+  TRANSACTION_LIMIT_EXCEEDED:
+    'Order value exceeds the maximum supported transaction value.',
+  SECURITY_NOT_FOUND: 'Security not found.',
+  SECURITY_NOT_TRADABLE: 'Security is not currently tradable.',
+  PRICE_UNAVAILABLE: 'No usable price is available for this security.',
+  STALE_PRICE: 'The latest price for this security is out of date.',
+};
+
+export class OrderRejectedException extends ApiException {
+  constructor(code: OrderRejectionCode) {
+    super(
+      code === 'SECURITY_NOT_FOUND'
+        ? HttpStatus.NOT_FOUND
+        : HttpStatus.UNPROCESSABLE_ENTITY,
+      code,
+      REJECTION_MESSAGES[code],
+    );
   }
 }

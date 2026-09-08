@@ -24,6 +24,13 @@ import { getToken, notifySessionLost, Session, SessionUser, setSession } from '.
 export const IDENTITY_AUTH_API_URL =
   import.meta.env.VITE_IDENTITY_AUTH_API_URL || 'http://localhost:3002';
 
+// Paper trading, orders and backtests are all served by market-trading, which
+// verifies the same access token. Guarded calls therefore differ only in
+// origin, so the helpers below take one rather than growing a second copy of
+// the token and refresh handling per service.
+export const MARKET_TRADING_API_URL =
+  import.meta.env.VITE_MARKET_TRADING_API_URL || 'http://localhost:3001';
+
 export interface SessionBody {
   access_token: string;
   token_type: 'Bearer';
@@ -214,28 +221,33 @@ function buildQuery(params?: Record<string, string | number | undefined>): strin
 export async function authedGet<T>(
   path: string,
   params?: Record<string, string | number | undefined>,
+  baseUrl?: string,
 ): Promise<EnvelopeResult<T>> {
-  const response = await authFetch(`${path}${buildQuery(params)}`, { method: 'GET' });
+  const response = await authFetch(`${path}${buildQuery(params)}`, { method: 'GET' }, baseUrl);
   return parseEnvelope<T>(response);
 }
 
 export async function authedPost<T>(
   path: string,
   body: unknown,
-  opts?: { idempotencyKey?: string },
+  opts?: { idempotencyKey?: string; baseUrl?: string },
 ): Promise<EnvelopeResult<T>> {
   const headers = new Headers({ 'Content-Type': 'application/json' });
   if (opts?.idempotencyKey) headers.set('Idempotency-Key', opts.idempotencyKey);
 
-  const response = await authFetch(path, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body),
-  });
+  const response = await authFetch(
+    path,
+    {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    },
+    opts?.baseUrl,
+  );
   return parseEnvelope<T>(response);
 }
 
-export async function authedDelete(path: string): Promise<void> {
-  const response = await authFetch(path, { method: 'DELETE' });
+export async function authedDelete(path: string, baseUrl?: string): Promise<void> {
+  const response = await authFetch(path, { method: 'DELETE' }, baseUrl);
   await parseEnvelope<void>(response);
 }

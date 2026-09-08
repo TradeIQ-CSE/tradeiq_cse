@@ -9,9 +9,9 @@ import {
 } from '../common/errors/api-exception';
 import {
   ExecutionQuote,
-  MarketTradingClient,
+  PaperTradingQuotesService,
   QuoteResult,
-} from '../market-trading/market-trading.client';
+} from '../paper-trading-quotes/paper-trading-quotes.service';
 import { hashCanonicalRequest } from '../common/idempotency/idempotency';
 import { OrdersService } from './orders.service';
 import { SubmitOrderDto } from './dto/submit-order.dto';
@@ -39,7 +39,7 @@ describe('OrdersService', () => {
   let service: OrdersService;
   let repoQuery: jest.Mock;
   let txQuery: jest.Mock;
-  let getQuote: jest.Mock;
+  let findQuote: jest.Mock;
 
   // The service issues many statements per call, so the mocks match on SQL
   // rather than on call order: a sequence-based mock would have to be
@@ -57,7 +57,7 @@ describe('OrdersService', () => {
   beforeEach(async () => {
     repoQuery = jest.fn().mockResolvedValue([]);
     txQuery = jest.fn().mockResolvedValue([]);
-    getQuote = jest.fn().mockResolvedValue({ found: true, quote: QUOTE });
+    findQuote = jest.fn().mockResolvedValue({ found: true, quote: QUOTE });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -74,7 +74,7 @@ describe('OrdersService', () => {
             ),
           },
         },
-        { provide: MarketTradingClient, useValue: { getQuote } },
+        { provide: PaperTradingQuotesService, useValue: { findQuote } },
       ],
     }).compile();
 
@@ -82,7 +82,7 @@ describe('OrdersService', () => {
   });
 
   const ownedPortfolio = (cash = '1000000') => ({
-    match: 'FROM auth.virtual_portfolios',
+    match: 'FROM market_data.virtual_portfolios',
     rows: [{ cash_balance: cash }],
   });
 
@@ -151,7 +151,7 @@ describe('OrdersService', () => {
       await expect(
         service.estimate(USER, PORTFOLIO, order()),
       ).rejects.toBeInstanceOf(PortfolioNotFoundException);
-      expect(getQuote).not.toHaveBeenCalled();
+      expect(findQuote).not.toHaveBeenCalled();
     });
   });
 
@@ -159,7 +159,7 @@ describe('OrdersService', () => {
     const KEY = 'idem-key-000001';
 
     const reserved = () => ({
-      match: 'INSERT INTO auth.idempotency_records',
+      match: 'INSERT INTO market_data.idempotency_records',
       rows: [{ idempotency_record_id: 'rec-1' }],
     });
 
@@ -167,7 +167,7 @@ describe('OrdersService', () => {
       // §4 — a transient dependency failure must leave the key reusable, which
       // is only true if the quote is fetched before the key is reserved.
       respond(repoQuery, [ownedPortfolio()]);
-      getQuote.mockRejectedValue(new Error('market-trading down'));
+      findQuote.mockRejectedValue(new Error('market-trading down'));
 
       await expect(
         service.submit(USER, PORTFOLIO, order(), KEY),
@@ -185,13 +185,13 @@ describe('OrdersService', () => {
       const count = (needle: string) =>
         statements.filter((s) => s.includes(needle)).length;
 
-      expect(count('INSERT INTO auth.paper_orders')).toBe(1);
-      expect(count('INSERT INTO auth.fills')).toBe(1);
-      expect(count('INSERT INTO auth.fill_fees')).toBe(5);
-      expect(count('INSERT INTO auth.cash_transactions')).toBe(1);
-      expect(count('INSERT INTO auth.position_lots')).toBe(1);
+      expect(count('INSERT INTO market_data.paper_orders')).toBe(1);
+      expect(count('INSERT INTO market_data.fills')).toBe(1);
+      expect(count('INSERT INTO market_data.fill_fees')).toBe(5);
+      expect(count('INSERT INTO market_data.cash_transactions')).toBe(1);
+      expect(count('INSERT INTO market_data.position_lots')).toBe(1);
       // A buy consumes nothing.
-      expect(count('INSERT INTO auth.lot_disposals')).toBe(0);
+      expect(count('INSERT INTO market_data.lot_disposals')).toBe(0);
 
       expect(body.status).toBe('filled');
       expect(body.fill?.cash_effect).toBe(-101120);
@@ -208,7 +208,8 @@ describe('OrdersService', () => {
       expect(
         statements.some(
           (s) =>
-            s.includes('auth.virtual_portfolios') && s.includes('FOR UPDATE'),
+            s.includes('market_data.virtual_portfolios') &&
+            s.includes('FOR UPDATE'),
         ),
       ).toBe(true);
     });
@@ -219,7 +220,7 @@ describe('OrdersService', () => {
         reserved(),
         ownedPortfolio(),
         {
-          match: 'FROM auth.position_lots',
+          match: 'FROM market_data.position_lots',
           rows: [
             {
               lot_id: 'lot-1',
@@ -243,7 +244,8 @@ describe('OrdersService', () => {
         txQuery.mock.calls.map((c) => c[0] as string) ?? []
       ).find(
         (s) =>
-          s.includes('FROM auth.position_lots') && s.includes('FOR UPDATE'),
+          s.includes('FROM market_data.position_lots') &&
+          s.includes('FOR UPDATE'),
       );
       // §3.3 — the lock order must match the consumption order.
       expect(lotLock).toContain(
@@ -254,7 +256,7 @@ describe('OrdersService', () => {
     // §8.2 — sell 400 of a 1,000 lot costing 101,120 at 120.
     it('records disposals and realized P/L on a sell', async () => {
       respond(repoQuery, [ownedPortfolio()]);
-      getQuote.mockResolvedValue({
+      findQuote.mockResolvedValue({
         found: true,
         quote: { ...QUOTE, close: 120 },
       } as QuoteResult);
@@ -262,7 +264,7 @@ describe('OrdersService', () => {
         reserved(),
         ownedPortfolio(),
         {
-          match: 'FROM auth.position_lots',
+          match: 'FROM market_data.position_lots',
           rows: [
             {
               lot_id: 'lot-1',
@@ -284,12 +286,15 @@ describe('OrdersService', () => {
 
       const statements = txQuery.mock.calls.map((c) => c[0] as string);
       expect(
-        statements.filter((s) => s.includes('INSERT INTO auth.lot_disposals'))
-          .length,
+        statements.filter((s) =>
+          s.includes('INSERT INTO market_data.lot_disposals'),
+        ).length,
       ).toBe(1);
       // A sell opens no new lot.
       expect(
-        statements.some((s) => s.includes('INSERT INTO auth.position_lots')),
+        statements.some((s) =>
+          s.includes('INSERT INTO market_data.position_lots'),
+        ),
       ).toBe(false);
 
       expect(body.fill?.cash_effect).toBe(47462.4);
@@ -310,18 +315,20 @@ describe('OrdersService', () => {
 
       const statements = txQuery.mock.calls.map((c) => c[0] as string);
       for (const table of [
-        'auth.fills',
-        'auth.fill_fees',
-        'auth.cash_transactions',
-        'auth.position_lots',
-        'auth.lot_disposals',
+        'market_data.fills',
+        'market_data.fill_fees',
+        'market_data.cash_transactions',
+        'market_data.position_lots',
+        'market_data.lot_disposals',
       ]) {
         expect(statements.some((s) => s.includes(`INSERT INTO ${table}`))).toBe(
           false,
         );
       }
       expect(
-        statements.some((s) => s.includes('UPDATE auth.virtual_portfolios')),
+        statements.some((s) =>
+          s.includes('UPDATE market_data.virtual_portfolios'),
+        ),
       ).toBe(false);
     });
 
@@ -338,7 +345,8 @@ describe('OrdersService', () => {
       txQuery.mockImplementation((sql: string) => {
         // No row returned from the reserving INSERT means the key already
         // exists, which is what sends the helper down the replay path.
-        if (sql.includes('INSERT INTO auth.idempotency_records')) return [];
+        if (sql.includes('INSERT INTO market_data.idempotency_records'))
+          return [];
         if (sql.includes('SELECT request_hash')) {
           return [{ request_hash: storedHash, response_body: stored }];
         }
@@ -350,7 +358,9 @@ describe('OrdersService', () => {
       expect(result.replayed).toBe(true);
       const statements = txQuery.mock.calls.map((c) => c[0] as string);
       expect(
-        statements.some((s) => s.includes('INSERT INTO auth.paper_orders')),
+        statements.some((s) =>
+          s.includes('INSERT INTO market_data.paper_orders'),
+        ),
       ).toBe(false);
     });
   });
@@ -359,7 +369,7 @@ describe('OrdersService', () => {
     it('404s an order that is not in this portfolio', async () => {
       repoQuery.mockImplementation((sql: string) =>
         Promise.resolve(
-          sql.includes('FROM auth.virtual_portfolios')
+          sql.includes('FROM market_data.virtual_portfolios')
             ? [{ cash_balance: '1000000' }]
             : [],
         ),

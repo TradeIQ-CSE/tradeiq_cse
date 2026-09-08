@@ -1,9 +1,9 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
-// Maps auth.fill_fees (1786358400000-InitialSchema.ts).
+// Maps market_data.fill_fees (1786358400000-InitialSchema.ts).
 // One row per fee component, so the schedule applied to a fill stays auditable
 // after the fact (paper-trading-v1.md §3.2).
-@Entity({ schema: 'auth', name: 'fill_fees' })
+@Entity({ schema: 'market_data', name: 'fill_fees' })
 export class FillFee {
   @PrimaryColumn('uuid', { name: 'fill_fee_id' })
   fillFeeId!: string;

@@ -5,20 +5,16 @@ import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import appConfig from './config/app.config';
 import authConfig from './config/auth.config';
 import databaseConfig from './config/database.config';
-import marketTradingConfig from './config/market-trading.config';
 import { validate } from './config/env.validation';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
-import { MarketTradingModule } from './market-trading/market-trading.module';
-import { OrdersModule } from './orders/orders.module';
-import { PortfoliosModule } from './portfolios/portfolios.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
-      load: [appConfig, authConfig, databaseConfig, marketTradingConfig],
+      load: [appConfig, authConfig, databaseConfig],
       validate,
     }),
     TypeOrmModule.forRootAsync({
@@ -41,9 +37,6 @@ import { PortfoliosModule } from './portfolios/portfolios.module';
     }),
     AuthModule,
     HealthModule,
-    MarketTradingModule,
-    OrdersModule,
-    PortfoliosModule,
   ],
 })
 export class AppModule {}

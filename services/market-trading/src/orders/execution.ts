@@ -12,7 +12,7 @@ import { money } from '../common/money/money';
 import {
   ExecutionQuote,
   QuoteResult,
-} from '../market-trading/market-trading.client';
+} from '../paper-trading-quotes/paper-trading-quotes.service';
 
 export type OrderSide = 'buy' | 'sell';
 

@@ -1,7 +1,7 @@
 import {
   ExecutionQuote,
   QuoteResult,
-} from '../market-trading/market-trading.client';
+} from '../paper-trading-quotes/paper-trading-quotes.service';
 import { money } from '../common/money/money';
 import { ExecutionInputs, priceOrder } from './execution';
 
