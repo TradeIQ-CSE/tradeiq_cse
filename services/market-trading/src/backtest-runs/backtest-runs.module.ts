@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from '../auth/auth.module';
 import { BacktestRunsController } from './backtest-runs.controller';
 import { BacktestRunsService } from './backtest-runs.service';
 import { BacktestRunsRepository } from './backtest-runs.repository';
@@ -10,6 +11,7 @@ import { DailyPrice } from '../db/entities/daily-price.entity';
 
 @Module({
   imports: [
+    AuthModule,
     TypeOrmModule.forFeature([
       BacktestRun,
       BacktestResult,

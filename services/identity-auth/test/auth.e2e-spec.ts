@@ -68,8 +68,11 @@ describe('Auth (e2e)', () => {
       });
       expect(response.body.data.access_token).toEqual(expect.any(String));
 
+      // Spent on a guarded route to prove the token is usable, not merely
+      // well-formed. /auth/me is this service's own: the trading routes it
+      // used to call now live in market-trading.
       await api()
-        .get('/portfolios')
+        .get('/auth/me')
         .set('Authorization', `Bearer ${response.body.data.access_token}`)
         .expect(200);
     });

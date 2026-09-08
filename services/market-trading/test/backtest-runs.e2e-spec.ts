@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { JwtModule, JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
+import { JwtAuthGuard } from '../src/auth/jwt-auth.guard';
 import { BacktestRunsController } from '../src/backtest-runs/backtest-runs.controller';
 import { BacktestRunsService } from '../src/backtest-runs/backtest-runs.service';
 import { BacktestRunsRepository } from '../src/backtest-runs/backtest-runs.repository';
@@ -8,9 +10,17 @@ import { BacktestRun } from '../src/backtest-runs/backtest-run.entity';
 import { BacktestResult } from '../src/backtest-runs/backtest-result.entity';
 import { configureMarketTradingApp } from '../src/app.setup';
 
+// Signed here rather than mocked: these tests are the reason the routes are
+// guarded, so they go through the real guard with real tokens.
+const TEST_SECRET = 'e2e-only-secret';
+const OWNER = '2ed6b5f9-c9fa-41e9-9b34-a39aef711f4e';
+const OTHER_USER = '9f1c0b52-6d3e-4a70-9a1e-2b4c8d5e7f01';
+
 describe('Backtest Runs (e2e)', () => {
   let app: NestExpressApplication;
   let mockRepo: Partial<Record<keyof BacktestRunsRepository, jest.Mock>>;
+  let ownerAuth: string;
+  let otherAuth: string;
 
   const validDto = {
     symbol: 'JKH',
@@ -84,8 +94,9 @@ describe('Backtest Runs (e2e)', () => {
         runsStore.set(run.id, run);
         return run;
       }),
-      findRunByIdAndOwner: jest.fn().mockImplementation(async (id) => {
-        return runsStore.get(id) || null;
+      findRunByIdAndOwner: jest.fn().mockImplementation(async (id, ownerId) => {
+        const run = runsStore.get(id);
+        return run && run.ownerId === ownerId ? run : null;
       }),
       updateRunStatus: jest
         .fn()
@@ -100,24 +111,40 @@ describe('Backtest Runs (e2e)', () => {
         resultsStore.set(result.backtestRunId, result);
         return result;
       }),
-      findResultByRunIdAndOwner: jest.fn().mockImplementation(async (runId) => {
-        return resultsStore.get(runId) || null;
-      }),
+      findResultByRunIdAndOwner: jest
+        .fn()
+        .mockImplementation(async (runId, ownerId) => {
+          const run = runsStore.get(runId);
+          if (!run || run.ownerId !== ownerId) return null;
+          return resultsStore.get(runId) || null;
+        }),
       runInTransaction: jest.fn().mockImplementation(async (cb) => {
         return cb({});
       }),
     };
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [
+        JwtModule.register({
+          secret: TEST_SECRET,
+          signOptions: { algorithm: 'HS256', expiresIn: '5m' },
+          verifyOptions: { algorithms: ['HS256'] },
+        }),
+      ],
       controllers: [BacktestRunsController],
       providers: [
         BacktestRunsService,
+        JwtAuthGuard,
         {
           provide: BacktestRunsRepository,
           useValue: mockRepo,
         },
       ],
     }).compile();
+
+    const jwt = moduleFixture.get(JwtService);
+    ownerAuth = `Bearer ${jwt.sign({ sub: OWNER })}`;
+    otherAuth = `Bearer ${jwt.sign({ sub: OTHER_USER })}`;
 
     app = moduleFixture.createNestApplication<NestExpressApplication>();
     configureMarketTradingApp(app);
@@ -131,7 +158,7 @@ describe('Backtest Runs (e2e)', () => {
   it('should process a valid backtest submission, run it in background, and retrieve results', async () => {
     const postRes = await request(app.getHttpServer())
       .post('/api/v1/backtests')
-      .set('x-user-id', 'test-user-1')
+      .set('Authorization', ownerAuth)
       .send(validDto)
       .expect(201);
 
@@ -142,7 +169,7 @@ describe('Backtest Runs (e2e)', () => {
 
     const statusRes = await request(app.getHttpServer())
       .get(`/api/v1/backtests/${runId}`)
-      .set('x-user-id', 'test-user-1')
+      .set('Authorization', ownerAuth)
       .expect(200);
 
     expect(statusRes.body.id).toBe(runId);
@@ -152,7 +179,7 @@ describe('Backtest Runs (e2e)', () => {
 
     const resultRes = await request(app.getHttpServer())
       .get(`/api/v1/backtests/${runId}/results`)
-      .set('x-user-id', 'test-user-1')
+      .set('Authorization', ownerAuth)
       .expect(200);
 
     expect(resultRes.body).toHaveProperty('initialCapital', 1000000);
@@ -169,7 +196,7 @@ describe('Backtest Runs (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/api/v1/backtests')
-      .set('x-user-id', 'test-user-1')
+      .set('Authorization', ownerAuth)
       .send(invalidDto)
       .expect(400)
       .expect((res) => {
@@ -189,7 +216,7 @@ describe('Backtest Runs (e2e)', () => {
 
     const res = await request(app.getHttpServer())
       .post('/api/v1/backtests')
-      .set('x-user-id', 'test-user-1')
+      .set('Authorization', ownerAuth)
       .send(unknownSymbolDto)
       .expect(400);
 
@@ -199,10 +226,55 @@ describe('Backtest Runs (e2e)', () => {
     expect(res.body.error).toHaveProperty('trace_id');
   });
 
+  it('refuses every route without a bearer token', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/backtests')
+      .send(validDto)
+      .expect(401)
+      .expect((res) => {
+        expect(res.body.error.code).toBe('UNAUTHENTICATED');
+      });
+
+    await request(app.getHttpServer())
+      .get('/api/v1/backtests/00000000-0000-0000-0000-000000000099')
+      .expect(401);
+
+    await request(app.getHttpServer())
+      .get('/api/v1/backtests/00000000-0000-0000-0000-000000000099/results')
+      .expect(401);
+  });
+
+  // The header this replaced was caller-supplied, so one user reading another's
+  // run was a matter of typing a different value.
+  it('does not show a run to a different authenticated user', async () => {
+    const postRes = await request(app.getHttpServer())
+      .post('/api/v1/backtests')
+      .set('Authorization', ownerAuth)
+      .send(validDto)
+      .expect(201);
+
+    const runId = postRes.body.id;
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/backtests/${runId}`)
+      .set('Authorization', otherAuth)
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/backtests/${runId}/results`)
+      .set('Authorization', otherAuth)
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/backtests/${runId}`)
+      .set('Authorization', ownerAuth)
+      .expect(200);
+  });
+
   it('should return structured error envelope with trace_id on run not found', async () => {
     const res = await request(app.getHttpServer())
       .get('/api/v1/backtests/00000000-0000-0000-0000-000000000099')
-      .set('x-user-id', 'test-user-1')
+      .set('Authorization', ownerAuth)
       .expect(404);
 
     expect(res.body).toHaveProperty('error');

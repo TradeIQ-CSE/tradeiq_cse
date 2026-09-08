@@ -1,11 +1,11 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
-// Maps auth.position_lots, as reshaped by
+// Maps market_data.position_lots, as reshaped by
 // services/identity-auth/src/db/migrations/1788150000000-AddPaperOrderExecution.ts
 //
 // Positions are derived from open lots rather than stored: there is no
 // positions table.
-@Entity({ schema: 'auth', name: 'position_lots' })
+@Entity({ schema: 'market_data', name: 'position_lots' })
 export class PositionLot {
   @PrimaryColumn('uuid', { name: 'lot_id' })
   lotId!: string;

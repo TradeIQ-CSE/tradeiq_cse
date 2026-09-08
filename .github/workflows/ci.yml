@@ -156,6 +156,9 @@ jobs:
     env:
       MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@localhost:5432/market_data
       DATA_INGESTION_MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@localhost:5432/market_data
+      # The Market API E2E step below boots market-trading, which now refuses to
+      # start without the access-token secret.
+      JWT_SECRET: test-only-ci-secret
     steps:
       - uses: actions/checkout@v4
         with:

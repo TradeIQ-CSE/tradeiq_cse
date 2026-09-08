@@ -1,16 +1,18 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from '../auth/auth.module';
 import { Fill } from '../entities/fill.entity';
 import { FillFee } from '../entities/fill-fee.entity';
 import { LotDisposal } from '../entities/lot-disposal.entity';
 import { PaperOrder } from '../entities/paper-order.entity';
 import { PositionLot } from '../entities/position-lot.entity';
-import { MarketTradingModule } from '../market-trading/market-trading.module';
+import { PaperTradingQuotesModule } from '../paper-trading-quotes/paper-trading-quotes.module';
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 
 @Module({
   imports: [
+    AuthModule,
     TypeOrmModule.forFeature([
       PaperOrder,
       Fill,
@@ -18,7 +20,7 @@ import { OrdersService } from './orders.service';
       PositionLot,
       LotDisposal,
     ]),
-    MarketTradingModule,
+    PaperTradingQuotesModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

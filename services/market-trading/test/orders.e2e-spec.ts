@@ -1,26 +1,27 @@
 import { randomUUID } from 'crypto';
-import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import request from 'supertest';
 import { DependencyUnavailableException } from '../src/common/errors/api-exception';
 import { AppModule } from '../src/app.module';
-import { configureIdentityAuthApp } from '../src/app.setup';
+import { configureMarketTradingApp } from '../src/app.setup';
 import {
   ExecutionQuote,
-  MarketTradingClient,
+  PaperTradingQuotesService,
   QuoteResult,
-} from '../src/market-trading/market-trading.client';
+} from '../src/paper-trading-quotes/paper-trading-quotes.service';
 
 // docs/api/paper-trading-v1.md §6.
 //
-// market-trading is stubbed rather than reached over HTTP, so a stale or
-// unpriced quote can be pinned without seeding a second database. The stub
-// removes the HTTP path only — the boundary itself is asserted separately in
-// the 'service boundary' block below.
+// The quote service is stubbed rather than driven off seeded prices, so a
+// stale, unpriced or delisted quote can be pinned directly. It is an
+// in-process call now that paper trading and the price data live in the same
+// service; the boundary that remains — this service cannot reach the auth
+// database — is asserted in the 'service boundary' block below.
 describe('Orders (e2e)', () => {
-  let app: INestApplication;
+  let app: NestExpressApplication;
   let jwtService: JwtService;
   let dataSource: DataSource;
   let userId: string;
@@ -44,12 +45,12 @@ describe('Orders (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
-      .overrideProvider(MarketTradingClient)
-      .useValue({ getQuote: quote, getValuations: valuations })
+      .overrideProvider(PaperTradingQuotesService)
+      .useValue({ findQuote: quote, getValuations: valuations })
       .compile();
 
-    app = moduleFixture.createNestApplication();
-    configureIdentityAuthApp(app);
+    app = moduleFixture.createNestApplication<NestExpressApplication>();
+    configureMarketTradingApp(app);
     await app.init();
     jwtService = app.get(JwtService);
     dataSource = app.get(DataSource);
@@ -76,23 +77,20 @@ describe('Orders (e2e)', () => {
     return rest;
   };
 
-  async function createUser(): Promise<string> {
-    const id = randomUUID();
-    await dataSource.query(
-      `INSERT INTO auth.users (user_id, email_encrypted, email_hash, password_hash, display_name)
-       VALUES ($1, 'enc', $2, 'hash', 'Test User')`,
-      [id, `hash-${id}`],
-    );
-    return id;
+  // A user id is now just the subject of a verified token. There is no users
+  // table in this database to insert into, and no foreign key expecting one:
+  // identity-auth owns users, and only the id crosses over, in the token.
+  function createUser(): string {
+    return randomUUID();
   }
 
   beforeEach(async () => {
     await dataSource.query(
-      `TRUNCATE auth.lot_disposals, auth.fill_fees, auth.fills, auth.paper_orders,
-                auth.position_lots, auth.idempotency_records,
-                auth.cash_transactions, auth.virtual_portfolios, auth.users CASCADE`,
+      `TRUNCATE market_data.lot_disposals, market_data.fill_fees, market_data.fills, market_data.paper_orders,
+                market_data.position_lots, market_data.idempotency_records,
+                market_data.cash_transactions, market_data.virtual_portfolios CASCADE`,
     );
-    userId = await createUser();
+    userId = createUser();
     token = await jwtService.signAsync({ sub: userId }, { expiresIn: '5m' });
     quote.mockReset();
     quote.mockResolvedValue({ found: true, quote: LISTED } as QuoteResult);
@@ -131,12 +129,12 @@ describe('Orders (e2e)', () => {
       });
 
       const [counts] = await dataSource.query(
-        `SELECT (SELECT count(*) FROM auth.fills WHERE portfolio_id = $1) AS fills,
-                (SELECT count(*) FROM auth.fill_fees ff JOIN auth.fills f USING (fill_id)
+        `SELECT (SELECT count(*) FROM market_data.fills WHERE portfolio_id = $1) AS fills,
+                (SELECT count(*) FROM market_data.fill_fees ff JOIN market_data.fills f USING (fill_id)
                   WHERE f.portfolio_id = $1) AS fees,
-                (SELECT count(*) FROM auth.cash_transactions
+                (SELECT count(*) FROM market_data.cash_transactions
                   WHERE portfolio_id = $1 AND transaction_type = 'buy_debit') AS cash,
-                (SELECT count(*) FROM auth.position_lots WHERE portfolio_id = $1) AS lots`,
+                (SELECT count(*) FROM market_data.position_lots WHERE portfolio_id = $1) AS lots`,
         [portfolioId],
       );
       expect(counts).toEqual({ fills: '1', fees: '5', cash: '1', lots: '1' });
@@ -150,12 +148,12 @@ describe('Orders (e2e)', () => {
 
       const [row] = await dataSource.query(
         `SELECT p.cash_balance,
-                (SELECT balance_after FROM auth.cash_transactions
+                (SELECT balance_after FROM market_data.cash_transactions
                   WHERE portfolio_id = p.portfolio_id
                   ORDER BY created_at DESC LIMIT 1) AS last_balance,
-                (SELECT cost_original FROM auth.position_lots
+                (SELECT cost_original FROM market_data.position_lots
                   WHERE portfolio_id = p.portfolio_id) AS lot_cost
-           FROM auth.virtual_portfolios p WHERE p.portfolio_id = $1`,
+           FROM market_data.virtual_portfolios p WHERE p.portfolio_id = $1`,
         [portfolioId],
       );
 
@@ -193,7 +191,7 @@ describe('Orders (e2e)', () => {
       });
 
       const [lot] = await dataSource.query(
-        `SELECT quantity_remaining, cost_remaining FROM auth.position_lots
+        `SELECT quantity_remaining, cost_remaining FROM market_data.position_lots
           WHERE portfolio_id = $1`,
         [portfolioId],
       );
@@ -201,8 +199,8 @@ describe('Orders (e2e)', () => {
       expect(lot.cost_remaining).toBe('60672.0000');
 
       const [disposal] = await dataSource.query(
-        `SELECT d.quantity, d.allocated_cost FROM auth.lot_disposals d
-           JOIN auth.fills f ON f.fill_id = d.sell_fill_id
+        `SELECT d.quantity, d.allocated_cost FROM market_data.lot_disposals d
+           JOIN market_data.fills f ON f.fill_id = d.sell_fill_id
           WHERE f.portfolio_id = $1`,
         [portfolioId],
       );
@@ -220,8 +218,8 @@ describe('Orders (e2e)', () => {
         `SELECT p.starting_capital + COALESCE(SUM(c.amount) FILTER
                   (WHERE c.transaction_type <> 'initial_capital'), 0) AS derived,
                 p.cash_balance
-           FROM auth.virtual_portfolios p
-           JOIN auth.cash_transactions c ON c.portfolio_id = p.portfolio_id
+           FROM market_data.virtual_portfolios p
+           JOIN market_data.cash_transactions c ON c.portfolio_id = p.portfolio_id
           WHERE p.portfolio_id = $1
           GROUP BY p.starting_capital, p.cash_balance`,
         [portfolioId],
@@ -289,8 +287,8 @@ describe('Orders (e2e)', () => {
 
       const disposals = await dataSource.query(
         `SELECT l.acquired_date, d.quantity, d.allocated_cost
-           FROM auth.lot_disposals d
-           JOIN auth.position_lots l ON l.lot_id = d.lot_id
+           FROM market_data.lot_disposals d
+           JOIN market_data.position_lots l ON l.lot_id = d.lot_id
           ORDER BY l.acquired_date ASC`,
       );
       expect(disposals).toHaveLength(2);
@@ -308,7 +306,7 @@ describe('Orders (e2e)', () => {
 
       const lots = await dataSource.query(
         `SELECT acquired_date, quantity_remaining, cost_remaining
-           FROM auth.position_lots WHERE portfolio_id = $1
+           FROM market_data.position_lots WHERE portfolio_id = $1
           ORDER BY acquired_date ASC`,
         [portfolioId],
       );
@@ -348,10 +346,10 @@ describe('Orders (e2e)', () => {
         .expect(200);
 
       const [after] = await dataSource.query(
-        `SELECT (SELECT count(*) FROM auth.paper_orders WHERE portfolio_id = $1) AS orders,
-                (SELECT count(*) FROM auth.fills WHERE portfolio_id = $1) AS fills,
-                (SELECT count(*) FROM auth.idempotency_records) AS keys,
-                (SELECT cash_balance FROM auth.virtual_portfolios WHERE portfolio_id = $1) AS balance`,
+        `SELECT (SELECT count(*) FROM market_data.paper_orders WHERE portfolio_id = $1) AS orders,
+                (SELECT count(*) FROM market_data.fills WHERE portfolio_id = $1) AS fills,
+                (SELECT count(*) FROM market_data.idempotency_records) AS keys,
+                (SELECT cash_balance FROM market_data.virtual_portfolios WHERE portfolio_id = $1) AS balance`,
         [portfolioId],
       );
       expect(after.orders).toBe('0');
@@ -446,10 +444,10 @@ describe('Orders (e2e)', () => {
         });
 
         const [after] = await dataSource.query(
-          `SELECT (SELECT count(*) FROM auth.fills WHERE portfolio_id = $1) AS fills,
-                (SELECT count(*) FROM auth.position_lots WHERE portfolio_id = $1) AS lots,
-                (SELECT count(*) FROM auth.cash_transactions WHERE portfolio_id = $1) AS cash,
-                (SELECT cash_balance FROM auth.virtual_portfolios WHERE portfolio_id = $1) AS balance`,
+          `SELECT (SELECT count(*) FROM market_data.fills WHERE portfolio_id = $1) AS fills,
+                (SELECT count(*) FROM market_data.position_lots WHERE portfolio_id = $1) AS lots,
+                (SELECT count(*) FROM market_data.cash_transactions WHERE portfolio_id = $1) AS cash,
+                (SELECT cash_balance FROM market_data.virtual_portfolios WHERE portfolio_id = $1) AS balance`,
           [portfolioId],
         );
         expect(after.fills).toBe('0');
@@ -472,8 +470,8 @@ describe('Orders (e2e)', () => {
       expect(second.body.data.order_id).toBe(first.body.data.order_id);
 
       const [counts] = await dataSource.query(
-        `SELECT (SELECT count(*) FROM auth.fills WHERE portfolio_id = $1) AS fills,
-                (SELECT count(*) FROM auth.paper_orders WHERE portfolio_id = $1) AS orders`,
+        `SELECT (SELECT count(*) FROM market_data.fills WHERE portfolio_id = $1) AS fills,
+                (SELECT count(*) FROM market_data.paper_orders WHERE portfolio_id = $1) AS orders`,
         [portfolioId],
       );
       expect(counts).toEqual({ fills: '1', orders: '1' });
@@ -568,27 +566,28 @@ describe('Orders (e2e)', () => {
 
   // CONTRIBUTING.md / SRS 3.6.2 — each service owns its database exclusively.
   describe('service boundary', () => {
-    // Stubbing the quote client proves nothing about SQL, so assert the
-    // guarantee at the level that actually enforces it: docker/db/init.sql
-    // revokes CONNECT per database, so identity-auth's role cannot reach
-    // market_data no matter what any query says. This fails if someone grants
-    // the role access to make a shortcut work.
-    it('cannot connect to the market_data database at all', async () => {
+    // The direction reversed with the move: this service holds the trading
+    // tables and must not reach the auth database for the user behind them.
+    // docker/db/init.sql revokes CONNECT per database, so the guarantee holds
+    // regardless of what any query says. This fails if someone grants the role
+    // access to make a shortcut work — reading a user's email to put it on a
+    // portfolio, say.
+    it('cannot connect to the auth database at all', async () => {
       const [privileges] = await dataSource.query(
-        `SELECT has_database_privilege(current_user, 'market_data', 'CONNECT') AS market_data,
+        `SELECT has_database_privilege(current_user, 'auth', 'CONNECT') AS auth,
                 has_database_privilege(current_user, current_database(), 'CONNECT') AS own`,
       );
 
-      expect(privileges.market_data).toBe(false);
+      expect(privileges.auth).toBe(false);
       // Guards against the assertion above passing for the wrong reason, such
       // as the role having no privileges anywhere.
       expect(privileges.own).toBe(true);
     });
 
-    it('holds no market_data tables in its own catalogue', async () => {
+    it('holds no auth tables in its own catalogue', async () => {
       const rows = await dataSource.query(
         `SELECT table_schema FROM information_schema.tables
-          WHERE table_schema NOT IN ('information_schema') AND table_schema LIKE 'market%'`,
+          WHERE table_schema = 'auth'`,
       );
       expect(rows).toEqual([]);
     });
@@ -597,7 +596,7 @@ describe('Orders (e2e)', () => {
   // §5.3, §6.4 — an identifier must not reveal whether it exists.
   describe('ownership', () => {
     it('returns the same PORTFOLIO_NOT_FOUND for another user and for nothing', async () => {
-      const otherId = await createUser();
+      const otherId = createUser();
       const otherToken = await jwtService.signAsync(
         { sub: otherId },
         { expiresIn: '5m' },

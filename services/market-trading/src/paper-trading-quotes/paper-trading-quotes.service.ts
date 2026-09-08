@@ -29,6 +29,13 @@ export interface Valuations {
   prices: ValuationPrice[];
 }
 
+// docs/api/paper-trading-v1.md §6.2 — an unknown symbol is a domain outcome,
+// not a failure: the order is persisted as a 201 rejection with
+// rejection_code SECURITY_NOT_FOUND. The order path therefore needs the
+// absence reported rather than thrown, which is what findQuote below returns.
+export type QuoteResult =
+  { found: true; quote: ExecutionQuote } | { found: false };
+
 // Raw row shape from the hand-written query below. numeric comes back as a
 // string from the pg driver; `date` comes back as a JS Date.
 interface RawQuoteRow {
@@ -134,6 +141,21 @@ export class PaperTradingQuotesService {
       close: row.close !== null ? Number(row.close) : null,
       settlement_date: settlementDate,
     };
+  }
+
+  // The order path's view of getQuote: the same quote, with an unknown symbol
+  // reported as { found: false } instead of thrown (§6.2). Kept next to
+  // getQuote so the two can never resolve a different session for the same
+  // symbol.
+  async findQuote(symbol: string): Promise<QuoteResult> {
+    try {
+      return { found: true, quote: await this.getQuote(symbol) };
+    } catch (error) {
+      if (error instanceof SecurityNotFoundException) {
+        return { found: false };
+      }
+      throw error;
+    }
   }
 
   // docs/api/paper-trading-v1.md §2.4 — the closes behind the §7 position and

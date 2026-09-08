@@ -15,7 +15,7 @@ import {
   PortfolioNotFoundException,
   PriceUnavailableException,
 } from '../common/errors/api-exception';
-import { MarketTradingClient } from '../market-trading/market-trading.client';
+import { PaperTradingQuotesService } from '../paper-trading-quotes/paper-trading-quotes.service';
 import {
   OpenHolding,
   PortfolioSummaryResponse,
@@ -104,7 +104,7 @@ export class PortfoliosService {
     private readonly portfolios: Repository<VirtualPortfolio>,
     @InjectDataSource()
     private readonly dataSource: DataSource,
-    private readonly marketTrading: MarketTradingClient,
+    private readonly quotes: PaperTradingQuotesService,
   ) {}
 
   // docs/api/paper-trading-v1.md §5.1 — atomically writes the portfolio and
@@ -141,7 +141,7 @@ export class PortfoliosService {
       const now = new Date();
       const portfolioId = randomUUID();
       await manager.query(
-        `INSERT INTO auth.virtual_portfolios
+        `INSERT INTO market_data.virtual_portfolios
            (portfolio_id, user_id, name, starting_capital, cash_balance, created_at)
          VALUES ($1, $2, $3, $4, $4, $5)`,
         [portfolioId, userId, dto.name, dto.starting_capital, now],
@@ -149,7 +149,7 @@ export class PortfoliosService {
 
       const transactionId = randomUUID();
       await manager.query(
-        `INSERT INTO auth.cash_transactions
+        `INSERT INTO market_data.cash_transactions
            (transaction_id, portfolio_id, transaction_type, amount, effective_date, balance_after, created_at)
          VALUES ($1, $2, 'initial_capital', $3, $4::date, $3, $5)`,
         // effective_date is sent as an explicit YYYY-MM-DD rather than casting
@@ -186,14 +186,14 @@ export class PortfoliosService {
     query: ListPortfoliosQueryDto,
   ): Promise<PaginatedResult<PortfolioResponse>> {
     const countRows: { total: string }[] = await this.portfolios.manager.query(
-      `SELECT COUNT(*)::text AS total FROM auth.virtual_portfolios
+      `SELECT COUNT(*)::text AS total FROM market_data.virtual_portfolios
        WHERE user_id = $1 AND deleted_at IS NULL`,
       [userId],
     );
 
     const rows: RawPortfolioRow[] = await this.portfolios.manager.query(
       `SELECT portfolio_id, name, starting_capital, cash_balance, created_at, deleted_at
-       FROM auth.virtual_portfolios
+       FROM market_data.virtual_portfolios
        WHERE user_id = $1 AND deleted_at IS NULL
        ORDER BY created_at DESC, portfolio_id ASC
        LIMIT $2 OFFSET $3`,
@@ -222,7 +222,7 @@ export class PortfoliosService {
   async remove(userId: string, portfolioId: string): Promise<void> {
     const rows: { portfolio_id: string }[] =
       await this.portfolios.manager.query(
-        `UPDATE auth.virtual_portfolios SET deleted_at = now()
+        `UPDATE market_data.virtual_portfolios SET deleted_at = now()
        WHERE portfolio_id = $1 AND user_id = $2 AND deleted_at IS NULL
        RETURNING portfolio_id`,
         [portfolioId, userId],
@@ -241,13 +241,13 @@ export class PortfoliosService {
     await this.findOwned(userId, portfolioId);
 
     const countRows: { total: string }[] = await this.portfolios.manager.query(
-      `SELECT COUNT(*)::text AS total FROM auth.cash_transactions WHERE portfolio_id = $1`,
+      `SELECT COUNT(*)::text AS total FROM market_data.cash_transactions WHERE portfolio_id = $1`,
       [portfolioId],
     );
 
     const rows: RawCashTransactionRow[] = await this.portfolios.manager.query(
       `SELECT transaction_id, transaction_type, amount, balance_after, effective_date, related_fill_id, created_at
-       FROM auth.cash_transactions
+       FROM market_data.cash_transactions
        WHERE portfolio_id = $1
        ORDER BY created_at DESC, transaction_id ASC
        LIMIT $2 OFFSET $3`,
@@ -342,7 +342,7 @@ export class PortfoliosService {
     // Called even with nothing held: §7 reports the effective session either
     // way, and an out-of-range as_of must still be rejected rather than quietly
     // ignored because the portfolio happens to be empty.
-    const valuations = await this.marketTrading.getValuations(
+    const valuations = await this.quotes.getValuations(
       holdings.map((holding) => holding.symbol),
       asOf,
     );
@@ -397,7 +397,7 @@ export class PortfoliosService {
       `SELECT symbol,
               SUM(quantity_remaining)::text AS quantity,
               SUM(cost_remaining)::text     AS cost_basis
-         FROM auth.position_lots
+         FROM market_data.position_lots
         WHERE portfolio_id = $1 AND quantity_remaining > 0
         GROUP BY symbol
         ORDER BY symbol ASC`,
@@ -420,7 +420,7 @@ export class PortfoliosService {
   ): Promise<Decimal> {
     const rows: { realized_pnl: string }[] = await manager.query(
       `SELECT COALESCE(SUM(realized_pnl), 0)::text AS realized_pnl
-         FROM auth.fills WHERE portfolio_id = $1`,
+         FROM market_data.fills WHERE portfolio_id = $1`,
       [portfolioId],
     );
     return fromNumericString(rows[0]?.realized_pnl ?? null);
@@ -435,7 +435,7 @@ export class PortfoliosService {
       manager ?? this.portfolios.manager
     ).query(
       `SELECT portfolio_id, name, starting_capital, cash_balance, created_at, deleted_at
-       FROM auth.virtual_portfolios
+       FROM market_data.virtual_portfolios
        WHERE portfolio_id = $1 AND user_id = $2 AND deleted_at IS NULL`,
       [portfolioId, userId],
     );

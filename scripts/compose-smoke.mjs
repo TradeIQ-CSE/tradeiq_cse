@@ -282,7 +282,7 @@ async function checkAuthenticatedJourney() {
 
   const unauthorized = await requestJson(
     'unauthenticated portfolio list',
-    origins.auth,
+    origins.market,
     '/portfolios',
     401,
   );
@@ -300,7 +300,7 @@ async function checkAuthenticatedJourney() {
   const portfolioHeaders = bearer(accessToken, { 'Idempotency-Key': portfolioKey });
   const created = await requestJson(
     'create portfolio',
-    origins.auth,
+    origins.market,
     '/portfolios',
     201,
     jsonRequest(portfolioPayload, portfolioHeaders),
@@ -311,7 +311,7 @@ async function checkAuthenticatedJourney() {
 
   const replayed = await requestJson(
     'replay portfolio creation',
-    origins.auth,
+    origins.market,
     '/portfolios',
     201,
     jsonRequest(portfolioPayload, portfolioHeaders),
@@ -327,7 +327,7 @@ async function checkAuthenticatedJourney() {
 
   const order = await requestJson(
     'submit cross-service order',
-    origins.auth,
+    origins.market,
     `/portfolios/${portfolioId}/orders`,
     201,
     jsonRequest(
@@ -343,7 +343,7 @@ async function checkAuthenticatedJourney() {
   const authHeaders = { headers: bearer(accessToken) };
   const { body: positions } = await requestJson(
     'portfolio positions',
-    origins.auth,
+    origins.market,
     `/portfolios/${portfolioId}/positions`,
     200,
     authHeaders,
@@ -356,7 +356,7 @@ async function checkAuthenticatedJourney() {
 
   const { body: cash } = await requestJson(
     'cash transactions',
-    origins.auth,
+    origins.market,
     `/portfolios/${portfolioId}/cash-transactions`,
     200,
     authHeaders,
@@ -370,7 +370,7 @@ async function checkAuthenticatedJourney() {
 
   const { body: summary } = await requestJson(
     'portfolio summary',
-    origins.auth,
+    origins.market,
     `/portfolios/${portfolioId}/summary`,
     200,
     authHeaders,

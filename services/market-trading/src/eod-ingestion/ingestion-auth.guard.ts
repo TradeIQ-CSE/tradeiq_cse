@@ -2,7 +2,7 @@ import { timingSafeEqual } from 'crypto';
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
-  IngestionUnauthenticatedException,
+  UnauthenticatedException,
   IngestionUnavailableException,
 } from '../common/errors/api-exception';
 
@@ -25,7 +25,7 @@ export class IngestionAuthGuard implements CanActivate {
       expectedBytes.length !== suppliedBytes.length ||
       !timingSafeEqual(expectedBytes, suppliedBytes)
     ) {
-      throw new IngestionUnauthenticatedException();
+      throw new UnauthenticatedException();
     }
     return true;
   }

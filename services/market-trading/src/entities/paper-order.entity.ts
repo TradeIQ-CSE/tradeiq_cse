@@ -1,8 +1,8 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
-// Maps auth.paper_orders, as reshaped by
+// Maps market_data.paper_orders, as reshaped by
 // services/identity-auth/src/db/migrations/1788150000000-AddPaperOrderExecution.ts
-@Entity({ schema: 'auth', name: 'paper_orders' })
+@Entity({ schema: 'market_data', name: 'paper_orders' })
 export class PaperOrder {
   @PrimaryColumn('uuid', { name: 'order_id' })
   orderId!: string;

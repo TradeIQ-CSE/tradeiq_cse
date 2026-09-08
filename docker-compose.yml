@@ -34,6 +34,9 @@ services:
       MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@db:5432/market_data
       MARKET_TRADING_CORS_ORIGINS: ${MARKET_TRADING_CORS_ORIGINS:-http://localhost:5173}
       MARKET_INGESTION_TOKEN: ${MARKET_INGESTION_TOKEN:-}
+      # Verification only; identity-auth issues the tokens and must be given the
+      # same value.
+      JWT_SECRET: ${JWT_SECRET:-dev-only-insecure-jwt-secret-change-me}
     ports:
       - "${MARKET_TRADING_PORT:-3001}:3001"
     depends_on:
@@ -79,7 +82,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       IDENTITY_AUTH_PORT: ${IDENTITY_AUTH_PORT:-3002}
       AUTH_DATABASE_URL: postgresql://auth:changeme@db:5432/auth
-      JWT_SECRET: ${JWT_SECRET:-changeme}
+      JWT_SECRET: ${JWT_SECRET:-dev-only-insecure-jwt-secret-change-me}
       AUTH_EMAIL_ENCRYPTION_KEY: ${AUTH_EMAIL_ENCRYPTION_KEY:-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaShouldChange=}
       # Compose serves plain HTTP, where a Secure cookie never reaches the app.
       AUTH_REFRESH_COOKIE_SECURE: ${AUTH_REFRESH_COOKIE_SECURE:-false}
@@ -87,20 +90,11 @@ services:
       # break every browser call: credentials: true forbids a wildcard origin,
       # so this list has to name the real one.
       IDENTITY_AUTH_CORS_ORIGINS: ${IDENTITY_AUTH_CORS_ORIGINS:-http://localhost:${FRONTEND_PORT:-5173}}
-      # Paper-order execution prices against market-trading over REST; there is
-      # no direct market_data access (SRS 3.6.2).
-      MARKET_TRADING_URL: http://market-trading:3001
     ports:
       - "${IDENTITY_AUTH_PORT:-3002}:3002"
     depends_on:
       db:
         condition: service_healthy
-      # Ordering only, deliberately not service_healthy: portfolios and the
-      # cash ledger work without market-trading, and order execution already
-      # degrades to 503 DEPENDENCY_UNAVAILABLE. Gating startup on it would take
-      # identity-auth down for endpoints that never touch market data.
-      market-trading:
-        condition: service_started
 
   ml-prediction-migrate:
     image: tradeiq/ml-prediction

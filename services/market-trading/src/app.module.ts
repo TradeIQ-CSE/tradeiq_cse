@@ -3,11 +3,14 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import appConfig from './config/app.config';
+import authConfig from './config/auth.config';
 import databaseConfig from './config/database.config';
 import ingestionConfig from './config/ingestion.config';
 import { validate } from './config/env.validation';
 import { HealthModule } from './health/health.module';
 import { MarketOverviewModule } from './market-overview/market-overview.module';
+import { OrdersModule } from './orders/orders.module';
+import { PortfoliosModule } from './portfolios/portfolios.module';
 import { PaperTradingQuotesModule } from './paper-trading-quotes/paper-trading-quotes.module';
 import { SecuritiesModule } from './securities/securities.module';
 import { BacktestRunsModule } from './backtest-runs/backtest-runs.module';
@@ -18,7 +21,7 @@ import { EodIngestionModule } from './eod-ingestion/eod-ingestion.module';
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
-      load: [appConfig, databaseConfig, ingestionConfig],
+      load: [appConfig, authConfig, databaseConfig, ingestionConfig],
       validate,
     }),
     TypeOrmModule.forRootAsync({
@@ -41,7 +44,9 @@ import { EodIngestionModule } from './eod-ingestion/eod-ingestion.module';
     }),
     HealthModule,
     MarketOverviewModule,
+    OrdersModule,
     PaperTradingQuotesModule,
+    PortfoliosModule,
     SecuritiesModule,
     BacktestRunsModule,
     EodIngestionModule,

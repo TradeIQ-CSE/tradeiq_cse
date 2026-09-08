@@ -1,7 +1,7 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
-// Maps auth.cash_transactions (services/identity-auth/src/db/migrations/1786358400000-InitialSchema.ts)
-@Entity({ schema: 'auth', name: 'cash_transactions' })
+// Maps market_data.cash_transactions (services/identity-auth/src/db/migrations/1786358400000-InitialSchema.ts)
+@Entity({ schema: 'market_data', name: 'cash_transactions' })
 export class CashTransaction {
   @PrimaryColumn('uuid', { name: 'transaction_id' })
   transactionId!: string;
