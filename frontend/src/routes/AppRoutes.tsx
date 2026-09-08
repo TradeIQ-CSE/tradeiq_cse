@@ -44,11 +44,12 @@ const BacktestWizard = lazy(() =>
     default: module.BacktestWizard,
   })),
 );
-const StatusStep = lazy(() =>
-  import('../features/backtesting/components/StatusStep').then((module) => ({
-    default: module.StatusStep,
+const BacktestResultsDashboard = lazy(() =>
+  import('../features/backtesting/components/BacktestResultsDashboard').then((module) => ({
+    default: module.BacktestResultsDashboard,
   })),
 );
+
 
 function LoadingFallback() {
   return (
@@ -189,10 +190,18 @@ export function AppRoutes() {
           }
         />
         <Route
+          path="/backtests/:runId"
+          element={
+            <ConsoleRoute>
+              <BacktestResultsDashboard />
+            </ConsoleRoute>
+          }
+        />
+        <Route
           path="/backtests/:runId/status"
           element={
             <ConsoleRoute>
-              <StatusStep />
+              <BacktestResultsDashboard />
             </ConsoleRoute>
           }
         />

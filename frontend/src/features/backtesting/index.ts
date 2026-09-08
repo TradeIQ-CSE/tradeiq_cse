@@ -7,3 +7,5 @@ export * from './api/backtestApi';
 export * from './hooks/useBacktestWizard';
 export { BacktestWizard } from './components/BacktestWizard';
 export { StatusStep } from './components/StatusStep';
+export { BacktestResultsDashboard } from './components/BacktestResultsDashboard';
+

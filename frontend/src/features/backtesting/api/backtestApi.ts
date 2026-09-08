@@ -2,6 +2,8 @@ import {
   CreateBacktestRunRequest,
   CreateBacktestRunResponse,
   BacktestStatusResponse,
+  BacktestResultResponse,
+  BacktestRunDetails,
 } from '../domain/types';
 import { ApiError, ApiErrorBody } from '../../../lib/api';
 import { SecurityListItem } from '../../markets/types';
@@ -87,6 +89,34 @@ export async function getBacktestRunStatus(
   });
 
   return handleResponse<BacktestStatusResponse>(response);
+}
+
+/**
+ * Retrieves configuration and execution details of a backtest run from GET /api/v1/backtests/:runId
+ */
+export async function getBacktestRunDetails(
+  runId: string,
+): Promise<BacktestRunDetails> {
+  return getBacktestRunStatus(runId);
+}
+
+
+/**
+ * Retrieves the final execution results of a completed run from GET /api/v1/backtests/:runId/results
+ */
+export async function getBacktestRunResults(
+  runId: string,
+): Promise<BacktestResultResponse> {
+  const url = new URL(`/api/v1/backtests/${runId}/results`, MARKET_TRADING_API_URL);
+
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+
+  return handleResponse<BacktestResultResponse>(response);
 }
 
 /**
