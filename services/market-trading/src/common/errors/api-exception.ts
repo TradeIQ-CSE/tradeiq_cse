@@ -47,12 +47,12 @@ export class SecurityNotFoundException extends ApiException {
   }
 }
 
-export class IngestionUnauthenticatedException extends ApiException {
+export class UnauthenticatedException extends ApiException {
   constructor() {
     super(
       HttpStatus.UNAUTHORIZED,
       'UNAUTHENTICATED',
-      'Authentication required.',
+      'Authentication is required.',
     );
   }
 }

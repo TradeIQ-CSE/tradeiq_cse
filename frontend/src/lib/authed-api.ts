@@ -139,10 +139,17 @@ function runSingleFlightRefresh(): Promise<Session> {
   return refreshPromise;
 }
 
-function withAuthHeader(init: RequestInit, token: string | null): RequestInit {
+function withAuthHeader(
+  init: RequestInit,
+  token: string | null,
+  sendCredentials: boolean,
+): RequestInit {
   const headers = new Headers(init.headers);
   if (token) headers.set('Authorization', `Bearer ${token}`);
-  return { ...init, headers, credentials: 'include' };
+  // Only identity-auth gets credentials: the refresh cookie is scoped to it,
+  // and market-trading's CORS does not allow credentialed requests — sending
+  // them there would fail the preflight rather than merely be redundant.
+  return sendCredentials ? { ...init, headers, credentials: 'include' } : { ...init, headers };
 }
 
 /**
@@ -155,10 +162,20 @@ function withAuthHeader(init: RequestInit, token: string | null): RequestInit {
  *
  * Never call this for /auth/refresh itself — that request must never recurse
  * into another refresh on its own 401.
+ *
+ * `baseUrl` exists because market-trading now verifies the same access token
+ * for its guarded routes (backtests). Those calls need the identical bearer
+ * token and 401-refresh-retry behaviour, and duplicating it per service is how
+ * the two copies drift.
  */
-export async function authFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  const url = new URL(path, IDENTITY_AUTH_API_URL);
-  const first = await fetch(url, withAuthHeader(init, getToken()));
+export async function authFetch(
+  path: string,
+  init: RequestInit = {},
+  baseUrl: string = IDENTITY_AUTH_API_URL,
+): Promise<Response> {
+  const url = new URL(path, baseUrl);
+  const sendCredentials = baseUrl === IDENTITY_AUTH_API_URL;
+  const first = await fetch(url, withAuthHeader(init, getToken(), sendCredentials));
 
   if (first.status !== 401) return first;
 
@@ -171,7 +188,7 @@ export async function authFetch(path: string, init: RequestInit = {}): Promise<R
   }
 
   setSession(session);
-  return fetch(url, withAuthHeader(init, getToken()));
+  return fetch(url, withAuthHeader(init, getToken(), sendCredentials));
 }
 
 // --- authedGet / authedPost / authedDelete ----------------------------------
