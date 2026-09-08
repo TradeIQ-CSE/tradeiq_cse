@@ -9,6 +9,7 @@ import {
   Min,
   validateSync,
 } from 'class-validator';
+import { StrongInProduction } from './jwt-secret.validator';
 
 class EnvironmentVariables {
   @IsOptional()
@@ -28,9 +29,12 @@ class EnvironmentVariables {
   //: The access-token secret identity-auth signs with; the same JWT_SECRET both
   //: services read. Required, and required to match — a market-trading that
   //: boots without it would reject every authenticated request at runtime
-  //: rather than failing here.
+  //: rather than failing here. Under HS256 it also signs, so a guessable value
+  //: lets anyone mint a token for any user id: @StrongInProduction rejects the
+  //: shipped development default and anything too short to be a real key.
   @IsString()
   @IsNotEmpty()
+  @StrongInProduction()
   JWT_SECRET!: string;
 
   //: Comma-separated browser origins allowed to call this API.

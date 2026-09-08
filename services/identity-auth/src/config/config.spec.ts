@@ -4,6 +4,10 @@ import databaseConfig from './database.config';
 import marketTradingConfig from './market-trading.config';
 import { durationToSeconds } from '../auth/auth.service';
 import { validate } from './env.validation';
+import {
+  DEVELOPMENT_JWT_SECRET,
+  MIN_PRODUCTION_JWT_SECRET_LENGTH,
+} from './jwt-secret.validator';
 
 const VALID_URL = 'postgresql://u:p@h:5432/db';
 const VALID_KEY = Buffer.alloc(32, 7).toString('base64');
@@ -131,6 +135,48 @@ describe('config', () => {
         );
       },
     );
+
+    // This service signs with JWT_SECRET, so a guessable value here forges
+    // tokens both services accept. The check applies in production only: dev
+    // and CI share one published value on purpose, since identity-auth and
+    // market-trading must be given the same secret to interoperate.
+    describe('JWT_SECRET strength', () => {
+      const AT_MINIMUM = 'k'.repeat(MIN_PRODUCTION_JWT_SECRET_LENGTH);
+      const ONE_SHORT = 'k'.repeat(MIN_PRODUCTION_JWT_SECRET_LENGTH - 1);
+
+      // The development default is longer than the minimum on purpose, so a
+      // length check alone would let it through — it has to be named.
+      it.each([
+        ['the published development default', DEVELOPMENT_JWT_SECRET],
+        ['the previous default', 'changeme'],
+        ['a secret one character under the minimum', ONE_SHORT],
+      ])('rejects %s in production', (_label, secret) => {
+        expect(() =>
+          validate({ ...REQUIRED, NODE_ENV: 'production', JWT_SECRET: secret }),
+        ).toThrow('Invalid environment configuration');
+      });
+
+      it('accepts a secret of exactly the minimum length in production', () => {
+        const validated = validate({
+          ...REQUIRED,
+          NODE_ENV: 'production',
+          JWT_SECRET: AT_MINIMUM,
+        });
+        expect(validated.JWT_SECRET).toBe(AT_MINIMUM);
+      });
+
+      it.each(['development', 'test'])(
+        'accepts the development default when NODE_ENV=%s',
+        (nodeEnv) => {
+          const validated = validate({
+            ...REQUIRED,
+            NODE_ENV: nodeEnv,
+            JWT_SECRET: DEVELOPMENT_JWT_SECRET,
+          });
+          expect(validated.JWT_SECRET).toBe(DEVELOPMENT_JWT_SECRET);
+        },
+      );
+    });
 
     it('rejects an encryption key that is not base64', () => {
       expect(() =>

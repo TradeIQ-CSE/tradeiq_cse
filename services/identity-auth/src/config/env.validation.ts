@@ -13,6 +13,7 @@ import {
   Min,
   validateSync,
 } from 'class-validator';
+import { StrongInProduction } from './jwt-secret.validator';
 
 // docs/api/auth-v1.md §8 — a token lifetime. Requires a unit of a second or
 // longer, and a value above zero, because jsonwebtoken hands a bare string to
@@ -53,8 +54,13 @@ class EnvironmentVariables {
   @IsNotEmpty()
   AUTH_DATABASE_URL!: string;
 
+  // The HS256 key this service signs access tokens with, and the one
+  // market-trading verifies them with. Anyone holding it can mint a token for
+  // any user id, so @StrongInProduction rejects the shipped development
+  // default and anything too short to be a real key once NODE_ENV=production.
   @IsString()
   @IsNotEmpty()
+  @StrongInProduction()
   JWT_SECRET!: string;
 
   @IsOptional()

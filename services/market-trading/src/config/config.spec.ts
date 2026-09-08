@@ -2,6 +2,10 @@ import appConfig from './app.config';
 import authConfig from './auth.config';
 import databaseConfig from './database.config';
 import { validate } from './env.validation';
+import {
+  DEVELOPMENT_JWT_SECRET,
+  MIN_PRODUCTION_JWT_SECRET_LENGTH,
+} from './jwt-secret.validator';
 
 const VALID_URL = 'postgresql://u:p@h:5432/db';
 const VALID_SECRET = 'test-secret';
@@ -100,6 +104,55 @@ describe('config', () => {
     it('throws when the secret is present but empty', () => {
       expect(() => validate({ ...MINIMAL_ENV, JWT_SECRET: '' })).toThrow(
         'Invalid environment configuration',
+      );
+    });
+
+    // Under HS256 the verification key is also a signing key, so a secret an
+    // attacker can guess or read out of this repository lets them mint a token
+    // for any user id. Production is the only place that matters, and the only
+    // place the check applies: dev and CI share one well-known value on
+    // purpose, because both services have to be handed the same one.
+    describe('JWT_SECRET strength', () => {
+      const AT_MINIMUM = 'k'.repeat(MIN_PRODUCTION_JWT_SECRET_LENGTH);
+      const ONE_SHORT = 'k'.repeat(MIN_PRODUCTION_JWT_SECRET_LENGTH - 1);
+
+      // DEVELOPMENT_JWT_SECRET is deliberately longer than the minimum, so a
+      // length check alone would wave it through. It has to be refused by
+      // name: it is printed in .env.example, which makes it public knowledge.
+      it.each([
+        ['the published development default', DEVELOPMENT_JWT_SECRET],
+        ['the previous default', 'changeme'],
+        ['a secret one character under the minimum', ONE_SHORT],
+      ])('rejects %s in production', (_label, secret) => {
+        expect(() =>
+          validate({
+            ...MINIMAL_ENV,
+            NODE_ENV: 'production',
+            JWT_SECRET: secret,
+          }),
+        ).toThrow('Invalid environment configuration');
+      });
+
+      it('accepts a secret of exactly the minimum length in production', () => {
+        const validated = validate({
+          ...MINIMAL_ENV,
+          NODE_ENV: 'production',
+          JWT_SECRET: AT_MINIMUM,
+        });
+        expect(validated.JWT_SECRET).toBe(AT_MINIMUM);
+      });
+
+      // `docker compose up` from a clean checkout must keep working.
+      it.each(['development', 'test'])(
+        'accepts the development default when NODE_ENV=%s',
+        (nodeEnv) => {
+          const validated = validate({
+            ...MINIMAL_ENV,
+            NODE_ENV: nodeEnv,
+            JWT_SECRET: DEVELOPMENT_JWT_SECRET,
+          });
+          expect(validated.JWT_SECRET).toBe(DEVELOPMENT_JWT_SECRET);
+        },
       );
     });
 
