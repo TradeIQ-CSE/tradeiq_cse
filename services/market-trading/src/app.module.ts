@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import appConfig from './config/app.config';
+import authConfig from './config/auth.config';
 import databaseConfig from './config/database.config';
 import ingestionConfig from './config/ingestion.config';
 import { validate } from './config/env.validation';
@@ -18,7 +19,7 @@ import { EodIngestionModule } from './eod-ingestion/eod-ingestion.module';
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
-      load: [appConfig, databaseConfig, ingestionConfig],
+      load: [appConfig, authConfig, databaseConfig, ingestionConfig],
       validate,
     }),
     TypeOrmModule.forRootAsync({

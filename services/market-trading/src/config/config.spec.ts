@@ -1,8 +1,17 @@
 import appConfig from './app.config';
+import authConfig from './auth.config';
 import databaseConfig from './database.config';
 import { validate } from './env.validation';
 
 const VALID_URL = 'postgresql://u:p@h:5432/db';
+const VALID_SECRET = 'test-secret';
+
+// Every environment below must carry both required variables, so the minimum
+// is named once rather than repeated per case.
+const MINIMAL_ENV = {
+  MARKET_DATA_DATABASE_URL: VALID_URL,
+  JWT_SECRET: VALID_SECRET,
+};
 
 describe('config', () => {
   const env = process.env;
@@ -49,6 +58,18 @@ describe('config', () => {
     });
   });
 
+  describe('authConfig', () => {
+    it('exposes the shared access-token secret', () => {
+      process.env.JWT_SECRET = VALID_SECRET;
+      expect(authConfig().jwtSecret).toBe(VALID_SECRET);
+    });
+
+    it('falls back to an empty secret so a missing value fails validation, not startup', () => {
+      delete process.env.JWT_SECRET;
+      expect(authConfig().jwtSecret).toBe('');
+    });
+  });
+
   describe('databaseConfig', () => {
     it('exposes the database url', () => {
       process.env.MARKET_DATA_DATABASE_URL = VALID_URL;
@@ -58,13 +79,33 @@ describe('config', () => {
 
   describe('validate', () => {
     it('accepts a minimal valid environment', () => {
-      const validated = validate({ MARKET_DATA_DATABASE_URL: VALID_URL });
+      const validated = validate({ ...MINIMAL_ENV });
       expect(validated.MARKET_DATA_DATABASE_URL).toBe(VALID_URL);
+      expect(validated.JWT_SECRET).toBe(VALID_SECRET);
+    });
+
+    // The guard verifies with this secret, so booting without it would turn
+    // every authenticated request into a 401 that looks like a client fault.
+    it.each(['MARKET_DATA_DATABASE_URL', 'JWT_SECRET'])(
+      'throws when %s is missing',
+      (key) => {
+        const env: Record<string, string> = { ...MINIMAL_ENV };
+        delete env[key];
+        expect(() => validate(env)).toThrow(
+          'Invalid environment configuration',
+        );
+      },
+    );
+
+    it('throws when the secret is present but empty', () => {
+      expect(() => validate({ ...MINIMAL_ENV, JWT_SECRET: '' })).toThrow(
+        'Invalid environment configuration',
+      );
     });
 
     it('allows an empty ingestion token so the write API can be disabled', () => {
       const validated = validate({
-        MARKET_DATA_DATABASE_URL: VALID_URL,
+        ...MINIMAL_ENV,
         MARKET_INGESTION_TOKEN: '',
       });
       expect(validated.MARKET_INGESTION_TOKEN).toBe('');
@@ -72,20 +113,16 @@ describe('config', () => {
 
     it('coerces a numeric port string to a number', () => {
       const validated = validate({
-        MARKET_DATA_DATABASE_URL: VALID_URL,
+        ...MINIMAL_ENV,
         MARKET_TRADING_PORT: '3001',
       });
       expect(validated.MARKET_TRADING_PORT).toBe(3001);
     });
 
-    it('throws when the database url is missing', () => {
-      expect(() => validate({})).toThrow('Invalid environment configuration');
-    });
-
     it('throws when the port is not an integer', () => {
       expect(() =>
         validate({
-          MARKET_DATA_DATABASE_URL: VALID_URL,
+          ...MINIMAL_ENV,
           MARKET_TRADING_PORT: 'not-a-port',
         }),
       ).toThrow('Invalid environment configuration');
@@ -94,7 +131,7 @@ describe('config', () => {
     it('throws on an unknown NODE_ENV', () => {
       expect(() =>
         validate({
-          MARKET_DATA_DATABASE_URL: VALID_URL,
+          ...MINIMAL_ENV,
           NODE_ENV: 'staging',
         }),
       ).toThrow('Invalid environment configuration');

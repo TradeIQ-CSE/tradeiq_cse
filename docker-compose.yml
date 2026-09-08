@@ -34,6 +34,9 @@ services:
       MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@db:5432/market_data
       MARKET_TRADING_CORS_ORIGINS: ${MARKET_TRADING_CORS_ORIGINS:-http://localhost:5173}
       MARKET_INGESTION_TOKEN: ${MARKET_INGESTION_TOKEN:-}
+      # Verification only; identity-auth issues the tokens and must be given the
+      # same value.
+      JWT_SECRET: ${JWT_SECRET:-changeme}
     ports:
       - "${MARKET_TRADING_PORT:-3001}:3001"
     depends_on:

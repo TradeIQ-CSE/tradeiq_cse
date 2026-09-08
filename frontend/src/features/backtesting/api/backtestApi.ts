@@ -4,6 +4,7 @@ import {
   BacktestStatusResponse,
 } from '../domain/types';
 import { ApiError, ApiErrorBody } from '../../../lib/api';
+import { authFetch } from '../../../lib/authed-api';
 import { SecurityListItem } from '../../markets/types';
 
 const MARKET_TRADING_API_URL =
@@ -44,16 +45,21 @@ async function handleResponse<T>(response: Response): Promise<T> {
 export async function submitBacktestRun(
   request: CreateBacktestRunRequest,
 ): Promise<CreateBacktestRunResponse> {
-  const url = new URL('/api/v1/backtests', MARKET_TRADING_API_URL);
-
-  const response = await fetch(url.toString(), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
+  // A run belongs to the authenticated user, so this goes through authFetch:
+  // market-trading takes the owner from the verified token, and an
+  // unauthenticated submission is a 401 rather than a run owned by nobody.
+  const response = await authFetch(
+    '/api/v1/backtests',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(request),
     },
-    body: JSON.stringify(request),
-  });
+    MARKET_TRADING_API_URL,
+  );
 
   const res = await handleResponse<{ id?: string; runId?: string; status?: 'queued' | 'running' | 'completed' | 'failed' }>(response);
   const id = res.runId || res.id;
@@ -77,14 +83,16 @@ export async function submitBacktestRun(
 export async function getBacktestRunStatus(
   runId: string,
 ): Promise<BacktestStatusResponse> {
-  const url = new URL(`/api/v1/backtests/${runId}`, MARKET_TRADING_API_URL);
-
-  const response = await fetch(url.toString(), {
-    method: 'GET',
-    headers: {
-      Accept: 'application/json',
+  const response = await authFetch(
+    `/api/v1/backtests/${runId}`,
+    {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
     },
-  });
+    MARKET_TRADING_API_URL,
+  );
 
   return handleResponse<BacktestStatusResponse>(response);
 }

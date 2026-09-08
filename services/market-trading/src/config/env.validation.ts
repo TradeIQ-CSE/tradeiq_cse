@@ -25,6 +25,14 @@ class EnvironmentVariables {
   @IsNotEmpty()
   MARKET_DATA_DATABASE_URL!: string;
 
+  //: The access-token secret identity-auth signs with; the same JWT_SECRET both
+  //: services read. Required, and required to match — a market-trading that
+  //: boots without it would reject every authenticated request at runtime
+  //: rather than failing here.
+  @IsString()
+  @IsNotEmpty()
+  JWT_SECRET!: string;
+
   //: Comma-separated browser origins allowed to call this API.
   @IsOptional()
   @IsString()
