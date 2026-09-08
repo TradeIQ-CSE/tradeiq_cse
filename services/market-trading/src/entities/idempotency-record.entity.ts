@@ -1,7 +1,7 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
-// Maps auth.idempotency_records (services/identity-auth/src/db/migrations/1788001100000-AddIdempotencyRecords.ts)
-@Entity({ schema: 'auth', name: 'idempotency_records' })
+// Maps market_data.idempotency_records (services/identity-auth/src/db/migrations/1788001100000-AddIdempotencyRecords.ts)
+@Entity({ schema: 'market_data', name: 'idempotency_records' })
 export class IdempotencyRecord {
   @PrimaryColumn('uuid', { name: 'idempotency_record_id' })
   idempotencyRecordId!: string;

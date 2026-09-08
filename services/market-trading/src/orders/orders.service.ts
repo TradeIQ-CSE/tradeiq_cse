@@ -18,7 +18,7 @@ import {
 } from '../common/idempotency/idempotency';
 import { money, toJsonNumber, toNumericString } from '../common/money/money';
 import { allocateFifo, OpenLot, realizedPnl } from '../common/money/fifo';
-import { MarketTradingClient } from '../market-trading/market-trading.client';
+import { PaperTradingQuotesService } from '../paper-trading-quotes/paper-trading-quotes.service';
 import { PricedOrder, priceOrder } from './execution';
 import { SubmitOrderDto } from './dto/submit-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
@@ -93,7 +93,7 @@ export class OrdersService {
     private readonly orders: Repository<PaperOrder>,
     @InjectDataSource()
     private readonly dataSource: DataSource,
-    private readonly marketTrading: MarketTradingClient,
+    private readonly quotes: PaperTradingQuotesService,
   ) {}
 
   // docs/api/paper-trading-v1.md §6.1 — reserves nothing and writes nothing.
@@ -107,7 +107,7 @@ export class OrdersService {
       userId,
       portfolioId,
     );
-    const quote = await this.marketTrading.getQuote(dto.symbol);
+    const quote = await this.quotes.findQuote(dto.symbol);
     const openQuantity = await this.openQuantity(
       this.orders.manager,
       portfolioId,
@@ -157,7 +157,7 @@ export class OrdersService {
     // that a transient dependency failure leave the key reusable, which means
     // it has to fail before the key is reserved.
     await this.findOwnedPortfolio(this.orders.manager, userId, portfolioId);
-    const quote = await this.marketTrading.getQuote(dto.symbol);
+    const quote = await this.quotes.findQuote(dto.symbol);
 
     const requestHash = hashCanonicalRequest({
       symbol: dto.symbol,
@@ -248,7 +248,7 @@ export class OrdersService {
     // No fill, no fees, no cash and no lot movement — only the order itself,
     // so the user has an auditable record of what was refused and why (§8.4).
     await manager.query(
-      `INSERT INTO auth.paper_orders
+      `INSERT INTO market_data.paper_orders
          (order_id, portfolio_id, symbol, side, order_type, quantity,
           filled_quantity, status, rejection_code, placed_at, updated_at)
        VALUES ($1, $2, $3, $4, 'market', $5, 0, 'rejected', $6, $7, $7)`,
@@ -291,7 +291,7 @@ export class OrdersService {
     const fillId = randomUUID();
 
     await manager.query(
-      `INSERT INTO auth.paper_orders
+      `INSERT INTO market_data.paper_orders
          (order_id, portfolio_id, symbol, side, order_type, quantity,
           filled_quantity, status, placed_at, updated_at)
        VALUES ($1, $2, $3, $4, 'market', $5, $5, 'filled', $6, $6)`,
@@ -311,7 +311,7 @@ export class OrdersService {
       dto.side === 'sell' ? realizedPnl(priced.cashEffect, allocations) : null;
 
     await manager.query(
-      `INSERT INTO auth.fills
+      `INSERT INTO market_data.fills
          (fill_id, order_id, portfolio_id, symbol, fill_date, settlement_date,
           quantity, fill_price, gross_consideration, fee_total, realized_pnl, created_at)
        VALUES ($1, $2, $3, $4, $5::date, $6::date, $7, $8, $9, $10, $11, $12)`,
@@ -334,7 +334,7 @@ export class OrdersService {
     // One row per component, so the schedule applied stays auditable (§3.2).
     for (const component of priced.fees.components) {
       await manager.query(
-        `INSERT INTO auth.fill_fees (fill_fee_id, fill_id, fee_type, rate_percent, amount)
+        `INSERT INTO market_data.fill_fees (fill_fee_id, fill_id, fee_type, rate_percent, amount)
          VALUES ($1, $2, $3, $4, $5)`,
         [
           randomUUID(),
@@ -350,7 +350,7 @@ export class OrdersService {
     // as separate cash transactions (§5.5).
     const cashAfter = cashBefore.plus(priced.cashEffect);
     await manager.query(
-      `INSERT INTO auth.cash_transactions
+      `INSERT INTO market_data.cash_transactions
          (transaction_id, portfolio_id, transaction_type, amount, related_fill_id,
           effective_date, balance_after, created_at)
        VALUES ($1, $2, $3, $4, $5, $6::date, $7, $8)`,
@@ -367,7 +367,7 @@ export class OrdersService {
     );
 
     await manager.query(
-      `UPDATE auth.virtual_portfolios SET cash_balance = $2 WHERE portfolio_id = $1`,
+      `UPDATE market_data.virtual_portfolios SET cash_balance = $2 WHERE portfolio_id = $1`,
       [portfolioId, toNumericString(cashAfter)],
     );
 
@@ -376,7 +376,7 @@ export class OrdersService {
       // plus all buy fees, which is exactly the cash debited.
       const lotCost = toNumericString(priced.cashEffect.negated());
       await manager.query(
-        `INSERT INTO auth.position_lots
+        `INSERT INTO market_data.position_lots
            (lot_id, portfolio_id, symbol, buy_fill_id, quantity_original,
             quantity_remaining, cost_original, cost_remaining,
             acquired_date, settlement_date, created_at)
@@ -396,7 +396,7 @@ export class OrdersService {
     } else {
       for (const allocation of allocations) {
         await manager.query(
-          `UPDATE auth.position_lots
+          `UPDATE market_data.position_lots
              SET quantity_remaining = quantity_remaining - $2,
                  cost_remaining = cost_remaining - $3
            WHERE lot_id = $1`,
@@ -407,7 +407,7 @@ export class OrdersService {
           ],
         );
         await manager.query(
-          `INSERT INTO auth.lot_disposals
+          `INSERT INTO market_data.lot_disposals
              (disposal_id, sell_fill_id, lot_id, quantity, allocated_cost, created_at)
            VALUES ($1, $2, $3, $4, $5, $6)`,
           [
@@ -463,7 +463,7 @@ export class OrdersService {
     }
 
     const countRows: { total: string }[] = await this.orders.manager.query(
-      `SELECT COUNT(*)::text AS total FROM auth.paper_orders
+      `SELECT COUNT(*)::text AS total FROM market_data.paper_orders
        WHERE portfolio_id = $1${statusClause}`,
       filters,
     );
@@ -471,7 +471,7 @@ export class OrdersService {
     const rows: RawOrderRow[] = await this.orders.manager.query(
       `SELECT order_id, portfolio_id, symbol, side, quantity, filled_quantity,
               status, rejection_code, placed_at
-         FROM auth.paper_orders
+         FROM market_data.paper_orders
         WHERE portfolio_id = $1${statusClause}
         ORDER BY placed_at DESC, order_id ASC
         LIMIT $${filters.length + 1} OFFSET $${filters.length + 2}`,
@@ -500,7 +500,7 @@ export class OrdersService {
     const rows: RawOrderRow[] = await this.orders.manager.query(
       `SELECT order_id, portfolio_id, symbol, side, quantity, filled_quantity,
               status, rejection_code, placed_at
-         FROM auth.paper_orders
+         FROM market_data.paper_orders
         WHERE order_id = $1 AND portfolio_id = $2`,
       [orderId, portfolioId],
     );
@@ -511,8 +511,8 @@ export class OrdersService {
     const fills: RawFillRow[] = await this.orders.manager.query(
       `SELECT f.fill_id, f.order_id, f.symbol, o.side, f.fill_date, f.settlement_date,
               f.quantity, f.fill_price, f.gross_consideration, f.fee_total, f.realized_pnl
-         FROM auth.fills f
-         JOIN auth.paper_orders o ON o.order_id = f.order_id
+         FROM market_data.fills f
+         JOIN market_data.paper_orders o ON o.order_id = f.order_id
         WHERE f.order_id = $1`,
       [orderId],
     );
@@ -529,15 +529,15 @@ export class OrdersService {
     await this.findOwnedPortfolio(this.orders.manager, userId, portfolioId);
 
     const countRows: { total: string }[] = await this.orders.manager.query(
-      `SELECT COUNT(*)::text AS total FROM auth.fills WHERE portfolio_id = $1`,
+      `SELECT COUNT(*)::text AS total FROM market_data.fills WHERE portfolio_id = $1`,
       [portfolioId],
     );
 
     const rows: RawFillRow[] = await this.orders.manager.query(
       `SELECT f.fill_id, f.order_id, f.symbol, o.side, f.fill_date, f.settlement_date,
               f.quantity, f.fill_price, f.gross_consideration, f.fee_total, f.realized_pnl
-         FROM auth.fills f
-         JOIN auth.paper_orders o ON o.order_id = f.order_id
+         FROM market_data.fills f
+         JOIN market_data.paper_orders o ON o.order_id = f.order_id
         WHERE f.portfolio_id = $1
         ORDER BY f.created_at DESC, f.fill_id ASC
         LIMIT $2 OFFSET $3`,
@@ -555,7 +555,7 @@ export class OrdersService {
       rows.length === 0
         ? []
         : await this.orders.manager.query(
-            `SELECT fill_id, fee_type, rate_percent, amount FROM auth.fill_fees
+            `SELECT fill_id, fee_type, rate_percent, amount FROM market_data.fill_fees
               WHERE fill_id = ANY($1::uuid[])
               ORDER BY fill_id ASC, fee_type ASC`,
             [rows.map((row) => row.fill_id)],
@@ -598,7 +598,7 @@ export class OrdersService {
     portfolioId: string,
   ): Promise<{ cash_balance: string }> {
     const rows: { cash_balance: string }[] = await manager.query(
-      `SELECT cash_balance FROM auth.virtual_portfolios
+      `SELECT cash_balance FROM market_data.virtual_portfolios
         WHERE portfolio_id = $1 AND user_id = $2 AND deleted_at IS NULL`,
       [portfolioId, userId],
     );
@@ -612,7 +612,7 @@ export class OrdersService {
     portfolioId: string,
   ): Promise<{ cash_balance: string }> {
     const rows: { cash_balance: string }[] = await manager.query(
-      `SELECT cash_balance FROM auth.virtual_portfolios
+      `SELECT cash_balance FROM market_data.virtual_portfolios
         WHERE portfolio_id = $1 AND user_id = $2 AND deleted_at IS NULL
         FOR UPDATE`,
       [portfolioId, userId],
@@ -631,7 +631,7 @@ export class OrdersService {
   ): Promise<RawLotRow[]> {
     return manager.query(
       `SELECT lot_id, quantity_original, quantity_remaining, cost_original, cost_remaining
-         FROM auth.position_lots
+         FROM market_data.position_lots
         WHERE portfolio_id = $1 AND symbol = $2 AND quantity_remaining > 0
         ORDER BY acquired_date ASC, created_at ASC, lot_id ASC
         FOR UPDATE`,
@@ -646,7 +646,7 @@ export class OrdersService {
   ): Promise<number> {
     const rows: { open_quantity: string }[] = await manager.query(
       `SELECT COALESCE(SUM(quantity_remaining), 0)::text AS open_quantity
-         FROM auth.position_lots
+         FROM market_data.position_lots
         WHERE portfolio_id = $1 AND symbol = $2 AND quantity_remaining > 0`,
       [portfolioId, symbol],
     );

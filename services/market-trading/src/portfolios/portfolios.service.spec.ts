@@ -7,7 +7,7 @@ import {
   PortfolioNotFoundException,
   ValidationFailedException,
 } from '../common/errors/api-exception';
-import { MarketTradingClient } from '../market-trading/market-trading.client';
+import { PaperTradingQuotesService } from '../paper-trading-quotes/paper-trading-quotes.service';
 import { PortfoliosService } from './portfolios.service';
 
 describe('PortfoliosService', () => {
@@ -40,7 +40,7 @@ describe('PortfoliosService', () => {
           useValue: { transaction: dataSourceTransaction },
         },
         {
-          provide: MarketTradingClient,
+          provide: PaperTradingQuotesService,
           useValue: { getValuations },
         },
       ],
@@ -90,10 +90,10 @@ describe('PortfoliosService', () => {
       });
       expect(txManagerQuery).toHaveBeenCalledTimes(4);
       expect(txManagerQuery.mock.calls[1][0]).toContain(
-        'INSERT INTO auth.virtual_portfolios',
+        'INSERT INTO market_data.virtual_portfolios',
       );
       expect(txManagerQuery.mock.calls[2][0]).toContain(
-        'INSERT INTO auth.cash_transactions',
+        'INSERT INTO market_data.cash_transactions',
       );
       expect(txManagerQuery.mock.calls[2][0]).toContain('initial_capital');
     });
@@ -106,7 +106,7 @@ describe('PortfoliosService', () => {
       let insertedHash = '';
       txManagerQuery.mockImplementation(
         async (sql: string, params: unknown[]) => {
-          if (sql.includes('INSERT INTO auth.idempotency_records')) {
+          if (sql.includes('INSERT INTO market_data.idempotency_records')) {
             insertedHash = params[5] as string;
             return [];
           }

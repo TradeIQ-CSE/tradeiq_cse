@@ -14,9 +14,10 @@ async function bootstrap() {
   configureMarketTradingApp(app);
 
   const config = app.get(ConfigService);
-  // Public market-data reads are unauthenticated (SRS 3.1.2.2). The backtest
-  // routes are not: they are POSTs from the SPA carrying a bearer token, which
-  // is why POST is allowed here where GET alone used to be.
+  // Public market-data reads are unauthenticated (SRS 3.1.2.2). The backtest,
+  // portfolio and order routes are not: they carry a bearer token and they
+  // write, which is why POST and DELETE are allowed here where GET alone used
+  // to be.
   //
   // Request headers are left to reflect what the preflight asks for, as
   // identity-auth does. Enumerating them buys nothing — CORS already governs
@@ -28,7 +29,7 @@ async function bootstrap() {
   // a cross-site request cannot borrow the user's session.
   app.enableCors({
     origin: config.getOrThrow<string[]>('app.corsOrigins'),
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'DELETE'],
   });
 
   const port = config.getOrThrow<number>('app.port');

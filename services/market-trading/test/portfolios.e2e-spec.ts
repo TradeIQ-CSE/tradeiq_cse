@@ -1,27 +1,30 @@
 import { randomUUID } from 'crypto';
-import { INestApplication } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
-import { configureIdentityAuthApp } from '../src/app.setup';
+import { configureMarketTradingApp } from '../src/app.setup';
 import {
   DependencyUnavailableException,
   ValidationFailedException,
 } from '../src/common/errors/api-exception';
-import { MarketTradingClient } from '../src/market-trading/market-trading.client';
+import { PaperTradingQuotesService } from '../src/paper-trading-quotes/paper-trading-quotes.service';
 
-// docs/api/paper-trading-v1.md §5. Test users come from the real signup
-// endpoint (docs/api/auth-v1.md §4.1), so these tests exercise the same token
-// path a browser does rather than a hand-minted one.
+// docs/api/paper-trading-v1.md §5. Tokens are signed here rather than obtained
+// from a signup call: identity-auth issues them and this service only verifies
+// them, so there is no signup endpoint to call. The token still travels the
+// path a browser's does — through the same guard, verified with the same
+// secret.
 describe('Portfolios (e2e)', () => {
-  let app: INestApplication;
+  let app: NestExpressApplication;
   let dataSource: DataSource;
+  let jwtService: JwtService;
   let token: string;
-  // §7 prices positions through market-trading. Stubbed rather than reached
-  // over HTTP, the same way test/orders.e2e-spec.ts does it, so a missing
-  // close or an unreachable dependency can be pinned without a second
-  // database.
+  // §7 prices positions through the quote service. Stubbed the same way
+  // test/orders.e2e-spec.ts does it, so a missing close can be pinned without
+  // seeding prices for every case.
   let valuations: jest.Mock;
 
   beforeAll(async () => {
@@ -29,14 +32,15 @@ describe('Portfolios (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
-      .overrideProvider(MarketTradingClient)
+      .overrideProvider(PaperTradingQuotesService)
       .useValue({ getValuations: valuations })
       .compile();
 
-    app = moduleFixture.createNestApplication();
-    configureIdentityAuthApp(app);
+    app = moduleFixture.createNestApplication<NestExpressApplication>();
+    configureMarketTradingApp(app);
     await app.init();
     dataSource = app.get(DataSource);
+    jwtService = app.get(JwtService);
   });
 
   afterAll(async () => {
@@ -44,24 +48,16 @@ describe('Portfolios (e2e)', () => {
   });
 
   async function createUser(): Promise<{ userId: string; token: string }> {
-    const response = await request(app.getHttpServer())
-      .post('/auth/signup')
-      .send({
-        email: `${randomUUID()}@example.lk`,
-        password: 'correct horse battery staple',
-        display_name: 'Test User',
-      })
-      .expect(201);
-
+    const userId = randomUUID();
     return {
-      userId: response.body.data.user.user_id,
-      token: response.body.data.access_token,
+      userId,
+      token: await jwtService.signAsync({ sub: userId }, { expiresIn: '5m' }),
     };
   }
 
   beforeEach(async () => {
     await dataSource.query(
-      'TRUNCATE auth.idempotency_records, auth.cash_transactions, auth.virtual_portfolios, auth.users CASCADE',
+      'TRUNCATE market_data.idempotency_records, market_data.cash_transactions, market_data.virtual_portfolios CASCADE',
     );
     ({ token } = await createUser());
   });

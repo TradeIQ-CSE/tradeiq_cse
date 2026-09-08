@@ -122,9 +122,6 @@ importers:
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
-      decimal.js:
-        specifier: ^10.6.0
-        version: 10.6.0
       pg:
         specifier: ^8.13.1
         version: 8.23.0
@@ -234,6 +231,9 @@ importers:
       class-validator:
         specifier: ^0.15.1
         version: 0.15.1
+      decimal.js:
+        specifier: ^10.6.0
+        version: 10.6.0
       dotenv:
         specifier: ^16.4.5
         version: 16.6.1

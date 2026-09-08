@@ -1,7 +1,6 @@
 import appConfig from './app.config';
 import authConfig from './auth.config';
 import databaseConfig from './database.config';
-import marketTradingConfig from './market-trading.config';
 import { durationToSeconds } from '../auth/auth.service';
 import { validate } from './env.validation';
 import {
@@ -86,26 +85,6 @@ describe('config', () => {
         process.env.AUTH_REFRESH_COOKIE_SECURE = value;
       }
       expect(authConfig().refreshCookieSecure).toBe(expected);
-    });
-  });
-
-  describe('marketTradingConfig', () => {
-    it('defaults the base url and timeout when unset', () => {
-      delete process.env.MARKET_TRADING_URL;
-      delete process.env.MARKET_TRADING_TIMEOUT_MS;
-      expect(marketTradingConfig()).toEqual({
-        baseUrl: 'http://localhost:3001',
-        timeoutMs: 3000,
-      });
-    });
-
-    it('reads the configured base url and timeout', () => {
-      process.env.MARKET_TRADING_URL = 'http://market-trading:3001';
-      process.env.MARKET_TRADING_TIMEOUT_MS = '1500';
-      expect(marketTradingConfig()).toEqual({
-        baseUrl: 'http://market-trading:3001',
-        timeoutMs: 1500,
-      });
     });
   });
 
@@ -318,34 +297,6 @@ describe('config', () => {
         validate({
           ...REQUIRED,
           IDENTITY_AUTH_PORT: 'not-a-port',
-        }),
-      ).toThrow('Invalid environment configuration');
-    });
-
-    it('accepts a hostname-only market-trading url', () => {
-      // http://market-trading:3001 is what compose injects; it has no TLD, so
-      // the validator must not insist on one.
-      const validated = validate({
-        ...REQUIRED,
-        MARKET_TRADING_URL: 'http://market-trading:3001',
-      });
-      expect(validated.MARKET_TRADING_URL).toBe('http://market-trading:3001');
-    });
-
-    it('throws when the market-trading url is not a url', () => {
-      expect(() =>
-        validate({
-          ...REQUIRED,
-          MARKET_TRADING_URL: 'not a url',
-        }),
-      ).toThrow('Invalid environment configuration');
-    });
-
-    it('throws when the market-trading timeout is not an integer', () => {
-      expect(() =>
-        validate({
-          ...REQUIRED,
-          MARKET_TRADING_TIMEOUT_MS: 'soon',
         }),
       ).toThrow('Invalid environment configuration');
     });
