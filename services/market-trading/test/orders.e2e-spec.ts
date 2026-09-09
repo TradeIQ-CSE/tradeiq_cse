@@ -1,9 +1,9 @@
 import { randomUUID } from 'crypto';
-import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import request from 'supertest';
+import { createTestSigner, TestSigner } from './access-token';
 import { DependencyUnavailableException } from '../src/common/errors/api-exception';
 import { AppModule } from '../src/app.module';
 import { configureMarketTradingApp } from '../src/app.setup';
@@ -22,7 +22,7 @@ import {
 // database — is asserted in the 'service boundary' block below.
 describe('Orders (e2e)', () => {
   let app: NestExpressApplication;
-  let jwtService: JwtService;
+  let signer: TestSigner;
   let dataSource: DataSource;
   let userId: string;
   let token: string;
@@ -40,6 +40,9 @@ describe('Orders (e2e)', () => {
   };
 
   beforeAll(async () => {
+    signer = createTestSigner();
+    process.env.AUTH_JWT_PUBLIC_KEYS = signer.publicKeys;
+
     quote = jest.fn();
     valuations = jest.fn();
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -52,7 +55,6 @@ describe('Orders (e2e)', () => {
     app = moduleFixture.createNestApplication<NestExpressApplication>();
     configureMarketTradingApp(app);
     await app.init();
-    jwtService = app.get(JwtService);
     dataSource = app.get(DataSource);
   });
 
@@ -91,7 +93,7 @@ describe('Orders (e2e)', () => {
                 market_data.cash_transactions, market_data.virtual_portfolios CASCADE`,
     );
     userId = createUser();
-    token = await jwtService.signAsync({ sub: userId }, { expiresIn: '5m' });
+    token = signer.sign({ sub: userId });
     quote.mockReset();
     quote.mockResolvedValue({ found: true, quote: LISTED } as QuoteResult);
     valuations.mockReset();
@@ -597,10 +599,7 @@ describe('Orders (e2e)', () => {
   describe('ownership', () => {
     it('returns the same PORTFOLIO_NOT_FOUND for another user and for nothing', async () => {
       const otherId = createUser();
-      const otherToken = await jwtService.signAsync(
-        { sub: otherId },
-        { expiresIn: '5m' },
-      );
+      const otherToken = signer.sign({ sub: otherId });
 
       const otherUsers = await api()
         .get(`/portfolios/${portfolioId}/orders`)

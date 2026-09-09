@@ -75,7 +75,11 @@ export SMOKE_AUTH_PORT="$smoke_auth_port"
 export SMOKE_ML_PORT="$smoke_ml_port"
 export SMOKE_FRONTEND_PORT="$smoke_frontend_port"
 export MARKET_INGESTION_TOKEN=smoke-only-market-ingestion-token-123456
-export JWT_SECRET=smoke-only-jwt-secret-123456
+# The published development pair. The smoke stack runs with NODE_ENV
+# unset, so the production-only rejection does not apply, and using the
+# committed pair keeps this script from carrying key material of its own.
+export AUTH_JWT_PRIVATE_KEY="$(grep '^AUTH_JWT_PRIVATE_KEY=' "$repo_root/.env.example" | cut -d= -f2-)"
+export AUTH_JWT_PUBLIC_KEYS="$(grep '^AUTH_JWT_PUBLIC_KEYS=' "$repo_root/.env.example" | cut -d= -f2-)"
 export AUTH_EMAIL_ENCRYPTION_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
 export AUTH_REFRESH_COOKIE_SECURE=false
 export MARKET_TRADING_CORS_ORIGINS="http://localhost:${smoke_frontend_port}"

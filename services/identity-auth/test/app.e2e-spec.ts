@@ -1,3 +1,4 @@
+import { generateKeyPairSync } from 'crypto';
 import { Controller, Get, INestApplication, UseGuards } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -144,11 +145,20 @@ describe('AppModule (e2e)', () => {
     expect(JSON.stringify(response.body)).not.toContain('expired');
   });
 
-  it('rejects a token signed with a different secret', async () => {
-    const token = await jwtService.signAsync(
-      { sub: '7be918e8-53b2-46e4-b114-0a938d2912ad' },
-      { secret: 'different-secret', expiresIn: '5m' },
-    );
+  // Access tokens are RS256 (docs/api/auth-v1.md §2), so the token this service
+  // must refuse is one signed by a key it does not hold — not one signed with
+  // the wrong shared secret, which no longer exists. Signed with a real key so
+  // the refusal comes from the signature not matching, rather than from the
+  // token being malformed.
+  it('rejects a token signed with a key it does not hold', async () => {
+    const unknownKey = generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+    }).privateKey.export({ type: 'pkcs8', format: 'pem' }) as string;
+
+    const token = await new JwtService({
+      privateKey: unknownKey,
+      signOptions: { algorithm: 'RS256', expiresIn: '5m' },
+    }).signAsync({ sub: '7be918e8-53b2-46e4-b114-0a938d2912ad' });
 
     const response = await request(app.getHttpServer())
       .get('/test/protected')

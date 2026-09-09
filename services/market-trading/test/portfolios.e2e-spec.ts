@@ -1,9 +1,9 @@
 import { randomUUID } from 'crypto';
-import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import request from 'supertest';
+import { createTestSigner, TestSigner } from './access-token';
 import { AppModule } from '../src/app.module';
 import { configureMarketTradingApp } from '../src/app.setup';
 import {
@@ -20,7 +20,7 @@ import { PaperTradingQuotesService } from '../src/paper-trading-quotes/paper-tra
 describe('Portfolios (e2e)', () => {
   let app: NestExpressApplication;
   let dataSource: DataSource;
-  let jwtService: JwtService;
+  let signer: TestSigner;
   let token: string;
   // §7 prices positions through the quote service. Stubbed the same way
   // test/orders.e2e-spec.ts does it, so a missing close can be pinned without
@@ -28,6 +28,9 @@ describe('Portfolios (e2e)', () => {
   let valuations: jest.Mock;
 
   beforeAll(async () => {
+    signer = createTestSigner();
+    process.env.AUTH_JWT_PUBLIC_KEYS = signer.publicKeys;
+
     valuations = jest.fn();
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -40,7 +43,6 @@ describe('Portfolios (e2e)', () => {
     configureMarketTradingApp(app);
     await app.init();
     dataSource = app.get(DataSource);
-    jwtService = app.get(JwtService);
   });
 
   afterAll(async () => {
@@ -51,7 +53,7 @@ describe('Portfolios (e2e)', () => {
     const userId = randomUUID();
     return {
       userId,
-      token: await jwtService.signAsync({ sub: userId }, { expiresIn: '5m' }),
+      token: signer.sign({ sub: userId }),
     };
   }
 

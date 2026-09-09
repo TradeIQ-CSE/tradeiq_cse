@@ -2,21 +2,42 @@ import appConfig from './app.config';
 import authConfig from './auth.config';
 import databaseConfig from './database.config';
 import { durationToSeconds } from '../auth/auth.service';
+import { generateKeyPairSync, KeyObject } from 'crypto';
 import { validate } from './env.validation';
 import {
-  DEVELOPMENT_JWT_SECRET,
-  MIN_PRODUCTION_JWT_SECRET_DISTINCT_CHARACTERS,
-  MIN_PRODUCTION_JWT_SECRET_LENGTH,
-} from './jwt-secret.validator';
+  DEVELOPMENT_JWT_PRIVATE_KEY,
+  MIN_ACCESS_TOKEN_KEY_BITS,
+} from './jwt-keys';
 
 const VALID_URL = 'postgresql://u:p@h:5432/db';
 const VALID_KEY = Buffer.alloc(32, 7).toString('base64');
+
+function encodePem(key: KeyObject, type: 'pkcs8' | 'spki'): string {
+  return Buffer.from(key.export({ type, format: 'pem' }) as string).toString(
+    'base64',
+  );
+}
+
+function rsaPair(bits: number) {
+  const { privateKey, publicKey } = generateKeyPairSync('rsa', {
+    modulusLength: bits,
+  });
+  return {
+    privateKey: encodePem(privateKey, 'pkcs8'),
+    publicKey: encodePem(publicKey, 'spki'),
+  };
+}
+
+// Generated once for the file: an RSA keygen is slow enough that doing it per
+// case would dominate the suite's runtime.
+const SIGNING = rsaPair(MIN_ACCESS_TOKEN_KEY_BITS);
+const RETIRING = rsaPair(MIN_ACCESS_TOKEN_KEY_BITS);
 
 // The three variables with no default. Spread into a case that is meant to
 // pass, so a test only fails for the reason it is testing.
 const REQUIRED = {
   AUTH_DATABASE_URL: VALID_URL,
-  JWT_SECRET: 'test-secret',
+  AUTH_JWT_PRIVATE_KEY: SIGNING.privateKey,
   AUTH_EMAIL_ENCRYPTION_KEY: VALID_KEY,
 };
 
@@ -51,9 +72,14 @@ describe('config', () => {
   });
 
   describe('authConfig', () => {
-    it('exposes the jwt secret', () => {
-      process.env.JWT_SECRET = 'test-secret';
-      expect(authConfig().jwtSecret).toBe('test-secret');
+    it('exposes the access-token signing key', () => {
+      process.env.AUTH_JWT_PRIVATE_KEY = SIGNING.privateKey;
+      expect(authConfig().privateKey).toBe(SIGNING.privateKey);
+    });
+
+    it('defaults the extra verification keys to an empty ring', () => {
+      delete process.env.AUTH_JWT_PUBLIC_KEYS;
+      expect(authConfig().publicKeys).toBe('');
     });
 
     it('defaults the token lifetimes to docs/api/auth-v1.md §2', () => {
@@ -94,7 +120,7 @@ describe('config', () => {
         ...REQUIRED,
       });
       expect(validated.AUTH_DATABASE_URL).toBe(VALID_URL);
-      expect(validated.JWT_SECRET).toBe('test-secret');
+      expect(validated.AUTH_JWT_PRIVATE_KEY).toBe(SIGNING.privateKey);
     });
 
     it('coerces a numeric port string to a number', () => {
@@ -105,115 +131,123 @@ describe('config', () => {
       expect(validated.IDENTITY_AUTH_PORT).toBe(3002);
     });
 
-    it.each(['AUTH_DATABASE_URL', 'JWT_SECRET', 'AUTH_EMAIL_ENCRYPTION_KEY'])(
-      'throws when %s is missing',
-      (key) => {
-        const rest = { ...(REQUIRED as Record<string, string>) };
-        delete rest[key];
-        expect(() => validate(rest)).toThrow(
-          'Invalid environment configuration',
-        );
-      },
-    );
+    it.each([
+      'AUTH_DATABASE_URL',
+      'AUTH_JWT_PRIVATE_KEY',
+      'AUTH_EMAIL_ENCRYPTION_KEY',
+    ])('throws when %s is missing', (key) => {
+      const rest = { ...(REQUIRED as Record<string, string>) };
+      delete rest[key];
+      expect(() => validate(rest)).toThrow('Invalid environment configuration');
+    });
 
-    // This service signs with JWT_SECRET, so a guessable value here forges
-    // tokens both services accept. The check applies in production only: dev
-    // and CI share one published value on purpose, since identity-auth and
-    // market-trading must be given the same secret to interoperate.
-    describe('JWT_SECRET strength', () => {
-      // 32 random bytes, base64 — what the command in .env.example prints.
-      // Sliced rather than padded so the length cases stay high-entropy and
-      // fail for the one reason they are testing.
-      const STRONG = 'Zq4vN8vLmR2xKfTb9wYhCd3JgEuPsA6nQzXr1TkVoBM=';
-      const AT_MINIMUM = STRONG.slice(0, MIN_PRODUCTION_JWT_SECRET_LENGTH);
-      const ONE_SHORT = STRONG.slice(0, MIN_PRODUCTION_JWT_SECRET_LENGTH - 1);
-
-      // Long enough, but sitting on the variety floor from either side. Kept
-      // as literals because a generated string with an exact distinct count is
-      // harder to read than it is worth; the assertion below pins them to the
-      // constant so raising the floor fails loudly here.
-      const AT_FLOOR = 'a1b2c3d4e5f6a2b3c4d5e6f1a3b4c5d6';
-      const BELOW_FLOOR = 'a1b2c3d4e5f5a2b3c4d5e5f1a3b4c5d5';
-
-      it('has boundary fixtures that straddle the floor', () => {
-        expect(AT_FLOOR.length).toBeGreaterThanOrEqual(
-          MIN_PRODUCTION_JWT_SECRET_LENGTH,
-        );
-        expect(BELOW_FLOOR.length).toBeGreaterThanOrEqual(
-          MIN_PRODUCTION_JWT_SECRET_LENGTH,
-        );
-        expect(new Set(AT_FLOOR).size).toBe(
-          MIN_PRODUCTION_JWT_SECRET_DISTINCT_CHARACTERS,
-        );
-        expect(new Set(BELOW_FLOOR).size).toBe(
-          MIN_PRODUCTION_JWT_SECRET_DISTINCT_CHARACTERS - 1,
-        );
+    // This service holds the only key that can mint an access token, so the
+    // checks here are about that key being real: well formed, long enough that
+    // the signature rather than the secrecy is not the weak part, and not the
+    // published development pair, whose private half is printed in
+    // .env.example for anyone to sign with.
+    describe('AUTH_JWT_PRIVATE_KEY', () => {
+      it.each([
+        ['not base64-encoded at all', 'not-a-key'],
+        [
+          'base64 of something that is not a PEM',
+          Buffer.from('nope').toString('base64'),
+        ],
+        ['a truncated PEM', SIGNING.privateKey.slice(0, 40)],
+        // A public key cannot sign. Worth its own case because it is the
+        // plausible mistake — the two values sit next to each other in
+        // .env.example and are both base64 PEMs.
+        ['the public half of the pair', SIGNING.publicKey],
+      ])('rejects a signing key that is %s', (_label, key) => {
+        expect(() =>
+          validate({ ...REQUIRED, AUTH_JWT_PRIVATE_KEY: key }),
+        ).toThrow('Invalid environment configuration');
       });
 
-      // DEVELOPMENT_JWT_SECRET is deliberately longer than the minimum and has
-      // 20 distinct characters, so neither the length nor the variety rule
-      // touches it. It has to be refused by name: .env.example prints it,
-      // which makes it public knowledge.
-      //
-      // The two padded cases are the bypass the length rule invites — clearing
-      // 32 characters by repeating one, or by tacking x's onto a short secret.
-      it.each([
-        ['the published development default', DEVELOPMENT_JWT_SECRET],
-        ['the previous default', 'changeme'],
-        ['a high-entropy secret one character under the minimum', ONE_SHORT],
-        [
-          'one character repeated to the minimum length',
-          'k'.repeat(MIN_PRODUCTION_JWT_SECRET_LENGTH),
-        ],
-        [
-          'a short secret padded out to the minimum length',
-          `changeme${'x'.repeat(MIN_PRODUCTION_JWT_SECRET_LENGTH - 8)}`,
-        ],
-        ['a secret one distinct character under the floor', BELOW_FLOOR],
-      ])('rejects %s in production', (_label, secret) => {
+      // Size and type are checked in every environment, not just production: a
+      // key this service cannot sign with is a boot failure whatever the
+      // environment, and without the check it would present as the first
+      // signup returning 500.
+      it('rejects an RSA key below the minimum size', () => {
         expect(() =>
           validate({
             ...REQUIRED,
-            NODE_ENV: 'production',
-            JWT_SECRET: secret,
+            AUTH_JWT_PRIVATE_KEY: rsaPair(1024).privateKey,
           }),
         ).toThrow('Invalid environment configuration');
       });
 
-      // Both encodings an operator is likely to be handed. Hex is the tighter
-      // of the two against the distinct-character floor (16 possible
-      // characters, not 64), so it is here to pin that the floor leaves room.
-      it.each([
-        ['exactly the minimum length', AT_MINIMUM],
-        ['base64', STRONG],
-        [
-          'hex',
-          'f3a9c1e05b7d248fa6b0139e5c8247dbe1a705f92c6b3d84a0e15792cb6f30d4',
-        ],
-        // Exactly at the floor. Pins where the boundary sits, not that this is
-        // a good secret — a 32-character string with only 12 distinct
-        // characters has to repeat, and counting characters cannot see that.
-        ['long enough with exactly the minimum variety', AT_FLOOR],
-      ])('accepts a %s secret in production', (_label, secret) => {
-        const validated = validate({
-          ...REQUIRED,
-          NODE_ENV: 'production',
-          JWT_SECRET: secret,
-        });
-        expect(validated.JWT_SECRET).toBe(secret);
+      it('rejects a key of the wrong type', () => {
+        const ec = encodePem(
+          generateKeyPairSync('ec', { namedCurve: 'P-256' }).privateKey,
+          'pkcs8',
+        );
+        expect(() =>
+          validate({ ...REQUIRED, AUTH_JWT_PRIVATE_KEY: ec }),
+        ).toThrow('Invalid environment configuration');
       });
 
+      // Published in this repository, so anyone can mint a token for any user
+      // id with it. Refused by identity — nothing about its size or shape
+      // distinguishes it from a real key.
+      it('rejects the published development key in production', () => {
+        expect(() =>
+          validate({
+            ...REQUIRED,
+            NODE_ENV: 'production',
+            AUTH_JWT_PRIVATE_KEY: DEVELOPMENT_JWT_PRIVATE_KEY,
+          }),
+        ).toThrow('Invalid environment configuration');
+      });
+
+      it('accepts a generated key in production', () => {
+        expect(() =>
+          validate({ ...REQUIRED, NODE_ENV: 'production' }),
+        ).not.toThrow();
+      });
+
+      // `docker compose up` from a clean checkout must keep working.
       it.each(['development', 'test'])(
-        'accepts the development default when NODE_ENV=%s',
+        'accepts the development key when NODE_ENV=%s',
         (nodeEnv) => {
           const validated = validate({
             ...REQUIRED,
             NODE_ENV: nodeEnv,
-            JWT_SECRET: DEVELOPMENT_JWT_SECRET,
+            AUTH_JWT_PRIVATE_KEY: DEVELOPMENT_JWT_PRIVATE_KEY,
           });
-          expect(validated.JWT_SECRET).toBe(DEVELOPMENT_JWT_SECRET);
+          expect(validated.AUTH_JWT_PRIVATE_KEY).toBe(
+            DEVELOPMENT_JWT_PRIVATE_KEY,
+          );
         },
       );
+    });
+
+    // Optional, and only meaningful mid-rotation: the signing key's own public
+    // half is always accepted without being named here.
+    describe('AUTH_JWT_PUBLIC_KEYS', () => {
+      it('is optional', () => {
+        expect(() => validate({ ...REQUIRED })).not.toThrow();
+      });
+
+      it('accepts a retiring key alongside the signing one', () => {
+        expect(() =>
+          validate({ ...REQUIRED, AUTH_JWT_PUBLIC_KEYS: RETIRING.publicKey }),
+        ).not.toThrow();
+      });
+
+      it('rejects a malformed entry', () => {
+        expect(() =>
+          validate({ ...REQUIRED, AUTH_JWT_PUBLIC_KEYS: 'not-a-key' }),
+        ).toThrow('Invalid environment configuration');
+      });
+
+      // Present but empty is a value someone meant to set and did not, which
+      // is worth failing on rather than silently reading as "no extra keys".
+      it('rejects an empty string', () => {
+        expect(() =>
+          validate({ ...REQUIRED, AUTH_JWT_PUBLIC_KEYS: '' }),
+        ).toThrow('Invalid environment configuration');
+      });
     });
 
     it('rejects an encryption key that is not base64', () => {

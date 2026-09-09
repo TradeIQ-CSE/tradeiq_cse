@@ -1,8 +1,9 @@
 import { registerAs } from '@nestjs/config';
 
-// The access-token signing secret. identity-auth issues the tokens this service
-// only verifies (docs/api/auth-v1.md §2.1) and reads the same JWT_SECRET, so
-// one value configures both sides and there is no second name to drift.
+// The public keys access tokens are verified against — a comma-separated list
+// of base64-encoded SPKI PEMs. identity-auth issues the tokens this service
+// only verifies (docs/api/auth-v1.md §2.1) and holds the private half alone,
+// so nothing here can sign one.
 export default registerAs('auth', () => ({
-  jwtSecret: process.env.JWT_SECRET ?? '',
+  publicKeys: process.env.AUTH_JWT_PUBLIC_KEYS ?? '',
 }));

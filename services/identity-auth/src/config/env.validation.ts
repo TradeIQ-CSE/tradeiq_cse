@@ -12,7 +12,10 @@ import {
   Min,
   validateSync,
 } from 'class-validator';
-import { StrongInProduction } from './jwt-secret.validator';
+import {
+  IsAccessTokenPrivateKey,
+  IsAccessTokenPublicKeyRing,
+} from './jwt-keys';
 
 // docs/api/auth-v1.md §8 — a token lifetime. Requires a unit of a second or
 // longer, and a value above zero, because jsonwebtoken hands a bare string to
@@ -53,14 +56,22 @@ class EnvironmentVariables {
   @IsNotEmpty()
   AUTH_DATABASE_URL!: string;
 
-  // The HS256 key this service signs access tokens with, and the one
-  // market-trading verifies them with. Anyone holding it can mint a token for
-  // any user id, so @StrongInProduction rejects the shipped development
-  // default and anything too short to be a real key once NODE_ENV=production.
+  // The RS256 private key this service signs access tokens with, base64-encoded
+  // PKCS#8 PEM. Anyone holding it can mint a token for any user id, so it lives
+  // here and nowhere else; @IsAccessTokenPrivateKey rejects a malformed or
+  // undersized key anywhere, and the published development key once
+  // NODE_ENV=production.
   @IsString()
   @IsNotEmpty()
-  @StrongInProduction()
-  JWT_SECRET!: string;
+  @IsAccessTokenPrivateKey()
+  AUTH_JWT_PRIVATE_KEY!: string;
+
+  // Extra public keys to accept on GET /auth/me during a rotation. Optional:
+  // the signing key's own public half is always accepted, derived from the
+  // private key rather than named again here.
+  @IsOptional()
+  @IsAccessTokenPublicKeyRing()
+  AUTH_JWT_PUBLIC_KEYS?: string;
 
   @IsOptional()
   @Matches(DURATION)
