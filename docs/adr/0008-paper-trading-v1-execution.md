@@ -1,6 +1,7 @@
 # ADR 0008: Deterministic EOD paper-trading execution
 
-- **Status:** Proposed for review
+- **Status:** Accepted; ownership and boundary decisions superseded by
+  [ADR 0009](./0009-market-trading-owns-paper-trading.md)
 - **Date:** 2026-08-27
 - **Source:** TIQ-57 / GitHub issue #36
 - **Contract:** [paper-trading-v1.md](../api/paper-trading-v1.md)
@@ -16,11 +17,20 @@ The initial auth schema contains the main portfolio and fill tables, but it
 stores market UUIDs that the market API deliberately does not expose and lacks
 idempotency and sell-to-lot allocation records.
 
+> **Partially superseded.** The two bullets marked below no longer hold. Every
+> execution rule after them — dates, fees, FIFO, rounding, idempotency — stands
+> unchanged, and is now enforced inside `market-trading`.
+
 ## Decision
 
-- `identity-auth` owns every user-specific paper-trading record.
-- It receives prices only through a typed REST execution quote from
-  `market-trading`; canonical symbols cross the boundary, not database UUIDs.
+- ~~`identity-auth` owns every user-specific paper-trading record.~~
+  **Superseded by [ADR 0009](./0009-market-trading-owns-paper-trading.md):**
+  `market-trading` owns them.
+- ~~It receives prices only through a typed REST execution quote from
+  `market-trading`; canonical symbols cross the boundary, not database UUIDs.~~
+  **Superseded by [ADR 0009](./0009-market-trading-owns-paper-trading.md):** the
+  quote is an in-process call. Canonical symbols rather than database UUIDs
+  remains true, and is now a storage rule — see paper-trading-v1.md §1.
 - V1 supports immediate all-or-rejected market orders only.
 - Execution uses the unadjusted close from the latest completed EOD session.
   Weekend and holiday submissions therefore use the preceding session.
@@ -48,4 +58,5 @@ idempotency and sell-to-lot allocation records.
 - [CSE transaction fee table](https://cdn.cse.lk/pdf/investor-portal/invest-sri-lanka.pdf)
 - [CSE amendment shortening equity settlement from T+3 to T+2](https://cdn.cse.lk/cmt/upload_report_file/f0OBhgMTj67atw5b_21May2024093353GMT_1716284033845.pdf)
 - [ADR 0001: service and store naming](./0001-service-and-store-naming.md)
+- [ADR 0009: `market-trading` owns paper trading](./0009-market-trading-owns-paper-trading.md)
 - [Structured error envelope](../api/error-envelope.md)

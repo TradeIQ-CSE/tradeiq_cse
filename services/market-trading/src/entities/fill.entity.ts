@@ -1,7 +1,6 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
-// Maps market_data.fills, as reshaped by
-// services/identity-auth/src/db/migrations/1788150000000-AddPaperOrderExecution.ts
+// Maps market_data.fills (src/db/migrations/1788500000000-PaperTradingTables.ts)
 @Entity({ schema: 'market_data', name: 'fills' })
 export class Fill {
   @PrimaryColumn('uuid', { name: 'fill_id' })

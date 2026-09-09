@@ -1,6 +1,6 @@
 # ADR 0001: Service and store naming
 
-- **Status:** Accepted
+- **Status:** Accepted; remit table superseded by [ADR 0009](./0009-market-trading-owns-paper-trading.md)
 - **Date:** 2026-08-11
 - **Source:** IMPLEMENTATION_PLAN.md §0.1 (D1) · Linear TIQ-41
 
@@ -22,6 +22,12 @@ Keep all existing names; rename nothing:
 | `identity-auth` | `auth` | Auth, users, portfolios, orders, fills, lots, cash |
 | `market-trading` | `market_data` | Market data, OHLCV, execution quotes, public API, backtesting |
 | `ml-prediction` | `ml` | Batch PPO directional predictions |
+
+> **The remit column is superseded.** ADR 0009 moves portfolios, orders,
+> fills, lots and cash to `market-trading`, leaving `identity-auth` with
+> identity alone. The service and database *names* this ADR decided are
+> unchanged — only the allocation of tables to them. See
+> [ADR 0009](./0009-market-trading-owns-paper-trading.md).
 
 ## Consequences
 

@@ -1,6 +1,6 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
-// Maps market_data.idempotency_records (services/identity-auth/src/db/migrations/1788001100000-AddIdempotencyRecords.ts)
+// Maps market_data.idempotency_records (src/db/migrations/1788500000000-PaperTradingTables.ts)
 @Entity({ schema: 'market_data', name: 'idempotency_records' })
 export class IdempotencyRecord {
   @PrimaryColumn('uuid', { name: 'idempotency_record_id' })

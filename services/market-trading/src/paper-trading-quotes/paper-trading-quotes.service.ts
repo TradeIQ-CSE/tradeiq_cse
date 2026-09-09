@@ -69,14 +69,14 @@ export class PaperTradingQuotesService {
     private readonly securities: Repository<Security>,
   ) {}
 
-  // docs/api/paper-trading-v1.md §2.3 — the execution quote identity-auth
-  // prices paper orders from. Read-only, and carries no user data.
+  // docs/api/paper-trading-v1.md §2.3 — the execution quote paper orders are
+  // priced from. Read-only, and carries no user data.
   //
-  // This endpoint reports facts and makes no trading judgement: it returns the
-  // listing status and whatever the latest price is, and identity-auth decides
-  // whether that means SECURITY_NOT_TRADABLE, PRICE_UNAVAILABLE or STALE_PRICE
-  // (§2.2). Keeping every rejection rule on one side of the boundary is what
-  // stops the two services disagreeing about whether an order was tradable.
+  // This reports facts and makes no trading judgement: it returns the listing
+  // status and whatever the latest price is, and §2.2 alone decides whether
+  // that means SECURITY_NOT_TRADABLE, PRICE_UNAVAILABLE or STALE_PRICE.
+  // Keeping every rejection rule in one place is what stops two readings of
+  // the same quote disagreeing about whether an order was tradable.
   async getQuote(symbol: string): Promise<ExecutionQuote> {
     const manager = this.securities.manager;
 
@@ -120,11 +120,11 @@ export class PaperTradingQuotesService {
     const row = rows[0];
     const priceAsOf = toIsoDate(row.price_as_of);
 
-    // §2.3: a known security with no usable price is a 200 with nulls, not an
-    // error — that is what lets identity-auth persist an auditable
-    // PRICE_UNAVAILABLE rejection instead of treating it as a dependency
-    // failure. A zero close is passed through as-is rather than nulled here,
-    // because "missing or zero" is identity-auth's rejection rule (§2.2).
+    // §2.3: a known security with no usable price returns nulls, not an error
+    // — that is what lets the order path persist an auditable
+    // PRICE_UNAVAILABLE rejection instead of failing the request. A zero close
+    // is passed through as-is rather than nulled here, because "missing or
+    // zero" is §2.2's rejection rule, not this one's.
     const settlementDate =
       priceAsOf !== null && marketAsOf !== null
         ? await resolveSettlementDate(manager, marketAsOf)

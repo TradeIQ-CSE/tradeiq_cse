@@ -16,8 +16,16 @@ requires `Authorization: Bearer <access token>` per
 [paper-trading-v1.md §1](./paper-trading-v1.md); this document specifies where that
 token comes from.
 
-`identity-auth` owns users and sessions in the `auth` database (ADR 0001). No other
-service issues or validates credentials, and no service reads `auth.users`.
+`identity-auth` owns users and sessions in the `auth` database
+([ADR 0009](../adr/0009-market-trading-owns-paper-trading.md)). It is the only
+service that authenticates credentials and the only one that issues tokens, and
+no other service reads `auth.users`.
+
+Verifying an access token is separate from issuing one. Any guarded service
+checks the signature and claims itself, against the shared `JWT_SECRET` — today
+that is `market-trading`, on every paper-trading and backtest route. It takes the
+`user_id` from the verified claims and never calls back to `identity-auth` to do
+so.
 
 Out of scope for v1: email verification and password reset (the `auth.email_tokens`
 table exists but has no mail provider behind it), OAuth/social login, multi-factor

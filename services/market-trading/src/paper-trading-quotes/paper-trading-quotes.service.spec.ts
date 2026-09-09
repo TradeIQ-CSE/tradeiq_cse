@@ -109,7 +109,7 @@ describe('PaperTradingQuotesService', () => {
   });
 
   // §2.3: a known security with no usable price is a 200 with nulls, so
-  // identity-auth can persist an auditable PRICE_UNAVAILABLE rejection.
+  // the order path can persist an auditable PRICE_UNAVAILABLE rejection.
   it('returns nulls rather than an error when the security has no price', async () => {
     mockQueries({ price_as_of: null, close: null });
 
@@ -123,7 +123,7 @@ describe('PaperTradingQuotesService', () => {
     });
   });
 
-  // A stale security still gets a quote; identity-auth compares price_as_of
+  // A stale security still gets a quote; §2.2 compares price_as_of
   // against market_as_of and rejects it as STALE_PRICE.
   it('reports a stale price without judging it', async () => {
     mockQueries({ price_as_of: '2024-12-20' });
@@ -137,7 +137,7 @@ describe('PaperTradingQuotesService', () => {
     expect(quote.settlement_date).toBe('2025-01-14');
   });
 
-  // "Missing or zero close" is identity-auth's rejection rule (§2.2), so a zero
+  // "Missing or zero close" is §2.2's rejection rule, not this service's, so a zero
   // is reported as a fact rather than nulled out here.
   it('passes a zero close through untouched', async () => {
     mockQueries({ close: '0.0000' });
@@ -307,7 +307,7 @@ describe('PaperTradingQuotesService', () => {
       expect(managerQuery).toHaveBeenCalledTimes(1);
     });
 
-    // §2.2 keeps "missing or zero" on identity-auth's side, so a zero close is
+    // §2.2 keeps "missing or zero" on the order path's side, so a zero close is
     // a fact this endpoint reports rather than folds into null.
     it('passes a zero close through untouched', async () => {
       bounds();

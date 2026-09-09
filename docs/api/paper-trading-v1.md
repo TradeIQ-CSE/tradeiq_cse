@@ -2,9 +2,10 @@
 
 | | |
 |---|---|
-| **Status** | Proposed for review — binding after TIQ-57 approval |
-| **Owner** | `identity-auth` for user-owned state; `market-trading` for execution quotes |
-| **Linear / GitHub** | TIQ-57 / issue #36 |
+| **Status** | Binding |
+| **Owner** | `market-trading` |
+| **Linear / GitHub** | TIQ-57 / issue #36 · boundary revised by TIQ-128 / TIQ-130 |
+| **ADR** | [0009](../adr/0009-market-trading-owns-paper-trading.md), superseding [0008](../adr/0008-paper-trading-v1-execution.md) |
 | **Error format** | [error-envelope.md](./error-envelope.md) |
 | **Currency** | LKR only |
 
@@ -14,25 +15,30 @@ This contract defines the first paper-trading slice used by the TradeIQ SPA:
 virtual portfolios, cash history, EOD market orders, fills, FIFO positions and
 portfolio valuation. It does not model a live exchange or broker.
 
-- `identity-auth` owns users, portfolios, orders, fills, fees, FIFO lots, lot
-  disposals and cash transactions in the `auth` database.
-- `market-trading` owns securities, trading sessions and prices in the
-  `market_data` database.
-- `identity-auth` obtains an execution quote from `market-trading` over REST.
-  It must never connect to `market_data` or reuse a TypeORM entity owned by
-  `market-trading`.
-- Canonical CSE symbols cross the service boundary. Internal market-data UUIDs
-  do not.
+`market-trading` owns all of it, in the `market_data` database: securities,
+trading sessions and prices, and the user-owned portfolios, orders, fills, fees,
+FIFO lots, lot disposals and cash transactions. Every rule that makes a write
+correct — the execution session, the fill date, T+2 settlement, the shared
+valuation date — is a market rule, so the records and the prices they depend on
+live together and an order fills in one local transaction. ADR 0009 records why.
 
-All investor-facing endpoints below are unversioned internal SPA endpoints and
-are served by `identity-auth`. They require `Authorization: Bearer <token>`.
-The authenticated `user_id` comes only from the verified token and is never
-accepted in a path, query or request body.
+`identity-auth` owns identity: users, credentials, sessions and tokens. It
+issues the access token; `market-trading` verifies it. That is the only coupling
+between the two services, and it runs one way.
 
-The current repository does not yet contain that JWT guard/current-user
-middleware. Portfolio APIs are not complete until it exists. Tests may replace
-the guard with an injected test principal; production code must not trust a
-client-supplied user header as an authentication substitute.
+- Canonical CSE symbols are stored on orders, fills and lots. Internal
+  market-data UUIDs are not, so a client can resolve every identifier in a
+  response through the public market API.
+- `user_id` on these tables is a plain uuid. `auth.users` is in a different
+  database with a different role, so it carries no foreign key and user deletion
+  does not cascade — see ADR 0009.
+
+All investor-facing endpoints below are unversioned internal SPA endpoints
+served by `market-trading`. They require `Authorization: Bearer <token>`. The
+authenticated `user_id` comes only from the verified token and is never accepted
+in a path, query or request body. Tests may replace the guard with an injected
+test principal; production code must not trust a client-supplied user header as
+an authentication substitute.
 
 ## 2. V1 decisions
 
@@ -51,9 +57,9 @@ not reserve cash, shares or a price. The submitted order response is final.
 
 ### 2.2 Execution date and price
 
-When `identity-auth` processes an order, it requests one execution quote for
-the canonical symbol. `market-trading` resolves its latest completed market
-session and returns that session's unadjusted EOD `close`.
+Processing an order takes one execution quote for the canonical symbol
+(§2.3): the latest completed market session, and that session's unadjusted EOD
+`close`.
 
 - An order placed on a weekend or holiday uses the previous completed session.
 - Clients cannot backdate an order.
@@ -63,56 +69,55 @@ session and returns that session's unadjusted EOD `close`.
   traded.
 - A missing or zero close rejects the order as `PRICE_UNAVAILABLE`.
 - A stale price rejects the order as `STALE_PRICE`.
-- A market-data timeout or 5xx is a transient dependency failure: no order is
-  created and the client may retry with the same idempotency key.
 
 The fill date is `market_as_of`. Settlement is the second market day after the
 fill date (T+2); the quote supplies `settlement_date` from the market calendar.
 For this simulator, cash and lots change atomically on the fill date. The
 settlement date is retained for audit and display, not deferred accounting.
 
-### 2.3 Execution-quote boundary
+### 2.3 Execution quote
 
-`market-trading` exposes the following service endpoint. It is read-only and
-contains no user data.
-
-`GET /internal/paper-trading/quotes/{symbol}`
+The quote is resolved in process, against `market_data`, inside the order
+transaction. It is not a REST endpoint: ADR 0009 withdrew
+`GET /internal/paper-trading/quotes/{symbol}` when paper trading moved into
+`market-trading`, because a fill must not depend on a network call. The shape it
+returns is unchanged:
 
 ```json
 {
-  "data": {
-    "symbol": "COMB.N0000",
-    "listing_status": "listed",
-    "market_as_of": "2025-01-10",
-    "price_as_of": "2025-01-10",
-    "close": 142.72,
-    "settlement_date": "2025-01-14"
-  }
+  "symbol": "COMB.N0000",
+  "listing_status": "listed",
+  "market_as_of": "2025-01-10",
+  "price_as_of": "2025-01-10",
+  "close": 142.72,
+  "settlement_date": "2025-01-14"
 }
 ```
 
-Unknown symbols return `404 SECURITY_NOT_FOUND`. A known security without a
-usable price returns `200` with nullable `price_as_of`, `close` and
-`settlement_date`; `identity-auth` records the corresponding order rejection.
-Unexpected market-data failures return `503 DEPENDENCY_UNAVAILABLE` to the
-calling service.
+The quote reports facts and makes no trading judgement. It returns the listing
+status and whatever the latest price is; §2.2 alone decides whether that means
+`SECURITY_NOT_TRADABLE`, `PRICE_UNAVAILABLE` or `STALE_PRICE`. Keeping every
+rejection rule in one place is what stops two readings of the same quote
+disagreeing about whether an order was tradable.
 
-### 2.4 Valuation boundary
+- An unknown symbol is a domain outcome, not a failure. The order path receives
+  the absence rather than an exception and persists a `201` rejection with
+  `rejection_code` `SECURITY_NOT_FOUND` (§6.2).
+- A known security with no usable price returns null `price_as_of`, `close` and
+  `settlement_date`, and §2.2 records the corresponding rejection.
 
-The second `market-trading` service endpoint, used to price the §7 position and
-summary views. Also read-only and free of user data.
+### 2.4 Valuation
 
-`GET /internal/paper-trading/valuations?symbols=COMB.N0000,JKH.N0000&as_of=2025-01-12`
+The closes behind the §7 position and summary views, also resolved in process.
+`GET /internal/paper-trading/valuations` was withdrawn with the quote endpoint.
 
 ```json
 {
-  "data": {
-    "as_of": "2025-01-10",
-    "prices": [
-      { "symbol": "COMB.N0000", "close": 120 },
-      { "symbol": "JKH.N0000", "close": null }
-    ]
-  }
+  "as_of": "2025-01-10",
+  "prices": [
+    { "symbol": "COMB.N0000", "close": 120 },
+    { "symbol": "JKH.N0000", "close": null }
+  ]
 }
 ```
 
@@ -122,22 +127,26 @@ Valuation asks "what did this security close at *on* this session", because
 §3.4 requires every position in one response to share one date, and carrying a
 previous day's close forward for a thinly traded symbol would mix dates across
 positions without saying so. The two questions have different answers on exactly
-the days it matters, so they get different endpoints.
+the days it matters, so they stay two separate calls — valuation is never the
+quote applied in a loop.
 
-- `symbols` is optional. Absent or empty returns the session with an empty
-  `prices` array, which is how a portfolio holding nothing still reports an
-  `as_of`. At most 200 symbols per request.
+- The session is resolved once per valuation, which is what makes the
+  single-session rule structural rather than something each caller maintains.
+- An empty symbol list returns the session with an empty `prices` array, which
+  is how a portfolio holding nothing still reports an `as_of`.
 - `as_of` is optional and follows the market-data bounds contract: a date
-  outside the available range is `400 VALIDATION_FAILED`, and a weekend or
-  holiday settles back to the preceding session. Omitted means the latest
-  session.
+  outside the available range is `400 VALIDATION_FAILED` on the §7 route that
+  accepted it, and a weekend or holiday settles back to the preceding session.
+  Omitted means the latest session.
 - `as_of` is `null` when no price data exists at all.
-- `prices` carries one entry per requested symbol, ordered by symbol ascending.
-  `close` is `null` when the symbol is unknown or did not trade on the effective
+- Symbols are matched case-insensitively, so `prices` carries one entry per
+  *distinct* symbol requested: asking for `comb.n0000` and `COMB.N0000` returns
+  one entry, not two. A known symbol is echoed back in its canonical stored
+  form; an unknown one has no canonical form, so the caller's own spelling is
+  returned. Entries are ordered ascending by the symbol as returned.
+- `close` is `null` when the symbol is unknown or did not trade on the effective
   session. Both are the same outcome to the caller — §7 has no
-  `SECURITY_NOT_FOUND` — so this endpoint does not distinguish them.
-
-Unexpected market-data failures return `503 DEPENDENCY_UNAVAILABLE`, as in §2.3.
+  `SECURITY_NOT_FOUND` — so this call does not distinguish them.
 
 ## 3. Precision, rounding and fees
 
@@ -251,7 +260,10 @@ an opaque 8–128 character printable ASCII value; UUIDs are recommended.
 - Same key and different request returns `409 IDEMPOTENCY_KEY_REUSED`.
 - Keys are retained for the life of the created portfolio or order.
 - Boundary validation failures and transient dependency failures are not stored,
-  so a corrected request or safe retry can reuse the key.
+  so a corrected request or safe retry can reuse the key. A transient failure is
+  one that produced no auditable result — since ADR 0009 that means the
+  datastore, not a service call, because there is no longer a service call in
+  the order path.
 - Domain rejections are stored because the rejected order is an auditable
   result.
 
@@ -748,7 +760,7 @@ unchanged.
 | 422 | `SECURITY_NOT_TRADABLE` | Estimate targets a suspended or delisted security |
 | 422 | `PRICE_UNAVAILABLE` | Estimate or valuation has no usable close |
 | 422 | `STALE_PRICE` | Estimate quote is older than the effective market session |
-| 503 | `DEPENDENCY_UNAVAILABLE` | `market-trading` timed out or returned an unexpected failure |
+| 503 | `DEPENDENCY_UNAVAILABLE` | A datastore the request needs was unavailable; the request is safe to retry |
 
 ### 9.2 Persisted order rejections
 
@@ -756,26 +768,35 @@ Order submission returns a `201` rejected order for expected domain outcomes,
 as defined in §6.2. This is distinct from an error envelope because the order
 identifier and rejection are part of the user's auditable history.
 
-## 10. Schema changes required before implementation
+## 10. Persistence
 
-The initial schema is a starting point, not the final v1 persistence contract.
-Implementation tickets must add migrations for these gaps:
+These tables live in `market_data`, created by the `PaperTradingTables`
+migration: `virtual_portfolios`, `paper_orders`, `fills`, `fill_fees`,
+`position_lots`, `lot_disposals`, `cash_transactions` and
+`idempotency_records`.
 
-1. Store canonical `symbol` on orders, fills and lots. The current
-   cross-service `security_id` cannot be resolved through the public market API
-   and violates the identifier boundary.
-2. Add persistent idempotency records with user, route, key, request hash,
-   response status/body and optional created resource id.
-3. Add a stable nullable `rejection_code` to paper orders; safe display text is
+They carry the six properties this contract requires, all of which shipped with
+TIQ-128:
+
+1. Canonical `symbol` on orders, fills and lots. The market-data uuid is not
+   stored, so every identifier in a response is resolvable through the public
+   market API.
+2. Persistent idempotency records with user, route, key, request hash, response
+   status/body and optional created resource id.
+3. A stable nullable `rejection_code` on paper orders; safe display text is
    mapped in application code.
-4. Add sell-to-lot disposal rows containing sell fill, source lot, quantity and
-   allocated cost so FIFO and realized P/L are auditable.
-5. Preserve original and remaining lot cost at 4 decimal places so final-lot
-   remainder allocation is exact.
-6. Add uniqueness and check constraints needed to prevent duplicate fill,
-   opening-cash and idempotency records.
+4. Sell-to-lot disposal rows carrying sell fill, source lot, quantity and
+   allocated cost, so FIFO and realized P/L are auditable.
+5. Original and remaining lot cost at 4 decimal places, so final-lot remainder
+   allocation is exact.
+6. Uniqueness and check constraints preventing duplicate fill, opening-cash and
+   idempotency records.
 
-Existing migrations are never edited after they have shipped; these changes
+`user_id` is a plain uuid with no foreign key to `auth.users` — see §1 and ADR
+0009. Every other relationship in the set is a real foreign key within
+`market_data`.
+
+Existing migrations are never edited after they have shipped; further changes
 belong in new forward migrations.
 
 ## 11. Out of scope
