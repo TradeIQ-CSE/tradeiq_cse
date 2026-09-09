@@ -22,10 +22,10 @@ service that authenticates credentials and the only one that issues tokens, and
 no other service reads `auth.users`.
 
 Verifying an access token is separate from issuing one. Any guarded service
-checks the signature and claims itself, against the shared `JWT_SECRET` — today
+checks the signature and claims itself, against a public key it is given — today
 that is `market-trading`, on every paper-trading and backtest route. It takes the
 `user_id` from the verified claims and never calls back to `identity-auth` to do
-so.
+so, and it holds no key that could sign a token of its own.
 
 Out of scope for v1: email verification and password reset (the `auth.email_tokens`
 table exists but has no mail provider behind it), OAuth/social login, multi-factor
@@ -38,7 +38,7 @@ Two credentials with deliberately different properties:
 
 | | Access token | Refresh token |
 |---|---|---|
-| Format | JWT, HS256 | Opaque 256-bit random value, base64url |
+| Format | JWT, RS256 | Opaque 256-bit random value, base64url |
 | Lifetime | 5 minutes (`AUTH_ACCESS_TOKEN_TTL`) | 15 days (`AUTH_REFRESH_TOKEN_TTL`) |
 | Transport | JSON response body | `Set-Cookie`, `HttpOnly` |
 | Client storage | Memory only — never `localStorage` | Cookie jar; unreadable to JavaScript |
@@ -48,6 +48,24 @@ Two credentials with deliberately different properties:
 The split is the point. The access token is stateless and cheap to verify on every
 request, so it is kept short-lived because it cannot be withdrawn. The refresh token
 is long-lived but revocable, and never exposed to page JavaScript.
+
+`identity-auth` holds the RS256 private key and is the only thing in the system
+that can mint an access token. Every other service is given the public half and
+can do nothing but check a signature, so a read-only disclosure of a verifier's
+environment yields no ability to impersonate anyone. The token header names the
+key it was signed with:
+
+```json
+{ "alg": "RS256", "typ": "JWT", "kid": "<base64url sha256 of the SPKI DER>" }
+```
+
+`kid` is derived from the key rather than configured beside it, so the two
+cannot drift apart. A verifier looks the value up in the keys it was given and
+refuses the token when it names one it does not hold — the `kid` chooses among
+configured keys, it is never itself trusted. `alg` is likewise pinned to RS256
+rather than read from the token: a verifier that honoured the header would
+accept the same token re-signed HS256 with the published public key as the
+HMAC secret, which is the whole authority the split was made to remove.
 
 ### 2.1 Access token claims
 
@@ -270,7 +288,8 @@ Byte-identical to the response for a real account with the wrong password.
 
 | Variable | Default | Notes |
 |---|---|---|
-| `JWT_SECRET` | — | Required. Signs access tokens here and verifies them in market-trading, so both services need the same value. Under `NODE_ENV=production` it must be at least 32 characters, contain at least 12 distinct characters, and not be the development default shipped in `.env.example`; each is refused at boot. The variety floor rejects a short secret padded out to clear the length rule — it is not a measure of entropy, so generate a real one: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. Any encoding is accepted. |
+| `AUTH_JWT_PRIVATE_KEY` | — | Required. The RS256 key access tokens are signed with: a base64-encoded PKCS#8 PEM holding an RSA private key of at least 2048 bits. It belongs to this service alone — a verifier is given the public half instead. A malformed, undersized or non-RSA value is refused at boot in every environment; the keypair published in `.env.example` is refused additionally under `NODE_ENV=production`. |
+| `AUTH_JWT_PUBLIC_KEYS` | — | A comma-separated list of base64-encoded SPKI PEMs. **Required in `market-trading`**, which has nothing else to verify with. **Optional here**, where the signing key's own public half is always accepted without being listed: set it only during a rotation, so `GET /auth/me` keeps accepting tokens signed with the outgoing key. Same boot-time checks as above, plus a rejection of the same key listed twice. |
 | `AUTH_ACCESS_TOKEN_TTL` | `5m` | `expiresIn` on issued access tokens. |
 | `AUTH_REFRESH_TOKEN_TTL` | `15d` | Refresh row lifetime and cookie `Max-Age`. |
 | `AUTH_EMAIL_ENCRYPTION_KEY` | — | Required. 32 bytes, base64. Rotating it orphans existing rows. |
@@ -287,6 +306,27 @@ reason — a sub-second refresh lifetime makes `expires_at` equal `issued_at`,
 which the table's check constraint refuses. The digit ceiling covers the other
 end: a longer run of digits overflows into an expiry no `Date` can represent,
 and failing at startup beats failing at the first signup.
+
+### 8.1 Rotating the signing key
+
+The list in `AUTH_JWT_PUBLIC_KEYS` exists so a rotation costs no sessions. Each
+step leaves every token already in a client's hands valid:
+
+1. **Add the incoming public key** to `AUTH_JWT_PUBLIC_KEYS` in `market-trading`
+   and deploy. It now accepts both keys and is still signed for by neither.
+2. **Swap `AUTH_JWT_PRIVATE_KEY`** in `identity-auth`, adding the *outgoing*
+   public key to its own `AUTH_JWT_PUBLIC_KEYS` at the same time, and deploy.
+   New tokens carry the new `kid`; tokens signed a minute ago still verify on
+   both services.
+3. **Wait out `AUTH_ACCESS_TOKEN_TTL`** — five minutes by default. After it, no
+   token signed with the outgoing key exists.
+4. **Drop the outgoing key** from both services and deploy.
+
+Doing step 2 before step 1 rejects every token issued between the two deploys.
+Skipping step 3 rejects tokens that had not yet expired. Neither is recoverable
+by retrying: an access token cannot be re-signed, only re-issued through
+`POST /auth/refresh`, which the client only attempts once the current one
+expires.
 
 ## 9. Consequences
 

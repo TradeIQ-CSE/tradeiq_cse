@@ -1,7 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { JwtModule, JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
+import { createTestSigner, TestSigner } from './access-token';
+import { AccessTokenKeyring } from '../src/auth/access-token-keyring';
 import { JwtAuthGuard } from '../src/auth/jwt-auth.guard';
 import { BacktestRunsController } from '../src/backtest-runs/backtest-runs.controller';
 import { BacktestRunsService } from '../src/backtest-runs/backtest-runs.service';
@@ -11,8 +14,9 @@ import { BacktestResult } from '../src/backtest-runs/backtest-result.entity';
 import { configureMarketTradingApp } from '../src/app.setup';
 
 // Signed here rather than mocked: these tests are the reason the routes are
-// guarded, so they go through the real guard with real tokens.
-const TEST_SECRET = 'e2e-only-secret';
+// guarded, so they go through the real guard with real tokens — and, since
+// TIQ-133, with a real RS256 keypair generated for this suite.
+const signer: TestSigner = createTestSigner();
 const OWNER = '2ed6b5f9-c9fa-41e9-9b34-a39aef711f4e';
 const OTHER_USER = '9f1c0b52-6d3e-4a70-9a1e-2b4c8d5e7f01';
 
@@ -126,9 +130,7 @@ describe('Backtest Runs (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
         JwtModule.register({
-          secret: TEST_SECRET,
-          signOptions: { algorithm: 'HS256', expiresIn: '5m' },
-          verifyOptions: { algorithms: ['HS256'] },
+          verifyOptions: { algorithms: ['RS256'] },
         }),
       ],
       controllers: [BacktestRunsController],
@@ -136,15 +138,23 @@ describe('Backtest Runs (e2e)', () => {
         BacktestRunsService,
         JwtAuthGuard,
         {
+          // The guard picks its verification key out of the ring by the
+          // token's `kid`. Built from the real class over a stub config so the
+          // lookup under test is the one that runs in production.
+          provide: AccessTokenKeyring,
+          useValue: new AccessTokenKeyring({
+            getOrThrow: () => signer.publicKeys,
+          } as unknown as ConfigService),
+        },
+        {
           provide: BacktestRunsRepository,
           useValue: mockRepo,
         },
       ],
     }).compile();
 
-    const jwt = moduleFixture.get(JwtService);
-    ownerAuth = `Bearer ${jwt.sign({ sub: OWNER })}`;
-    otherAuth = `Bearer ${jwt.sign({ sub: OTHER_USER })}`;
+    ownerAuth = `Bearer ${signer.sign({ sub: OWNER })}`;
+    otherAuth = `Bearer ${signer.sign({ sub: OTHER_USER })}`;
 
     app = moduleFixture.createNestApplication<NestExpressApplication>();
     configureMarketTradingApp(app);

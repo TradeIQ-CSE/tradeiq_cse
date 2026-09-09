@@ -9,7 +9,7 @@ import {
   Min,
   validateSync,
 } from 'class-validator';
-import { StrongInProduction } from './jwt-secret.validator';
+import { IsAccessTokenPublicKeyRing } from './jwt-keys';
 
 class EnvironmentVariables {
   @IsOptional()
@@ -26,16 +26,16 @@ class EnvironmentVariables {
   @IsNotEmpty()
   MARKET_DATA_DATABASE_URL!: string;
 
-  //: The access-token secret identity-auth signs with; the same JWT_SECRET both
-  //: services read. Required, and required to match — a market-trading that
-  //: boots without it would reject every authenticated request at runtime
-  //: rather than failing here. Under HS256 it also signs, so a guessable value
-  //: lets anyone mint a token for any user id: @StrongInProduction rejects the
-  //: shipped development default and anything too short to be a real key.
+  //: The public keys access tokens are verified against, comma-separated
+  //: base64-encoded SPKI PEMs. Required, and required to include whichever key
+  //: identity-auth is signing with — a market-trading that boots without a
+  //: usable key would reject every authenticated request at runtime rather
+  //: than failing here. No private key appears in this service's environment,
+  //: so nothing it holds can mint a token (docs/api/auth-v1.md §8).
   @IsString()
   @IsNotEmpty()
-  @StrongInProduction()
-  JWT_SECRET!: string;
+  @IsAccessTokenPublicKeyRing()
+  AUTH_JWT_PUBLIC_KEYS!: string;
 
   //: Comma-separated browser origins allowed to call this API.
   @IsOptional()

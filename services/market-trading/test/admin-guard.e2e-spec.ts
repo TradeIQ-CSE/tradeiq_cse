@@ -1,10 +1,10 @@
 import { randomUUID } from 'crypto';
 import { Controller, Get, Module, UseGuards } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
+import { createTestSigner, TestSigner } from './access-token';
 import { AdminGuard } from '../src/auth/admin.guard';
 import { AuthModule } from '../src/auth/auth.module';
 import { JwtAuthGuard } from '../src/auth/jwt-auth.guard';
@@ -40,15 +40,17 @@ class AdminGuardTestModule {}
 
 describe('AdminGuard (e2e)', () => {
   let app: NestExpressApplication;
-  let jwtService: JwtService;
+  let signer: TestSigner;
 
   const sign = (role?: string) =>
-    jwtService.signAsync(
+    signer.sign(
       role === undefined ? { sub: randomUUID() } : { sub: randomUUID(), role },
-      { expiresIn: '5m' },
     );
 
   beforeAll(async () => {
+    signer = createTestSigner();
+    process.env.AUTH_JWT_PUBLIC_KEYS = signer.publicKeys;
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AdminGuardTestModule],
     }).compile();
@@ -56,7 +58,6 @@ describe('AdminGuard (e2e)', () => {
     app = moduleFixture.createNestApplication<NestExpressApplication>();
     configureMarketTradingApp(app);
     await app.init();
-    jwtService = app.get(JwtService);
   });
 
   afterAll(async () => {
@@ -66,7 +67,7 @@ describe('AdminGuard (e2e)', () => {
   it('admits an admin token', async () => {
     const response = await request(app.getHttpServer())
       .get('/test-only/admin')
-      .set('Authorization', `Bearer ${await sign('admin')}`)
+      .set('Authorization', `Bearer ${sign('admin')}`)
       .expect(200);
 
     expect(response.body).toEqual({ data: { ok: true } });
@@ -77,7 +78,7 @@ describe('AdminGuard (e2e)', () => {
   it('refuses an investor token with a 403 FORBIDDEN envelope', async () => {
     const response = await request(app.getHttpServer())
       .get('/test-only/admin')
-      .set('Authorization', `Bearer ${await sign('investor')}`)
+      .set('Authorization', `Bearer ${sign('investor')}`)
       .expect(403);
 
     expect(response.body.error).toMatchObject({ code: 'FORBIDDEN' });
@@ -93,7 +94,7 @@ describe('AdminGuard (e2e)', () => {
   ])('refuses a token with %s', async (_label, role) => {
     await request(app.getHttpServer())
       .get('/test-only/admin')
-      .set('Authorization', `Bearer ${await sign(role)}`)
+      .set('Authorization', `Bearer ${sign(role)}`)
       .expect(403);
   });
 
@@ -103,7 +104,7 @@ describe('AdminGuard (e2e)', () => {
   ])('does not grant admin from %s', async (_label, header) => {
     await request(app.getHttpServer())
       .get('/test-only/admin')
-      .set('Authorization', `Bearer ${await sign('investor')}`)
+      .set('Authorization', `Bearer ${sign('investor')}`)
       .set(header, 'admin')
       .expect(403);
   });

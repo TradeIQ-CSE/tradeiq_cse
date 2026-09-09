@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { createHash } from 'crypto';
+import { createHash, createPublicKey } from 'crypto';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module';
@@ -75,6 +75,37 @@ describe('Auth (e2e)', () => {
         .get('/auth/me')
         .set('Authorization', `Bearer ${response.body.data.access_token}`)
         .expect(200);
+    });
+
+    // TIQ-133 — the issuer half of RS256. The header is what every verifier
+    // reads before it does anything else: `alg` decides how the signature is
+    // checked and `kid` decides which key it is checked against, so a token
+    // issued without them is one market-trading refuses.
+    //
+    // `kid` is asserted against the key derived from AUTH_JWT_PRIVATE_KEY
+    // rather than a literal, because a literal would still pass if the service
+    // stamped a constant that had drifted from the key it signs with.
+    it('signs the access token RS256 and names the signing key', async () => {
+      const response = await signup().expect(201);
+      const [encodedHeader] = (response.body.data.access_token as string).split(
+        '.',
+      );
+      const header: unknown = JSON.parse(
+        Buffer.from(encodedHeader, 'base64url').toString('utf8'),
+      );
+
+      const expectedKeyId = createHash('sha256')
+        .update(
+          createPublicKey(
+            Buffer.from(
+              process.env.AUTH_JWT_PRIVATE_KEY as string,
+              'base64',
+            ).toString('utf8'),
+          ).export({ type: 'spki', format: 'der' }),
+        )
+        .digest('base64url');
+
+      expect(header).toMatchObject({ alg: 'RS256', kid: expectedKeyId });
     });
 
     it('never returns the refresh token in the body', async () => {

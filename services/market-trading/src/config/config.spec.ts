@@ -1,21 +1,37 @@
 import appConfig from './app.config';
 import authConfig from './auth.config';
 import databaseConfig from './database.config';
+import { generateKeyPairSync, KeyObject } from 'crypto';
 import { validate } from './env.validation';
 import {
-  DEVELOPMENT_JWT_SECRET,
-  MIN_PRODUCTION_JWT_SECRET_DISTINCT_CHARACTERS,
-  MIN_PRODUCTION_JWT_SECRET_LENGTH,
-} from './jwt-secret.validator';
+  DEVELOPMENT_JWT_PUBLIC_KEY,
+  MIN_ACCESS_TOKEN_KEY_BITS,
+} from './jwt-keys';
 
 const VALID_URL = 'postgresql://u:p@h:5432/db';
-const VALID_SECRET = 'test-secret';
+
+function encodePublicKey(key: KeyObject): string {
+  return Buffer.from(
+    key.export({ type: 'spki', format: 'pem' }) as string,
+  ).toString('base64');
+}
+
+function rsaPublicKey(bits: number): string {
+  return encodePublicKey(
+    generateKeyPairSync('rsa', { modulusLength: bits }).publicKey,
+  );
+}
+
+// Generated once for the file: an RSA keygen is slow enough that doing it per
+// case would dominate the suite's runtime.
+const VALID_KEY = rsaPublicKey(MIN_ACCESS_TOKEN_KEY_BITS);
+const SECOND_KEY = rsaPublicKey(MIN_ACCESS_TOKEN_KEY_BITS);
 
 // Every environment below must carry both required variables, so the minimum
 // is named once rather than repeated per case.
 const MINIMAL_ENV = {
   MARKET_DATA_DATABASE_URL: VALID_URL,
-  JWT_SECRET: VALID_SECRET,
+  AUTH_JWT_PUBLIC_KEYS: VALID_KEY,
 };
 
 describe('config', () => {
@@ -64,14 +80,14 @@ describe('config', () => {
   });
 
   describe('authConfig', () => {
-    it('exposes the shared access-token secret', () => {
-      process.env.JWT_SECRET = VALID_SECRET;
-      expect(authConfig().jwtSecret).toBe(VALID_SECRET);
+    it('exposes the access-token public keys', () => {
+      process.env.AUTH_JWT_PUBLIC_KEYS = VALID_KEY;
+      expect(authConfig().publicKeys).toBe(VALID_KEY);
     });
 
-    it('falls back to an empty secret so a missing value fails validation, not startup', () => {
-      delete process.env.JWT_SECRET;
-      expect(authConfig().jwtSecret).toBe('');
+    it('falls back to an empty ring so a missing value fails validation, not startup', () => {
+      delete process.env.AUTH_JWT_PUBLIC_KEYS;
+      expect(authConfig().publicKeys).toBe('');
     });
   });
 
@@ -86,12 +102,13 @@ describe('config', () => {
     it('accepts a minimal valid environment', () => {
       const validated = validate({ ...MINIMAL_ENV });
       expect(validated.MARKET_DATA_DATABASE_URL).toBe(VALID_URL);
-      expect(validated.JWT_SECRET).toBe(VALID_SECRET);
+      expect(validated.AUTH_JWT_PUBLIC_KEYS).toBe(VALID_KEY);
     });
 
-    // The guard verifies with this secret, so booting without it would turn
-    // every authenticated request into a 401 that looks like a client fault.
-    it.each(['MARKET_DATA_DATABASE_URL', 'JWT_SECRET'])(
+    // The guard verifies against these keys, so booting without them would
+    // turn every authenticated request into a 401 that looks like a client
+    // fault.
+    it.each(['MARKET_DATA_DATABASE_URL', 'AUTH_JWT_PUBLIC_KEYS'])(
       'throws when %s is missing',
       (key) => {
         const env: Record<string, string> = { ...MINIMAL_ENV };
@@ -102,110 +119,125 @@ describe('config', () => {
       },
     );
 
-    it('throws when the secret is present but empty', () => {
-      expect(() => validate({ ...MINIMAL_ENV, JWT_SECRET: '' })).toThrow(
-        'Invalid environment configuration',
-      );
+    it('throws when the key ring is present but empty', () => {
+      expect(() =>
+        validate({ ...MINIMAL_ENV, AUTH_JWT_PUBLIC_KEYS: '' }),
+      ).toThrow('Invalid environment configuration');
     });
 
-    // Under HS256 the verification key is also a signing key, so a secret an
-    // attacker can guess or read out of this repository lets them mint a token
-    // for any user id. Production is the only place that matters, and the only
-    // place the check applies: dev and CI share one well-known value on
-    // purpose, because both services have to be handed the same one.
-    describe('JWT_SECRET strength', () => {
-      // 32 random bytes, base64 — what the command in .env.example prints.
-      // Sliced rather than padded so the length cases stay high-entropy and
-      // fail for the one reason they are testing.
-      const STRONG = 'Zq4vN8vLmR2xKfTb9wYhCd3JgEuPsA6nQzXr1TkVoBM=';
-      const AT_MINIMUM = STRONG.slice(0, MIN_PRODUCTION_JWT_SECRET_LENGTH);
-      const ONE_SHORT = STRONG.slice(0, MIN_PRODUCTION_JWT_SECRET_LENGTH - 1);
-
-      // Long enough, but sitting on the variety floor from either side. Kept
-      // as literals because a generated string with an exact distinct count is
-      // harder to read than it is worth; the assertion below pins them to the
-      // constant so raising the floor fails loudly here.
-      const AT_FLOOR = 'a1b2c3d4e5f6a2b3c4d5e6f1a3b4c5d6';
-      const BELOW_FLOOR = 'a1b2c3d4e5f5a2b3c4d5e5f1a3b4c5d5';
-
-      it('has boundary fixtures that straddle the floor', () => {
-        expect(AT_FLOOR.length).toBeGreaterThanOrEqual(
-          MIN_PRODUCTION_JWT_SECRET_LENGTH,
-        );
-        expect(BELOW_FLOOR.length).toBeGreaterThanOrEqual(
-          MIN_PRODUCTION_JWT_SECRET_LENGTH,
-        );
-        expect(new Set(AT_FLOOR).size).toBe(
-          MIN_PRODUCTION_JWT_SECRET_DISTINCT_CHARACTERS,
-        );
-        expect(new Set(BELOW_FLOOR).size).toBe(
-          MIN_PRODUCTION_JWT_SECRET_DISTINCT_CHARACTERS - 1,
-        );
+    // A verifier holds no signing key, so the old strength rules — length and
+    // character variety — no longer apply: an RSA public key is not something
+    // an attacker guesses. What is left is that the key be well formed, long
+    // enough that the signature itself is not the weak part, and not the
+    // published development pair, whose private half anyone can read out of
+    // this repository and sign with.
+    describe('AUTH_JWT_PUBLIC_KEYS', () => {
+      it('accepts several comma-separated keys, so a rotation can be staged', () => {
+        const ring = `${VALID_KEY},${SECOND_KEY}`;
+        expect(
+          validate({ ...MINIMAL_ENV, AUTH_JWT_PUBLIC_KEYS: ring })
+            .AUTH_JWT_PUBLIC_KEYS,
+        ).toBe(ring);
       });
 
-      // DEVELOPMENT_JWT_SECRET is deliberately longer than the minimum and has
-      // 20 distinct characters, so neither the length nor the variety rule
-      // touches it. It has to be refused by name: .env.example prints it,
-      // which makes it public knowledge.
-      //
-      // The two padded cases are the bypass the length rule invites — clearing
-      // 32 characters by repeating one, or by tacking x's onto a short secret.
-      it.each([
-        ['the published development default', DEVELOPMENT_JWT_SECRET],
-        ['the previous default', 'changeme'],
-        ['a high-entropy secret one character under the minimum', ONE_SHORT],
-        [
-          'one character repeated to the minimum length',
-          'k'.repeat(MIN_PRODUCTION_JWT_SECRET_LENGTH),
-        ],
-        [
-          'a short secret padded out to the minimum length',
-          `changeme${'x'.repeat(MIN_PRODUCTION_JWT_SECRET_LENGTH - 8)}`,
-        ],
-        ['a secret one distinct character under the floor', BELOW_FLOOR],
-      ])('rejects %s in production', (_label, secret) => {
+      it('tolerates whitespace around the separator', () => {
         expect(() =>
           validate({
             ...MINIMAL_ENV,
-            NODE_ENV: 'production',
-            JWT_SECRET: secret,
+            AUTH_JWT_PUBLIC_KEYS: `${VALID_KEY} , ${SECOND_KEY}`,
+          }),
+        ).not.toThrow();
+      });
+
+      // The same key twice is either a paste error or a rotation whose new
+      // value never went in. Both leave the ring looking staged when it is
+      // not, so the boot fails rather than quietly holding one key.
+      it('rejects the same key listed twice', () => {
+        expect(() =>
+          validate({
+            ...MINIMAL_ENV,
+            AUTH_JWT_PUBLIC_KEYS: `${VALID_KEY},${VALID_KEY}`,
           }),
         ).toThrow('Invalid environment configuration');
       });
 
-      // Both encodings an operator is likely to be handed. Hex is the tighter
-      // of the two against the distinct-character floor (16 possible
-      // characters, not 64), so it is here to pin that the floor leaves room.
       it.each([
-        ['exactly the minimum length', AT_MINIMUM],
-        ['base64', STRONG],
+        ['not base64-encoded at all', 'not-a-key'],
         [
-          'hex',
-          'f3a9c1e05b7d248fa6b0139e5c8247dbe1a705f92c6b3d84a0e15792cb6f30d4',
+          'base64 of something that is not a PEM',
+          Buffer.from('nope').toString('base64'),
         ],
-        // Exactly at the floor. Pins where the boundary sits, not that this is
-        // a good secret — a 32-character string with only 12 distinct
-        // characters has to repeat, and counting characters cannot see that.
-        ['long enough with exactly the minimum variety', AT_FLOOR],
-      ])('accepts a %s secret in production', (_label, secret) => {
-        const validated = validate({
-          ...MINIMAL_ENV,
-          NODE_ENV: 'production',
-          JWT_SECRET: secret,
-        });
-        expect(validated.JWT_SECRET).toBe(secret);
+        ['a truncated PEM', VALID_KEY.slice(0, 40)],
+        ['one good key and one bad', `${VALID_KEY},not-a-key`],
+      ])('rejects a ring that is %s', (_label, ring) => {
+        expect(() =>
+          validate({ ...MINIMAL_ENV, AUTH_JWT_PUBLIC_KEYS: ring }),
+        ).toThrow('Invalid environment configuration');
+      });
+
+      // Size and type are checked in every environment, not just production:
+      // a key this service cannot verify against is a boot failure whatever
+      // the environment, and without the check it would present as every
+      // authenticated request returning 401.
+      it('rejects an RSA key below the minimum size', () => {
+        expect(() =>
+          validate({
+            ...MINIMAL_ENV,
+            AUTH_JWT_PUBLIC_KEYS: rsaPublicKey(1024),
+          }),
+        ).toThrow('Invalid environment configuration');
+      });
+
+      it('rejects a key of the wrong type', () => {
+        const ec = encodePublicKey(
+          generateKeyPairSync('ec', { namedCurve: 'P-256' }).publicKey,
+        );
+        expect(() =>
+          validate({ ...MINIMAL_ENV, AUTH_JWT_PUBLIC_KEYS: ec }),
+        ).toThrow('Invalid environment configuration');
+      });
+
+      // Its private half is printed in .env.example, so anyone can mint a
+      // token this key verifies. It is refused by identity — nothing about its
+      // size or shape distinguishes it from a real key.
+      it('rejects the published development key in production', () => {
+        expect(() =>
+          validate({
+            ...MINIMAL_ENV,
+            NODE_ENV: 'production',
+            AUTH_JWT_PUBLIC_KEYS: DEVELOPMENT_JWT_PUBLIC_KEY,
+          }),
+        ).toThrow('Invalid environment configuration');
+      });
+
+      it('rejects it even alongside a real key', () => {
+        expect(() =>
+          validate({
+            ...MINIMAL_ENV,
+            NODE_ENV: 'production',
+            AUTH_JWT_PUBLIC_KEYS: `${VALID_KEY},${DEVELOPMENT_JWT_PUBLIC_KEY}`,
+          }),
+        ).toThrow('Invalid environment configuration');
+      });
+
+      it('accepts a generated key in production', () => {
+        expect(() =>
+          validate({ ...MINIMAL_ENV, NODE_ENV: 'production' }),
+        ).not.toThrow();
       });
 
       // `docker compose up` from a clean checkout must keep working.
       it.each(['development', 'test'])(
-        'accepts the development default when NODE_ENV=%s',
+        'accepts the development key when NODE_ENV=%s',
         (nodeEnv) => {
           const validated = validate({
             ...MINIMAL_ENV,
             NODE_ENV: nodeEnv,
-            JWT_SECRET: DEVELOPMENT_JWT_SECRET,
+            AUTH_JWT_PUBLIC_KEYS: DEVELOPMENT_JWT_PUBLIC_KEY,
           });
-          expect(validated.JWT_SECRET).toBe(DEVELOPMENT_JWT_SECRET);
+          expect(validated.AUTH_JWT_PUBLIC_KEYS).toBe(
+            DEVELOPMENT_JWT_PUBLIC_KEY,
+          );
         },
       );
     });
