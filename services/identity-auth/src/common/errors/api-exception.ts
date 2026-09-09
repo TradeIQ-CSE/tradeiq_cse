@@ -5,6 +5,7 @@ import { HttpException, HttpStatus } from '@nestjs/common';
 // introduce codes from those registries.
 export type ApiErrorCode =
   | 'UNAUTHENTICATED'
+  | 'FORBIDDEN'
   | 'NOT_FOUND'
   | 'VALIDATION_FAILED'
   | 'INVALID_CREDENTIALS'
@@ -59,6 +60,20 @@ export class UnauthenticatedException extends ApiException {
       HttpStatus.UNAUTHORIZED,
       'UNAUTHENTICATED',
       'Authentication is required.',
+    );
+  }
+}
+
+// docs/api/error-envelope.md §2 — 403 is "authenticated but not allowed", which
+// is a different answer from 401: the caller's token is valid and re-presenting
+// it will not help. The client is meant to hide the affordance rather than
+// retry or re-authenticate.
+export class ForbiddenException extends ApiException {
+  constructor() {
+    super(
+      HttpStatus.FORBIDDEN,
+      'FORBIDDEN',
+      'You do not have permission to perform this action.',
     );
   }
 }

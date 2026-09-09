@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import { AdminGuard } from './admin.guard';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 // Verification only. The secret is the one identity-auth signs with: both
@@ -23,7 +24,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
       }),
     }),
   ],
-  providers: [JwtAuthGuard],
-  exports: [JwtAuthGuard, JwtModule],
+  providers: [JwtAuthGuard, AdminGuard],
+  exports: [JwtAuthGuard, AdminGuard, JwtModule],
 })
 export class AuthModule {}

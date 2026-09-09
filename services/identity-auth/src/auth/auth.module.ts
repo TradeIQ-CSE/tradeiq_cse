@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { EmailCipher } from '../common/crypto/email-cipher';
 import { RefreshToken } from '../entities/refresh-token.entity';
 import { User } from '../entities/user.entity';
+import { AdminGuard } from './admin.guard';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -39,7 +40,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
   // JwtAuthGuard is exported rather than registered as an APP_GUARD so
   // controllers opt in with @UseGuards. Global so it resolves in every feature
   // module without each one importing AuthModule.
-  providers: [AuthService, EmailCipher, JwtAuthGuard],
-  exports: [JwtModule, JwtAuthGuard],
+  providers: [AuthService, EmailCipher, JwtAuthGuard, AdminGuard],
+  exports: [JwtModule, JwtAuthGuard, AdminGuard],
 })
 export class AuthModule {}

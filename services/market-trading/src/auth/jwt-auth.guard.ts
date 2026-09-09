@@ -3,13 +3,25 @@ import { JwtService } from '@nestjs/jwt';
 import { isUUID } from 'class-validator';
 import { Request } from 'express';
 import { UnauthenticatedException } from '../common/errors/api-exception';
-import { AuthenticatedUser } from './authenticated-user';
+import { AuthenticatedUser, UserRole } from './authenticated-user';
 
 type AuthenticatedRequest = Request & { user?: AuthenticatedUser };
 
 interface AccessTokenPayload {
   sub?: unknown;
   exp?: unknown;
+  role?: unknown;
+}
+
+// docs/api/auth-v1.md §2.1 — the role claim is authorization input, so it fails
+// closed: only the exact string 'admin' grants admin, and a missing, misspelt,
+// differently cased or non-string claim is an investor.
+//
+// Written as "is it admin" rather than "is it not investor" on purpose. The
+// inverted form reads the same until a token arrives carrying role 'superuser'
+// or role 123, at which point it grants admin to a value nobody defined.
+function toRole(claim: unknown): UserRole {
+  return claim === 'admin' ? 'admin' : 'investor';
 }
 
 // market-trading verifies access tokens; it never issues them. identity-auth
@@ -52,7 +64,7 @@ export class JwtAuthGuard implements CanActivate {
         throw new UnauthenticatedException();
       }
 
-      request.user = { userId: payload.sub };
+      request.user = { userId: payload.sub, role: toRole(payload.role) };
       return true;
     } catch {
       throw new UnauthenticatedException();
