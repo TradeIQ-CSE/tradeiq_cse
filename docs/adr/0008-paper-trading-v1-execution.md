@@ -17,16 +17,20 @@ The initial auth schema contains the main portfolio and fill tables, but it
 stores market UUIDs that the market API deliberately does not expose and lacks
 idempotency and sell-to-lot allocation records.
 
-> **Partially superseded.** The first two bullets no longer hold: ADR 0009
-> gives `market-trading` the user-specific paper-trading records, and the REST
-> execution quote is now an in-process call. Every execution rule below —
-> dates, fees, FIFO, rounding, idempotency — stands unchanged.
+> **Partially superseded.** The two bullets marked below no longer hold. Every
+> execution rule after them — dates, fees, FIFO, rounding, idempotency — stands
+> unchanged, and is now enforced inside `market-trading`.
 
 ## Decision
 
-- `identity-auth` owns every user-specific paper-trading record.
-- It receives prices only through a typed REST execution quote from
-  `market-trading`; canonical symbols cross the boundary, not database UUIDs.
+- ~~`identity-auth` owns every user-specific paper-trading record.~~
+  **Superseded by [ADR 0009](./0009-market-trading-owns-paper-trading.md):**
+  `market-trading` owns them.
+- ~~It receives prices only through a typed REST execution quote from
+  `market-trading`; canonical symbols cross the boundary, not database UUIDs.~~
+  **Superseded by [ADR 0009](./0009-market-trading-owns-paper-trading.md):** the
+  quote is an in-process call. Canonical symbols rather than database UUIDs
+  remains true, and is now a storage rule — see paper-trading-v1.md §1.
 - V1 supports immediate all-or-rejected market orders only.
 - Execution uses the unadjusted close from the latest completed EOD session.
   Weekend and holiday submissions therefore use the preceding session.

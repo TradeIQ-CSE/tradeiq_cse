@@ -139,12 +139,14 @@ quote applied in a loop.
   accepted it, and a weekend or holiday settles back to the preceding session.
   Omitted means the latest session.
 - `as_of` is `null` when no price data exists at all.
-- `prices` carries one entry per requested symbol, ordered by symbol ascending.
-  Symbols are matched case-insensitively and deduplicated, and the canonical
-  stored form is echoed back. `close` is `null` when the symbol is unknown or
-  did not trade on the effective session. Both are the same outcome to the
-  caller — §7 has no `SECURITY_NOT_FOUND` — so this call does not distinguish
-  them.
+- Symbols are matched case-insensitively, so `prices` carries one entry per
+  *distinct* symbol requested: asking for `comb.n0000` and `COMB.N0000` returns
+  one entry, not two. A known symbol is echoed back in its canonical stored
+  form; an unknown one has no canonical form, so the caller's own spelling is
+  returned. Entries are ordered ascending by the symbol as returned.
+- `close` is `null` when the symbol is unknown or did not trade on the effective
+  session. Both are the same outcome to the caller — §7 has no
+  `SECURITY_NOT_FOUND` — so this call does not distinguish them.
 
 ## 3. Precision, rounding and fees
 
