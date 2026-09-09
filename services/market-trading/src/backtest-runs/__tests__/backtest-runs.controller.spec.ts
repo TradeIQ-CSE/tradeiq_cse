@@ -2,9 +2,15 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { BacktestRunsController } from '../backtest-runs.controller';
 import { BacktestRunsService } from '../backtest-runs.service';
+import { AuthenticatedUser } from '../../auth/authenticated-user';
 import { CreateBacktestRunDto } from '../dto/create-backtest-run.dto';
 
 const OWNER = '2ed6b5f9-c9fa-41e9-9b34-a39aef711f4e';
+
+// The shape JwtAuthGuard puts on the request. These routes are owner-scoped
+// and not role-gated, so the role here is only what a normal signed-in user
+// carries.
+const INVESTOR: AuthenticatedUser = { userId: OWNER, role: 'investor' };
 
 describe('BacktestRunsController', () => {
   let controller: BacktestRunsController;
@@ -35,9 +41,10 @@ describe('BacktestRunsController', () => {
     service.submitRun.mockResolvedValue({ id: 'run-1' });
     const dto = {} as CreateBacktestRunDto;
 
-    await expect(controller.submitRun({ userId: OWNER }, dto)).resolves.toEqual(
-      { id: 'run-1', status: 'queued' },
-    );
+    await expect(controller.submitRun(INVESTOR, dto)).resolves.toEqual({
+      id: 'run-1',
+      status: 'queued',
+    });
     expect(service.submitRun).toHaveBeenCalledWith(dto, OWNER);
   });
 
@@ -50,7 +57,7 @@ describe('BacktestRunsController', () => {
       completedAt: null,
     });
 
-    await controller.getStatus({ userId: OWNER }, 'run-1');
+    await controller.getStatus(INVESTOR, 'run-1');
     expect(service.getRunStatus).toHaveBeenCalledWith('run-1', OWNER);
   });
 
@@ -61,7 +68,7 @@ describe('BacktestRunsController', () => {
       equityCurve: [],
     });
 
-    await controller.getResults({ userId: OWNER }, 'run-1');
+    await controller.getResults(INVESTOR, 'run-1');
     expect(service.getRunResults).toHaveBeenCalledWith('run-1', OWNER);
   });
 

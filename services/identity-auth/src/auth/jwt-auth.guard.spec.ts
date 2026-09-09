@@ -34,7 +34,7 @@ describe('JwtAuthGuard', () => {
 
     await expect(guard.canActivate(createContext(request))).resolves.toBe(true);
     expect(verifyAsync).toHaveBeenCalledWith('signed-token');
-    expect(request.user).toEqual({ userId });
+    expect(request.user).toEqual({ userId, role: 'investor' });
   });
 
   // docs/api/auth-v1.md §2.1 — verifyAsync enforces exp only when the claim is
@@ -101,4 +101,35 @@ describe('JwtAuthGuard', () => {
       expect(request.user).toBeUndefined();
     },
   );
+
+  // docs/api/auth-v1.md §2.1 — the role claim decides authorization, so it is
+  // read strictly: only the exact string 'admin' is admin.
+  //
+  // The uppercase and unknown-string cases are the ones that matter. An
+  // implementation written as `role !== 'investor'` passes every other case
+  // here and silently promotes both of them to admin.
+  it.each([
+    ['admin', 'admin', 'admin'],
+    ['investor', 'investor', 'investor'],
+    ['absent', undefined, 'investor'],
+    ['null', null, 'investor'],
+    ['uppercase ADMIN', 'ADMIN', 'investor'],
+    ['padded " admin "', ' admin ', 'investor'],
+    ['an unknown role', 'superuser', 'investor'],
+    ['a non-string', 1, 'investor'],
+    ['an object', { role: 'admin' }, 'investor'],
+  ])('reads role %s as %s', async (_label, claim, expected) => {
+    const userId = '2ed6b5f9-c9fa-41e9-9b34-a39aef711f4e';
+    const request = {
+      headers: { authorization: 'Bearer signed-token' },
+    } as TestRequest;
+    verifyAsync.mockResolvedValue({
+      sub: userId,
+      exp: FUTURE_EXP,
+      role: claim,
+    });
+
+    await expect(guard.canActivate(createContext(request))).resolves.toBe(true);
+    expect(request.user).toEqual({ userId, role: expected });
+  });
 });

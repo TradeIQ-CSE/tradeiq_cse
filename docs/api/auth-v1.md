@@ -59,6 +59,21 @@ is long-lived but revocable, and never exposed to page JavaScript.
 `sub` is the only identity input the API trusts. A token without an `exp` claim is
 rejected — absence of expiry is treated as invalid, not as "never expires".
 
+`role` is the only authorization input, and it is read strictly: **only the exact
+string `admin` grants admin.** A missing, differently cased, misspelt or
+non-string claim is an investor. Nothing outside the signed token can grant it —
+not a header, query parameter or body field. Guarded services expose this as an
+`AdminGuard`, which answers `403 FORBIDDEN` rather than `401`: the caller is
+authenticated, just not permitted, so re-authenticating would not help.
+
+A role change takes effect on the **next** access token, not immediately.
+`POST /auth/refresh` re-reads the user inside the rotation transaction, so a
+refreshed token always carries the current role — but an access token already in
+a client's hands keeps the old one until it expires. The access-token TTL
+(`AUTH_ACCESS_TOKEN_TTL`, 5 minutes) is therefore the window in which a demoted
+admin retains admin access. Revoking the user's refresh tokens shortens nothing
+inside that window; it only prevents the next rotation.
+
 ### 2.2 Refresh cookie
 
 ```

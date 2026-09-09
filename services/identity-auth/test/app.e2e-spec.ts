@@ -91,7 +91,39 @@ describe('AppModule (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .set('X-User-Id', 'd8e8c6aa-02d5-4b44-8382-c8da8729f540')
       .expect(200)
-      .expect({ userId });
+      .expect({ userId, role: 'investor' });
+  });
+
+  // A token with no role claim is an investor (docs/api/auth-v1.md §2.1), and
+  // the header is ignored the same way X-User-Id is above: neither identity nor
+  // role is ever taken from request input.
+  it('does not take the role from a request header', async () => {
+    const userId = '6fbd34d3-bd63-4fcb-ac7e-3cf92f52b61e';
+    const token = await jwtService.signAsync(
+      { sub: userId },
+      { expiresIn: '5m' },
+    );
+
+    await request(app.getHttpServer())
+      .get('/test/protected')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-User-Role', 'admin')
+      .expect(200)
+      .expect({ userId, role: 'investor' });
+  });
+
+  it('carries an admin role claim through to the current user', async () => {
+    const userId = '6fbd34d3-bd63-4fcb-ac7e-3cf92f52b61e';
+    const token = await jwtService.signAsync(
+      { sub: userId, role: 'admin' },
+      { expiresIn: '5m' },
+    );
+
+    await request(app.getHttpServer())
+      .get('/test/protected')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200)
+      .expect({ userId, role: 'admin' });
   });
 
   it('rejects an expired token with the same safe error', async () => {
