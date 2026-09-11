@@ -1,13 +1,24 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { AppShell } from '../components/layout/AppShell';
+import {
+  AppPage,
+  PageIntro,
+  PageState,
+} from '../components/application/layout/application-layout';
 import { RequireAuth } from '../auth/RequireAuth';
 import { RequireAdmin } from '../auth/RequireAdmin';
 import { useAuth } from '../auth/useAuth';
+import { useTranslation } from 'react-i18next';
 
 const LandingPage = lazy(() =>
   import('../features/landing/LandingPage').then((module) => ({
     default: module.LandingPage,
+  })),
+);
+const HowItWorksPage = lazy(() =>
+  import('../features/landing/HowItWorksPage').then((module) => ({
+    default: module.HowItWorksPage,
   })),
 );
 const MarketsPage = lazy(() =>
@@ -61,9 +72,14 @@ const StatusStep = lazy(() =>
 );
 
 function LoadingFallback() {
+  const { t } = useTranslation();
   return (
-    <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
-      Loading view…
+    <div className="min-h-dvh bg-background-full p-4 sm:p-6">
+      <PageState
+        kind="loading"
+        title={t('shell.loadingTitle')}
+        description={t('shell.loadingDescription')}
+      />
     </div>
   );
 }
@@ -116,13 +132,15 @@ function ConsoleShellLayout() {
 }
 
 function PlannedFeature({ title }: { title: string }) {
+  const { t } = useTranslation();
   return (
-    <div style={{ color: '#e2e8f0' }}>
-      <h1 style={{ fontSize: '24px', fontWeight: 600 }}>{title}</h1>
-      <p style={{ color: '#90a1b9' }}>
-        This interface is planned and is not available in the current build.
-      </p>
-    </div>
+    <AppPage width="reading">
+      <PageIntro
+        eyebrow={t('shell.plannedEyebrow')}
+        title={title}
+        description={t('shell.plannedDescription')}
+      />
+    </AppPage>
   );
 }
 
@@ -131,6 +149,7 @@ export function AppRoutes() {
     <Suspense fallback={<LoadingFallback />}>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/how-it-works" element={<HowItWorksPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
 

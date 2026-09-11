@@ -10,10 +10,11 @@ const OPTIONS: { preference: ThemePreference; label: string; Icon: typeof RiSunL
 
 export interface ThemeModeControlProps {
   className?: string;
+  compact?: boolean;
 }
 
-/** Light / dark / system segmented control — the sidebar's theme picker. */
-export function ThemeModeControl({ className }: ThemeModeControlProps) {
+/** Light, dark, and system segmented theme picker. */
+export function ThemeModeControl({ className, compact = false }: ThemeModeControlProps) {
   const { preference, setPreference } = useTheme();
 
   return (
@@ -21,7 +22,7 @@ export function ThemeModeControl({ className }: ThemeModeControlProps) {
       role="radiogroup"
       aria-label="Theme"
       className={cx(
-        'inline-flex items-center gap-1 rounded-2lg bg-background-secondary-default p-1',
+        'inline-grid grid-cols-3 items-center gap-1 rounded-2lg bg-background-secondary-default p-1',
         className,
       )}
     >
@@ -43,7 +44,7 @@ export function ThemeModeControl({ className }: ThemeModeControlProps) {
               setPreference(optionPreference, origin);
             }}
             className={cx(
-              'flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1.5',
+              'flex cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5',
               'text-body-medium transition-colors duration-150 ease',
               'outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring',
               selected
@@ -52,7 +53,7 @@ export function ThemeModeControl({ className }: ThemeModeControlProps) {
             )}
           >
             <Icon className="size-4" aria-hidden />
-            <span>{label}</span>
+            <span className={cx(compact && 'sr-only')}>{label}</span>
           </button>
         );
       })}

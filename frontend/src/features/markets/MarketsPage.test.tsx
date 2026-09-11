@@ -49,6 +49,21 @@ describe('MarketsPage', () => {
     }
   });
 
+  it('shows reusable sector marks beside securities in the table', async () => {
+    renderWithProviders(<MarketsPage />);
+
+    expect(
+      await table().findByRole('img', { name: 'Consumer Discretionary sector' }),
+    ).toHaveAttribute('data-sector-category', '25');
+    expect(table().getByRole('img', { name: 'Banks sector' })).toHaveAttribute(
+      'data-sector-category',
+      '40',
+    );
+    expect(
+      table().getByRole('img', { name: 'Telecommunication Services sector' }),
+    ).toHaveAttribute('data-sector-category', '50');
+  });
+
   it('shows the skeleton state while pending, with no rows and aria-busy on the card', async () => {
     let releaseResponse: () => void = () => {};
     const gate = new Promise<void>((resolve) => {
@@ -239,7 +254,7 @@ describe('MarketsPage', () => {
     );
 
     const first = securitiesFixture[0];
-    const link = await screen.findByRole('link', {
+    const link = await table().findByRole('link', {
       name: t('markets.viewDetails', { symbol: first.symbol }),
     });
     const [watchButton] = screen.getAllByRole('button', {

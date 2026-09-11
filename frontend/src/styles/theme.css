@@ -186,6 +186,9 @@
   /* Background */
   --color-background-full:              var(--color-white);
   --color-background-primary-default:   var(--color-white);
+  /* Photographic/video surfaces stay navy in either theme. */
+  --color-background-media-default: var(--color-slate-950);
+  --color-text-media-secondary: var(--color-slate-300);
   --color-background-inner-default:     var(--color-white);
   --color-background-primary-hover:     var(--color-slate-100);
   --color-background-primary-active:    var(--color-slate-200);
@@ -196,6 +199,16 @@
   --color-background-tertiary-default:  var(--color-slate-200);
   --color-background-tertiary-hover:    var(--color-slate-300);
   --color-background-tertiary-error:    var(--color-red-100);
+  /* TradeIQ application frame: a restrained static blue atmosphere and
+   * localized glass. Data surfaces continue to use the opaque tokens above. */
+  --color-app-backdrop-base:             var(--color-slate-50);
+  --color-app-backdrop-glow-primary:     color-mix(in srgb, var(--color-accent-300) 24%, transparent);
+  --color-app-backdrop-glow-secondary:   color-mix(in srgb, var(--color-blue-200) 34%, transparent);
+  --color-app-workspace:                 color-mix(in srgb, var(--color-white) 91%, transparent);
+  --color-app-glass-surface:             color-mix(in srgb, var(--color-white) 74%, transparent);
+  --color-app-glass-surface-strong:      color-mix(in srgb, var(--color-white) 88%, transparent);
+  --color-app-glass-border:              color-mix(in srgb, var(--color-white) 78%, var(--color-slate-200));
+  --color-app-overlay:                   color-mix(in srgb, var(--color-slate-950) 46%, transparent);
   --color-background-recent-hire-role:  var(--color-slate-100);
   --color-avatar-neutral-background:    var(--color-slate-300);
   /* Figma background/quaternary/default — first used by the Storage
@@ -330,6 +343,11 @@
   --color-status-dot-yellow-halo:   var(--color-yellow-200);
   --color-status-dot-indigo-halo:   var(--color-indigo-100);
 
+  /* Ranked market bars need more chroma than status-chip surfaces while
+   * remaining pale enough for row labels and prices to stay readable. */
+  --color-market-gain-bar: color-mix(in srgb, var(--color-emerald-300) 54%, var(--color-background-primary-default));
+  --color-market-loss-bar: color-mix(in srgb, var(--color-rose-300) 52%, var(--color-background-primary-default));
+
   /* Date range selection: the connecting band and its start/end caps. */
   --color-date-range-background:      var(--color-accent-100);
   --color-date-range-edge-background: var(--color-accent-300);
@@ -402,6 +420,7 @@
   /* Foreground */
   --color-foreground-full:            var(--color-slate-700);
   --color-foreground-icon-primary:    var(--color-slate-50);
+  --color-foreground-icon-secondary:  var(--color-slate-300);
   --color-foreground-icon-hover:      var(--color-white);
   --color-foreground-icon-error:      var(--color-red-400);
   --color-foreground-icon-tertiary:   var(--color-slate-600);
@@ -414,27 +433,36 @@
   --color-button-primary-disabled-foreground: var(--color-slate-500);
 
   /* Text */
-  --color-text-primary:  var(--color-slate-50);
-  --color-text-tertiary: var(--color-slate-600);
+  --color-text-primary:   var(--color-slate-50);
+  --color-text-secondary: var(--color-slate-300);
+  --color-text-tertiary:  var(--color-slate-400);
   --color-text-disabled: var(--color-slate-800);
   --color-text-error-primary: var(--color-red-400);
   --color-input-disabled-text: color-mix(in srgb, var(--color-slate-500) 40%, transparent);
 
   /* Background */
-  --color-background-full:              var(--color-slate-925);
-  --color-background-primary-default:   var(--color-slate-800);
-  --color-background-inner-default:     color-mix(in srgb, var(--color-slate-800) 60%, transparent);
+  --color-background-full:              color-mix(in srgb, var(--color-blue-950) 36%, var(--color-slate-950));
+  --color-background-primary-default:   color-mix(in srgb, var(--color-blue-950) 18%, var(--color-slate-900));
+  --color-background-inner-default:     color-mix(in srgb, var(--color-background-primary-default) 60%, transparent);
   --color-background-primary-hover:     color-mix(in srgb, var(--color-slate-700) 60%, transparent);
   --color-background-primary-active:    var(--color-slate-800);
   --color-background-primary-disabled:  var(--color-slate-800);
   --color-input-disabled-background:    color-mix(in srgb, var(--color-slate-800) 30%, transparent);
   --color-switch-off-chip-start:        var(--color-background-tertiary-default);
   --color-switch-off-chip-end:          var(--color-background-tertiary-default);
-  --color-background-secondary-default: var(--color-slate-900);
-  --color-background-secondary-hover:   var(--color-slate-800);
-  --color-background-tertiary-default:  var(--color-slate-800);
-  --color-background-tertiary-hover:    var(--color-slate-700);
+  --color-background-secondary-default: color-mix(in srgb, var(--color-blue-950) 25%, var(--color-slate-950));
+  --color-background-secondary-hover:   color-mix(in srgb, var(--color-blue-950) 14%, var(--color-slate-800));
+  --color-background-tertiary-default:  color-mix(in srgb, var(--color-blue-950) 14%, var(--color-slate-800));
+  --color-background-tertiary-hover:    color-mix(in srgb, var(--color-blue-900) 12%, var(--color-slate-700));
   --color-background-tertiary-error:    color-mix(in srgb, var(--color-red-950) 60%, transparent);
+  --color-app-backdrop-base:             color-mix(in srgb, var(--color-blue-950) 54%, var(--color-slate-950));
+  --color-app-backdrop-glow-primary:     color-mix(in srgb, var(--color-accent-700) 20%, transparent);
+  --color-app-backdrop-glow-secondary:   color-mix(in srgb, var(--color-blue-800) 18%, transparent);
+  --color-app-workspace:                 color-mix(in srgb, var(--color-slate-950) 88%, transparent);
+  --color-app-glass-surface:             color-mix(in srgb, var(--color-blue-950) 32%, var(--color-slate-950) 68%);
+  --color-app-glass-surface-strong:      color-mix(in srgb, var(--color-blue-950) 18%, var(--color-slate-900) 82%);
+  --color-app-glass-border:              color-mix(in srgb, var(--color-slate-300) 14%, transparent);
+  --color-app-overlay:                   color-mix(in srgb, var(--color-slate-950) 72%, transparent);
   --color-background-quaternary-default: var(--color-slate-700);
   --color-background-quaternary-hover:   var(--color-slate-600);
   --color-background-recent-hire-role:  color-mix(in srgb, var(--color-slate-900) 60%, transparent);
@@ -549,6 +577,9 @@
   --color-status-dot-yellow-halo:   color-mix(in srgb, var(--color-yellow-800) 40%, transparent);
   --color-status-dot-indigo-halo:   color-mix(in srgb, var(--color-indigo-800) 40%, transparent);
 
+  --color-market-gain-bar: color-mix(in srgb, var(--color-emerald-600) 46%, var(--color-background-primary-default));
+  --color-market-loss-bar: color-mix(in srgb, var(--color-rose-600) 44%, var(--color-background-primary-default));
+
   --color-date-range-background:      var(--color-accent-950);
   --color-date-range-edge-background: var(--color-accent-800);
 
@@ -639,6 +670,14 @@
   --color-background-tertiary-default:  var(--color-background-tertiary-default);
   --color-background-tertiary-hover:    var(--color-background-tertiary-hover);
   --color-background-tertiary-error:    var(--color-background-tertiary-error);
+  --color-app-backdrop-base:             var(--color-app-backdrop-base);
+  --color-app-backdrop-glow-primary:     var(--color-app-backdrop-glow-primary);
+  --color-app-backdrop-glow-secondary:   var(--color-app-backdrop-glow-secondary);
+  --color-app-workspace:                 var(--color-app-workspace);
+  --color-app-glass-surface:             var(--color-app-glass-surface);
+  --color-app-glass-surface-strong:      var(--color-app-glass-surface-strong);
+  --color-app-glass-border:              var(--color-app-glass-border);
+  --color-app-overlay:                   var(--color-app-overlay);
   --color-background-recent-hire-role:  var(--color-background-recent-hire-role);
   --color-avatar-neutral-background:    var(--color-avatar-neutral-background);
   --color-background-quaternary-default: var(--color-background-quaternary-default);
@@ -734,6 +773,8 @@
   --color-status-dot-green-halo:    var(--color-status-dot-green-halo);
   --color-status-dot-yellow-halo:   var(--color-status-dot-yellow-halo);
   --color-status-dot-indigo-halo:   var(--color-status-dot-indigo-halo);
+  --color-market-gain-bar:          var(--color-market-gain-bar);
+  --color-market-loss-bar:          var(--color-market-loss-bar);
   --color-date-range-background:      var(--color-date-range-background);
   --color-date-range-edge-background: var(--color-date-range-edge-background);
   --color-calendar-event-blue-background:    var(--color-calendar-event-blue-background);
@@ -900,6 +941,13 @@
   &[aria-disabled="true"]::before {
     display: none;
   }
+}
+
+/* Text placed on saturated brand or danger fills. This unlayered component
+ * rule intentionally wins over inherited page text; disabled actions fall
+ * back to their dedicated BoardUI foreground tokens. */
+.bui-on-accent:not(:disabled):not([aria-disabled="true"]) {
+  color: var(--color-white);
 }
 
 /* ---------------------------------------------------------------------------

@@ -24,6 +24,28 @@ describe('StatusStep Polling & Retry Behavior', () => {
         startedAt: '2026-09-06T10:00:00Z',
         completedAt: '2026-09-06T10:01:00Z',
       });
+    const getResultsSpy = vi.spyOn(api, 'getBacktestRunResults').mockResolvedValue({
+      initialCapital: 1_000_000,
+      finalCash: 1_085_000,
+      finalEquity: 1_085_000,
+      trades: [],
+      equityCurve: [
+        {
+          date: '2025-01-02',
+          cash: 1_000_000,
+          positionQuantity: 0,
+          positionMarketValue: 0,
+          totalEquity: 1_000_000,
+        },
+        {
+          date: '2025-12-31',
+          cash: 1_085_000,
+          positionQuantity: 0,
+          positionMarketValue: 0,
+          totalEquity: 1_085_000,
+        },
+      ],
+    });
 
     render(
       <MemoryRouter initialEntries={['/backtests/run-123/status']}>
@@ -44,9 +66,11 @@ describe('StatusStep Polling & Retry Behavior', () => {
       () => {
         expect(getStatusSpy).toHaveBeenCalledTimes(2);
         expect(screen.getByText('Backtest Simulation Complete!')).toBeTruthy();
+        expect(screen.getByText('Trade count')).toBeTruthy();
       },
       { timeout: 4000 },
     );
+    expect(getResultsSpy).toHaveBeenCalledWith('run-123');
   });
 
   it('allows manual retry when Retry Status Check button is clicked', async () => {

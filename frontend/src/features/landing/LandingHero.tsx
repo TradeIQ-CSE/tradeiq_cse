@@ -1,59 +1,33 @@
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { RiTimeLine } from '@remixicon/react';
-import { Button } from '../../components/base/buttons/button';
-import { Chip } from '../../components/base/badges/chip';
-import { cx } from '../../utils/cx';
-import { LANDING_CONTAINER } from './LandingPage';
+import { RiArrowRightLine, RiTimeLine } from '@remixicon/react';
+import { ButtonLink } from '@/components/base/buttons/button';
+import { Chip } from '@/components/base/badges/chip';
+import { LandingBackdrop } from './LandingBackdrop';
 
-/**
- * Headline set solid, not in a gradient.
- *
- * It previously ran through a purple-to-green gradient, which was both the
- * lowest-contrast text on the page and the last purple left in the product.
- *
- * There is no product mockup here any more either. The one that stood in this
- * slot was a drawn facsimile of the app carrying invented prices and an "AI
- * signals" panel for a service that does not exist. The real securities table
- * immediately below is the product view now — it reads from the same
- * GET /securities the Markets screen uses.
- */
+const HERO_CONTAINER = 'mx-auto w-full max-w-[96rem] px-4 sm:px-6 lg:px-8';
+
 export function LandingHero() {
   const { t } = useTranslation();
-
   return (
-    <section className={cx(LANDING_CONTAINER, 'flex flex-col items-center text-center')}>
-      <Chip variant="caption" color="soft">
-        {t('landing.hero.badge')}
-      </Chip>
-
-      <h1 className="mt-5 max-w-4xl text-balance text-4xl font-semibold leading-[1.1] tracking-tight text-text-primary sm:text-5xl lg:text-6xl">
-        {t('landing.hero.headlineLine1')}{' '}
-        <span className="text-status-blue-text">{t('landing.hero.headlineLine2')}</span>
-      </h1>
-
-      <p className="mt-5 max-w-2xl text-lg leading-relaxed text-text-secondary">
-        {t('landing.hero.subtitle')}
-      </p>
-
-      {/* One primary action and one neutral one, per the plan. */}
-      <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-        <Link to="/signup">
-          <Button variant="primary" size="medium">
-            {t('landing.hero.getStarted')}
-          </Button>
-        </Link>
-        <Link to="/login">
-          <Button variant="secondary" size="medium">
-            {t('landing.hero.signIn')}
-          </Button>
-        </Link>
+    <section className="landing-hero">
+      <div className={HERO_CONTAINER}>
+        <div className="landing-hero-media relative isolate overflow-hidden rounded-3xl p-4 text-center sm:px-8 sm:py-10 lg:px-12 lg:py-16">
+          <LandingBackdrop />
+          <div className="landing-hero-glass relative mx-auto flex max-w-5xl flex-col items-center rounded-3xl px-5 py-10 sm:px-12 sm:py-20">
+            <Chip variant="caption" color="soft" className="landing-media-chip">{t('landing.hero.badge')}</Chip>
+            <h1 className="landing-display mt-6 max-w-5xl text-display-4-bold text-text-primary sm:text-display-1-bold lg:text-large-title-bold">
+              {t('landing.hero.headlineLine1')}{' '}
+              <span className="block">{t('landing.hero.headlineLine2')}</span>
+            </h1>
+            <p className="landing-lead mt-6 max-w-2xl text-headline-regular text-text-secondary">{t('landing.hero.subtitle')}</p>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <ButtonLink href="/markets" variant="primary">{t('landing.hero.getStarted')}</ButtonLink>
+              <ButtonLink href="/login" variant="secondary" trailingIcon={RiArrowRightLine} className="landing-media-secondary-button">{t('landing.hero.signIn')}</ButtonLink>
+            </div>
+            <p className="mt-6 flex items-center gap-2 text-body-2-medium text-text-secondary"><RiTimeLine className="size-4" aria-hidden />{t('landing.hero.dataNote')}</p>
+          </div>
+        </div>
       </div>
-
-      <p className="mt-6 flex items-center gap-1.5 text-body-medium text-text-tertiary">
-        <RiTimeLine className="size-4" aria-hidden />
-        {t('landing.hero.dataNote')}
-      </p>
     </section>
   );
 }

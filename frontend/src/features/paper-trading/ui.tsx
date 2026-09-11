@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react';
-import { Button } from '../../components/base/buttons/button';
-import { cx } from '../../utils/cx';
+import type { ReactNode } from "react";
+import { Button } from "../../components/base/buttons/button";
+import { AppNotice } from "../../components/application/layout/application-layout";
+import { cx } from "../../utils/cx";
 
 /**
  * The shared BoardUI surface for every paper-trading screen. Before the
@@ -23,7 +24,7 @@ export function Field({
   className?: string;
 }) {
   return (
-    <label className={cx('flex w-full flex-col items-start gap-1', className)}>
+    <label className={cx("flex w-full flex-col items-start gap-1", className)}>
       <span className="text-body-medium text-text-secondary">{label}</span>
       {children}
     </label>
@@ -43,7 +44,7 @@ export function Card({
   return (
     <section
       className={cx(
-        'relative overflow-hidden rounded-2xl border border-border-table bg-background-primary-default',
+        "relative overflow-hidden rounded-3xl border border-border-table bg-background-primary-default shadow-xs",
         className,
       )}
       aria-busy={busy}
@@ -79,10 +80,14 @@ export function CardHeading({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-4 pb-3">
+    <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-4 pb-3 sm:px-5 sm:pt-5">
       <div className="flex min-w-0 flex-col gap-0.5">
         <h2 className="text-headline-medium text-text-primary">{title}</h2>
-        {subtitle && <span className="text-body-2-medium text-text-tertiary">{subtitle}</span>}
+        {subtitle && (
+          <span className="text-body-2-medium text-text-tertiary">
+            {subtitle}
+          </span>
+        )}
       </div>
       {actions}
     </div>
@@ -91,7 +96,11 @@ export function CardHeading({
 
 /** A quiet, centred line for empty and loading states inside a card. */
 export function StateMessage({ children }: { children: ReactNode }) {
-  return <p className="px-4 py-8 text-center text-body-medium text-text-secondary">{children}</p>;
+  return (
+    <p className="px-4 py-8 text-center text-body-medium text-text-secondary">
+      {children}
+    </p>
+  );
 }
 
 /**
@@ -100,14 +109,17 @@ export function StateMessage({ children }: { children: ReactNode }) {
  * ones that appear in response to a user action should interrupt a screen
  * reader.
  */
-export function ErrorCard({ children, role }: { children: ReactNode; role?: 'alert' }) {
+export function ErrorCard({
+  children,
+  role,
+}: {
+  children: ReactNode;
+  role?: "alert";
+}) {
   return (
-    <div
-      role={role}
-      className="rounded-2xl border border-status-rose-background bg-status-rose-background px-4 py-3 text-body-medium text-status-rose-text"
-    >
+    <AppNotice tone="error" role={role}>
       {children}
-    </div>
+    </AppNotice>
   );
 }
 
@@ -118,19 +130,19 @@ export function ErrorCard({ children, role }: { children: ReactNode; role?: 'ale
  * about the dataset rather than a failure.
  */
 export function NoticeCard({ children }: { children: ReactNode }) {
-  return (
-    <div className="rounded-2xl border border-status-yellow-background bg-status-yellow-background px-4 py-3 text-body-medium text-status-yellow-text">
-      {children}
-    </div>
-  );
+  return <AppNotice tone="warning">{children}</AppNotice>;
 }
 
 /** ▲/▼ so direction is never carried by colour alone. */
-export function DirectionGlyph({ direction }: { direction: 'up' | 'down' | 'flat' }) {
-  if (direction === 'flat') return null;
+export function DirectionGlyph({
+  direction,
+}: {
+  direction: "up" | "down" | "flat";
+}) {
+  if (direction === "flat") return null;
   return (
     <span aria-hidden="true" className="mr-1">
-      {direction === 'up' ? '▲' : '▼'}
+      {direction === "up" ? "▲" : "▼"}
     </span>
   );
 }
@@ -159,13 +171,23 @@ export function Pager({
   onNext: () => void;
 }) {
   return (
-    <footer className="flex items-center justify-between gap-4 border-t border-separator-border px-4 py-3">
+    <footer className="flex flex-col gap-3 border-t border-separator-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <span className="text-body-medium text-text-secondary">{label}</span>
       <div className="flex items-center gap-2">
-        <Button variant="secondary" size="small" disabled={!canGoPrevious} onClick={onPrevious}>
+        <Button
+          variant="secondary"
+          size="small"
+          disabled={!canGoPrevious}
+          onClick={onPrevious}
+        >
           {previousLabel}
         </Button>
-        <Button variant="secondary" size="small" disabled={!canGoNext} onClick={onNext}>
+        <Button
+          variant="secondary"
+          size="small"
+          disabled={!canGoNext}
+          onClick={onNext}
+        >
           {nextLabel}
         </Button>
       </div>

@@ -25,18 +25,21 @@ export interface ChartPalette {
   axis: string;
   /** Axis tick labels. */
   tick: string;
+  /** Hover band behind the active candle. */
+  cursor: string;
 }
 
 export const chartPalette: ChartPalette = {
-  up: 'var(--color-status-lime-text)',
-  down: 'var(--color-status-rose-text)',
+  up: "var(--color-status-lime-text)",
+  down: "var(--color-status-rose-text)",
   // Not --color-chart-neutral: that is slate-800 in dark, invisible against
   // the card. This colour draws the candle wicks, so it has to read on both.
-  neutral: 'var(--color-text-secondary)',
+  neutral: "var(--color-text-secondary)",
   // Not --color-chart-track: in dark that is slate-800, the same value as the
   // card it is drawn on, so the rules disappear. border/button/default is the
   // one edge token with contrast against both surfaces.
-  grid: 'var(--color-border-button-default)',
-  axis: 'var(--color-border-button-default)',
-  tick: 'var(--color-text-tertiary)',
+  grid: "var(--color-border-button-default)",
+  axis: "var(--color-border-button-default)",
+  tick: "var(--color-text-tertiary)",
+  cursor: "var(--color-background-secondary-hover)",
 };

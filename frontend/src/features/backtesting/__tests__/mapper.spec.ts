@@ -1,6 +1,20 @@
 import { describe, it, expect } from 'vitest';
 import { mapToBacktestRequest } from '../domain/mapper';
-import { createDefaultBacktestConfig } from '../domain/defaults';
+import { createDefaultBacktestConfig as createBlankBacktestConfig } from '../domain/defaults';
+
+function createDefaultBacktestConfig() {
+  const config = createBlankBacktestConfig();
+  config.security = {
+    symbol: 'JKH.N0000',
+    companyName: 'John Keells Holdings PLC',
+    sector: 'Consumer Discretionary',
+    sectorGicsCode: '25',
+    dataFrom: '2017-01-02',
+    dataTo: '2025-12-31',
+    price: 198.5,
+  };
+  return config;
+}
 
 describe('mapToBacktestRequest', () => {
   it('should format valid default configuration to match CreateBacktestRunDto contract', () => {

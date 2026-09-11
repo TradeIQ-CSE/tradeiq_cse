@@ -1,5 +1,7 @@
 import { ReactNode } from 'react';
-import { RiLineChartLine } from '@remixicon/react';
+import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
+import { TradeIqLogo } from '../../components/foundations/brand/tradeiq-logo';
 
 /**
  * Shared frame for the two auth pages.
@@ -22,10 +24,19 @@ export function AuthCard({
   children: ReactNode;
   footer: ReactNode;
 }) {
+  const { t } = useTranslation();
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background-secondary-default p-6">
       <div className="flex w-full max-w-[400px] flex-col rounded-3xl border border-border-button-default bg-background-primary-default p-6 shadow-xs sm:p-8">
-        <RiLineChartLine className="mb-5 size-8 text-foreground-icon-primary" aria-hidden />
+        <Link
+          to="/"
+          aria-label={t('app.name')}
+          className="mb-5 flex w-fit items-center gap-2 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+        >
+          <TradeIqLogo size="md" />
+          <span className="text-headline-semibold text-text-primary">{t('app.name')}</span>
+        </Link>
 
         <div className="flex flex-col gap-1.5">
           <h1 className="text-title-2-medium text-text-primary">{title}</h1>

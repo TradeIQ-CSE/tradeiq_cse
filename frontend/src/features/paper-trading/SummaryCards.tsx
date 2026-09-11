@@ -1,13 +1,26 @@
-import type { ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
-import { ApiError } from '../../lib/api';
-import { readErrorText } from './error-text';
-import { localeFor } from '../../i18n';
-import { changeDirection, formatMoney, formatPercent, formatSignedMoney } from './format';
-import { usePortfolioSummary } from './usePortfolios';
-import { DirectionGlyph, ErrorCard, NoticeCard } from './ui';
-import { toneClass } from './ui-styles';
-import { cx } from '../../utils/cx';
+import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
+import {
+  RiBarChartBoxLine,
+  RiCoinsLine,
+  RiFundsLine,
+  RiLineChartLine,
+  RiWallet3Line,
+} from "@remixicon/react";
+import { ApiError } from "../../lib/api";
+import { StatSurface } from "../../components/application/layout/application-layout";
+import { readErrorText } from "./error-text";
+import { localeFor } from "../../i18n";
+import {
+  changeDirection,
+  formatMoney,
+  formatPercent,
+  formatSignedMoney,
+} from "./format";
+import { usePortfolioSummary } from "./usePortfolios";
+import { DirectionGlyph, ErrorCard, NoticeCard } from "./ui";
+import { toneClass } from "./ui-styles";
+import { cx } from "../../utils/cx";
 
 interface SummaryCardsProps {
   portfolioId: string;
@@ -19,20 +32,31 @@ function SummaryCard({
   value,
   sub,
   tone,
+  icon,
 }: {
   label: string;
   value: ReactNode;
   sub?: ReactNode;
   tone?: string;
+  icon: typeof RiFundsLine;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1 rounded-2xl bg-background-secondary-default p-4">
-      <span className="truncate text-body-medium text-text-secondary">{label}</span>
-      <span className={cx('truncate text-title-2-medium tabular-nums', tone ?? 'text-text-primary')}>
-        {value}
-      </span>
-      {sub && <span className={cx('truncate text-body-2-medium', tone)}>{sub}</span>}
-    </div>
+    <StatSurface
+      label={label}
+      icon={icon}
+      value={
+        <span
+          className={cx("truncate tabular-nums", tone ?? "text-text-primary")}
+        >
+          {value}
+        </span>
+      }
+      supportingText={
+        sub ? (
+          <span className={cx("truncate tabular-nums", tone)}>{sub}</span>
+        ) : undefined
+      }
+    />
   );
 }
 
@@ -41,19 +65,26 @@ function SummaryCard({
 export function SummaryCards({ portfolioId, asOf }: SummaryCardsProps) {
   const { t, i18n } = useTranslation();
   const locale = localeFor(i18n.resolvedLanguage ?? i18n.language);
-  const { data, isPending, isFetching, isError, error } = usePortfolioSummary(portfolioId, asOf);
+  const { data, isPending, isFetching, isError, error } = usePortfolioSummary(
+    portfolioId,
+    asOf,
+  );
 
   if (isError) {
-    if (error instanceof ApiError && error.body.code === 'PRICE_UNAVAILABLE') {
+    if (error instanceof ApiError && error.body.code === "PRICE_UNAVAILABLE") {
       return (
         <NoticeCard>
-          {t('portfolio.summary.priceUnavailable', {
-            date: asOf || t('portfolio.summary.latestSession'),
+          {t("portfolio.summary.priceUnavailable", {
+            date: asOf || t("portfolio.summary.latestSession"),
           })}
         </NoticeCard>
       );
     }
-    return <ErrorCard>{readErrorText(error, t('portfolio.summary.unreachable'))}</ErrorCard>;
+    return (
+      <ErrorCard>
+        {readErrorText(error, t("portfolio.summary.unreachable"))}
+      </ErrorCard>
+    );
   }
 
   if (isPending || !data) {
@@ -64,7 +95,7 @@ export function SummaryCards({ portfolioId, asOf }: SummaryCardsProps) {
       >
         {Array.from({ length: 6 }).map((_, index) => (
           <div
-            className="h-24 animate-pulse rounded-2xl bg-background-secondary-default"
+            className="h-28 animate-pulse rounded-3xl bg-background-secondary-default"
             key={index}
           />
         ))}
@@ -84,25 +115,29 @@ export function SummaryCards({ portfolioId, asOf }: SummaryCardsProps) {
         <span
           className="absolute inset-x-0 -top-1 h-0.5 animate-pulse bg-button-primary"
           role="status"
-          aria-label={t('portfolio.summary.loading')}
+          aria-label={t("portfolio.summary.loading")}
         />
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <SummaryCard
-          label={t('portfolio.summary.totalEquity')}
+          icon={RiFundsLine}
+          label={t("portfolio.summary.totalEquity")}
           value={formatMoney(summary.total_equity, locale)}
         />
         <SummaryCard
-          label={t('portfolio.summary.cashBalance')}
+          icon={RiWallet3Line}
+          label={t("portfolio.summary.cashBalance")}
           value={formatMoney(summary.cash_balance, locale)}
         />
         <SummaryCard
-          label={t('portfolio.summary.holdingsValue')}
+          icon={RiBarChartBoxLine}
+          label={t("portfolio.summary.holdingsValue")}
           value={formatMoney(summary.holdings_value, locale)}
         />
         <SummaryCard
-          label={t('portfolio.summary.totalPnl')}
+          icon={RiLineChartLine}
+          label={t("portfolio.summary.totalPnl")}
           tone={toneClass(summary.total_pnl)}
           value={
             <>
@@ -118,7 +153,8 @@ export function SummaryCards({ portfolioId, asOf }: SummaryCardsProps) {
           }
         />
         <SummaryCard
-          label={t('portfolio.summary.realizedPnl')}
+          icon={RiCoinsLine}
+          label={t("portfolio.summary.realizedPnl")}
           tone={toneClass(summary.realized_pnl)}
           value={
             <>
@@ -128,7 +164,8 @@ export function SummaryCards({ portfolioId, asOf }: SummaryCardsProps) {
           }
         />
         <SummaryCard
-          label={t('portfolio.summary.unrealizedPnl')}
+          icon={RiLineChartLine}
+          label={t("portfolio.summary.unrealizedPnl")}
           tone={toneClass(summary.unrealized_pnl)}
           value={
             <>
@@ -141,8 +178,8 @@ export function SummaryCards({ portfolioId, asOf }: SummaryCardsProps) {
 
       <p className="text-body-2-medium text-text-tertiary">
         {summary.as_of
-          ? t('portfolio.summary.asOf', { date: summary.as_of })
-          : t('portfolio.summary.noSession')}
+          ? t("portfolio.summary.asOf", { date: summary.as_of })
+          : t("portfolio.summary.noSession")}
       </p>
     </section>
   );

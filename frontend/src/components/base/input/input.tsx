@@ -3,6 +3,7 @@
 import {
   createContext,
   useContext,
+  useId,
   type ComponentType,
   type ReactNode,
   type Ref,
@@ -69,10 +70,16 @@ const TextFieldContext = createContext<TextFieldContextValue>({});
 /* -------------------------------------------------------------------------- */
 
 export interface TextFieldProps
-  extends Omit<AriaTextFieldProps, "className">,
-    TextFieldContextValue {
+  extends Omit<AriaTextFieldProps, "className">, TextFieldContextValue {
   className?: string;
-  children?: ReactNode | ((state: { isRequired: boolean; isInvalid: boolean; isDisabled: boolean; isReadOnly: boolean }) => ReactNode);
+  children?:
+    | ReactNode
+    | ((state: {
+        isRequired: boolean;
+        isInvalid: boolean;
+        isDisabled: boolean;
+        isReadOnly: boolean;
+      }) => ReactNode);
 }
 
 export function TextField({
@@ -105,7 +112,10 @@ TextField.displayName = "TextField";
 /*  InputBase                                                                  */
 /* -------------------------------------------------------------------------- */
 
-export interface InputBaseProps extends Omit<AriaInputProps, "size" | "className"> {
+export interface InputBaseProps extends Omit<
+  AriaInputProps,
+  "size" | "className"
+> {
   size?: InputSize;
   className?: string;
   leadingIcon?: IconComponent;
@@ -130,14 +140,14 @@ const inputStyles = sortCx({
   ].join(" "),
 
   fieldSize: {
-    medium: "p-2",                // 8px all sides → h auto = 36
-    small:  "h-8 px-1.5 py-2",    // 32 / 6 / 8
+    medium: "p-2", // 8px all sides → h auto = 36
+    small: "h-8 px-1.5 py-2", // 32 / 6 / 8
   },
 
   // When a leadingAddon is present (Phone basic): tighten left padding.
   fieldWithAddonSize: {
     medium: "h-9 pl-1 pr-2 py-2", // 36 / 4 / 8 / 8
-    small:  "h-8 pl-1 pr-1.5 py-2",
+    small: "h-8 pl-1 pr-1.5 py-2",
   },
 
   content: "flex w-full items-center gap-2 min-w-0",
@@ -195,7 +205,8 @@ export function InputBase({
           isDisabled &&
             "bg-input-disabled-background text-input-disabled-foreground",
           // Invalid
-          isInvalid && "bg-background-tertiary-error text-foreground-icon-error",
+          isInvalid &&
+            "bg-background-tertiary-error text-foreground-icon-error",
           ctx.fieldClassName,
           fieldClassName,
         )
@@ -229,7 +240,8 @@ InputBase.displayName = "InputBase";
 /* -------------------------------------------------------------------------- */
 
 export interface InputProps
-  extends Omit<TextFieldProps, "children">,
+  extends
+    Omit<TextFieldProps, "children">,
     Pick<
       InputBaseProps,
       | "leadingIcon"
@@ -244,6 +256,10 @@ export interface InputProps
   /** Show an info icon next to the label. Replace with tooltip when Tooltip lands. */
   tooltip?: boolean | string;
   placeholder?: string;
+  /** Native numeric constraints forwarded to the underlying input. */
+  min?: number | string;
+  max?: number | string;
+  step?: number | string;
 }
 
 export function Input({
@@ -251,6 +267,9 @@ export function Input({
   hint,
   tooltip,
   placeholder,
+  min,
+  max,
+  step,
   leadingIcon,
   trailingIcon,
   leadingAddon,
@@ -260,6 +279,8 @@ export function Input({
   className,
   ...textFieldProps
 }: InputProps) {
+  const labelId = useId();
+
   return (
     <TextField
       {...textFieldProps}
@@ -275,6 +296,7 @@ export function Input({
         <>
           {label && (
             <Label
+              id={labelId}
               isRequired={isRequired}
               isInvalid={isInvalid}
               tooltip={tooltip}
@@ -290,6 +312,10 @@ export function Input({
             trailingIcon={trailingIcon}
             leadingAddon={leadingAddon}
             fieldClassName={fieldClassName}
+            min={min}
+            max={max}
+            step={step}
+            aria-labelledby={label ? labelId : undefined}
           />
           {hint && <HintText isInvalid={isInvalid}>{hint}</HintText>}
         </>

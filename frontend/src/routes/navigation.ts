@@ -27,6 +27,8 @@ export interface NavRoute {
   planned?: boolean;
   /** Excluded from the sidebar and command palette for non-admins. */
   adminOnly?: boolean;
+  /** Optional route-family prefix used by breadcrumbs and selected navigation. */
+  activePrefix?: string;
 }
 
 export const NAV_GROUPS: { key: NavGroupKey; labelKey: string }[] = [
@@ -55,6 +57,7 @@ export const NAV_ROUTES: NavRoute[] = [
     key: 'backtesting',
     labelKey: 'nav.items.backtesting',
     path: '/backtests/new/security',
+    activePrefix: '/backtests',
     icon: RiHistoryLine,
     group: 'research',
   },
@@ -89,5 +92,11 @@ export const NAV_ROUTES: NavRoute[] = [
 export function navRouteForPath(pathname: string): NavRoute | undefined {
   return [...NAV_ROUTES]
     .sort((a, b) => b.path.length - a.path.length)
-    .find((route) => pathname === route.path || pathname.startsWith(`${route.path}/`));
+    .find(
+      (route) =>
+        pathname === route.path ||
+        pathname.startsWith(`${route.path}/`) ||
+        (route.activePrefix !== undefined &&
+          (pathname === route.activePrefix || pathname.startsWith(`${route.activePrefix}/`))),
+    );
 }

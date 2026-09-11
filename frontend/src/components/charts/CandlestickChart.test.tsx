@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import {
   candleBody,
   candleColor,
@@ -26,6 +26,8 @@ function point(overrides: Partial<ChartDatum>): ChartDatum {
     ...overrides,
   };
 }
+
+afterEach(() => vi.restoreAllMocks());
 
 describe('candleBody', () => {
   it('spans [open, close] when open is below close', () => {
@@ -146,4 +148,60 @@ describe('CandlestickChart', () => {
       within(table).queryByRole('columnheader', { name: 'Adjusted close' }),
     ).not.toBeInTheDocument();
   });
+
+  it.each([
+    ['monthly', 1],
+    ['weekly', 2],
+    ['short daily range', 7],
+    ['long daily range', 31],
+  ])(
+    'keeps every volume bar centered under its candle for a %s data set',
+    async (_range, count) => {
+      const bounds = {
+        x: 0,
+        y: 0,
+        top: 0,
+        right: 800,
+        bottom: 400,
+        left: 0,
+        width: 800,
+        height: 400,
+        toJSON: () => ({}),
+      } as DOMRect;
+      vi.spyOn(Element.prototype, 'getBoundingClientRect')
+        .mockReturnValue(bounds);
+      const data = Array.from({ length: count }, (_, index) =>
+        point({
+          date: `2026-01-${String(index + 1).padStart(2, '0')}`,
+          periodEnd: count <= 2 ? '2026-01-31' : undefined,
+          close: 100 + (index % 3),
+          volume: 1_000 + index * 100,
+        }),
+      );
+
+      const { container } = render(<CandlestickChart data={data} />);
+
+      await waitFor(() => {
+        expect(container.querySelectorAll('.recharts-wrapper')).toHaveLength(2);
+      });
+
+      const centers = Array.from(
+        container.querySelectorAll('.recharts-wrapper'),
+      ).map((chart) =>
+        Array.from(
+          chart.querySelectorAll<SVGPathElement>(
+            '.recharts-bar-rectangle path',
+          ),
+        ).map((bar) => {
+          const x = Number(bar.getAttribute('d')?.match(/^M\s+([\d.]+)/)?.[1]);
+          const width = Number(bar.getAttribute('width'));
+          return x + width / 2;
+        }),
+      );
+
+      expect(centers[0]).toHaveLength(count);
+      expect(centers[1]).toHaveLength(count);
+      expect(centers[1]).toEqual(centers[0]);
+    },
+  );
 });

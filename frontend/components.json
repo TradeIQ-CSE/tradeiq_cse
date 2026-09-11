@@ -17,5 +17,8 @@
     "lib": "@/utils",
     "hooks": "@/hooks"
   },
-  "iconLibrary": "remixicon"
+  "iconLibrary": "remixicon",
+  "registries": {
+    "@aceternity": "https://ui.aceternity.com/registry/{name}.json"
+  }
 }

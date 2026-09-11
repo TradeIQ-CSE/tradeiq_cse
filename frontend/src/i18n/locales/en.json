@@ -42,15 +42,30 @@
     "searchPlaceholder": "Search symbol or company…",
     "breadcrumbRoot": "Console"
   },
+  "shell": {
+    "skipToContent": "Skip to main content",
+    "openNavigation": "Open navigation",
+    "closeNavigation": "Close navigation",
+    "navigationDialog": "Application navigation",
+    "loadingTitle": "Loading view",
+    "loadingDescription": "Preparing this part of TradeIQ.",
+    "plannedEyebrow": "Planned capability",
+    "plannedDescription": "This interface is planned and is not available in the current build."
+  },
   "markets": {
+    "eyebrow": "CSE market research",
     "title": "Browse Securities",
     "subtitle_one": "{{formattedCount}} security listed on CSE",
     "subtitle_other": "{{formattedCount}} securities listed on CSE",
     "filters": {
+      "label": "Market filters",
       "all": "All",
       "gainers": "Gainers",
       "losers": "Losers",
       "mostActive": "Most Active",
+      "sector": "Sector",
+      "marketCap": "Market capitalisation",
+      "allSectors": "All sectors",
       "selectSegment": "Select Segment",
       "selectMarketCap": "Select Market Cap"
     },
@@ -65,6 +80,9 @@
       "peRatio": "P/E",
       "watch": "Watch"
     },
+    "table": {
+      "scrollHint": "Swipe horizontally to compare all market fields. Security names stay visible."
+    },
     "cap": {
       "large": "Large",
       "mid": "Mid",
@@ -72,6 +90,8 @@
     },
     "states": {
       "loading": "Loading securities…",
+      "emptyTitle": "No matching securities",
+      "errorTitle": "Market data is unavailable",
       "empty": "No securities match your filters.",
       "unreachable": "Could not reach the market-trading API."
     },
@@ -90,13 +110,16 @@
     "empty": "—",
     "tradingDate": "Trading date",
     "asOf": "as of {{date}}",
+    "asOfDescription": "Prices and changes are for {{date}}.",
     "viewDetails": "View {{symbol}} details",
     "notice": {
       "eod": "Prices reflect end-of-day data. There is no live market feed."
     },
     "stats": {
       "listed": "Listed securities",
-      "asOf": "Latest session"
+      "listedHelp": "Available in the current market dataset",
+      "asOf": "Latest session",
+      "asOfHelp": "The trading date used for prices and changes"
     },
     "movers": {
       "title": "Top movers",
@@ -104,6 +127,12 @@
       "loading": "Loading top movers",
       "empty": "No ranked movers for this session.",
       "unreachable": "Could not load top movers.",
+      "columns": {
+        "security": "Security",
+        "close": "Close (LKR)",
+        "change": "Change",
+        "volume": "Volume"
+      },
       "lists": {
         "gainers": "Gainers",
         "losers": "Losers",
@@ -112,6 +141,7 @@
     }
   },
   "securityDetail": {
+    "eyebrow": "CSE security research",
     "back": "Back to markets",
     "currency": "LKR",
     "listingStatus": {
@@ -126,12 +156,17 @@
     },
     "actions": {
       "apply": "Apply range",
+      "cancel": "Cancel",
       "reset": "Default range",
       "retry": "Try again"
     },
     "range": {
+      "label": "Historical date range",
+      "placeholder": "Select a historical range",
       "from": "From",
       "to": "To",
+      "selectedDays_one": "{{count}} day selected",
+      "selectedDays_other": "{{count}} days selected",
       "fromAfterTo": "The start date must be on or before the end date.",
       "fieldError": "{{field}}: {{reason}}"
     },
@@ -140,6 +175,11 @@
       "range": "{{from}} – {{to}} · end-of-day data",
       "rangeUnavailable": "No coverage dates available",
       "timeframeLabel": "Chart timeframe",
+      "legend": {
+        "up": "Closed above open",
+        "down": "Closed below open",
+        "help": "Volume appears below the price chart"
+      },
       "accessibleLabel": "{{timeframe}} OHLCV history for {{symbol}}",
       "values": {
         "date": "Date",
@@ -189,12 +229,15 @@
   "landing": {
     "nav": {
       "tagline": "COLOMBO STOCK EXCHANGE",
+      "label": "Explore TradeIQ",
       "links": {
-        "market": "Market",
+        "market": "Browse CSE",
+        "workspace": "How it works",
+        "backtesting": "Test a strategy",
         "newsEvents": "News & Events",
         "aboutUs": "About Us"
       },
-      "openAccount": "Open an Account",
+      "openAccount": "Create account",
       "signIn": "Sign in",
       "linkUnavailable": "Coming soon"
     },
@@ -202,51 +245,84 @@
       "badge": "Colombo Stock Exchange",
       "headlineLine1": "The professional edge",
       "headlineLine2": "for CSE investors.",
-      "subtitle": "Market data, historical charting, strategy backtesting and paper trading, built for Sri Lankan investors.",
+      "subtitle": "Browse CSE prices, test an investing idea using historical data, and practise trading with virtual money in one clear workspace.",
       "getStarted": "Get started free",
-      "signIn": "Sign in →",
+      "pauseVideo": "Pause background video",
+      "playVideo": "Play background video",
+      "explore": "Explore markets",
+      "accessNote": "Market exploration is open. No account needed.",
+      "facts": {
+        "source": {
+          "title": "CSE market data",
+          "detail": "End-of-day prices. Session dates shown."
+        },
+        "research": {
+          "title": "Test an idea",
+          "detail": "Run clear trading rules against historical prices."
+        },
+        "practice": {
+          "title": "Practise without risk",
+          "detail": "Use virtual money. No real trades are placed."
+        }
+      },
+      "signIn": "Sign in",
       "dataNote": "End-of-day data · Delayed"
     },
     "marketData": {
       "eyebrow": "Market data",
       "headingLine1": "The full CSE picture,",
       "headingLine2": "at a glance.",
-      "description": "Browse every security listed on the CSE with real end-of-day prices, search, and OHLC breakdowns.",
-      "cta": "Explore the markets →",
+      "overview": "Browse listed companies, compare their latest available prices, and open a security to see how its price has moved. Filter by sector or review the session's gainers, losers, and most active securities.",
+      "explore": "Explore the markets",
+      "description": "Open Markets to search every security and review its available price history.",
+      "cta": "View all securities",
       "cardTitle": "CSE Securities",
-      "descriptionCounted": "Browse all {{formattedCount}} securities listed on the CSE with real end-of-day prices, search, and OHLC breakdowns.",
-      "sample": "Sample data"
+      "descriptionCounted": "A selection from {{formattedCount}} listed securities. Explore the full market with search and historical charts.",
+      "sample": "Sample data",
+      "sampleNote": "Illustrative prices preview the Markets workspace. They are not a live market feed.",
+      "security": "Security / Company",
+      "priceLabel": "Price (LKR) / Change"
     },
     "insights": {
-      "eyebrow": "What you get",
-      "description": "Every price on TradeIQ comes from official CSE end-of-day data. Test a strategy against it, track a paper portfolio with it, and see exactly which session a figure came from.",
-      "heading": "Built on the data, not on a hunch.",
+      "eyebrow": "THE WORKSPACE",
+      "description": "Start with a listed company, test an idea on past prices, then practise buying and selling with virtual money. Your simulated portfolio keeps the results together.",
+      "heading": "Chart. Test. Track.",
       "planned": "Planned",
       "capabilities": {
         "charting": {
-          "title": "Historical charting",
-          "description": "Daily, weekly and monthly OHLC for every listed security, over any range the data covers."
+          "title": "Historical backtesting",
+          "description": "Choose a CSE security and run clear buy and sell rules against past prices. This shows how the rules would have behaved, not what will happen next.",
+          "cta": "Test an idea"
         },
         "portfolio": {
           "title": "Portfolio analytics",
-          "description": "Positions, realised and unrealised P&L and a full cash ledger for every paper portfolio."
+          "description": "See the virtual cash, holdings, gains, and losses created by your practice trades in one simple view.",
+          "cta": "See a paper portfolio"
+        },
+        "trading": {
+          "title": "Paper trading",
+          "description": "Practise placing buy and sell orders with virtual money. You can learn how an order works without using real money.",
+          "cta": "Practise a trade"
         },
         "signals": {
           "title": "Model-driven signals",
-          "description": "Direction probabilities from a statistical model. Not built yet — no signal is shown anywhere until it is."
+          "description": "Direction probabilities from a statistical model. This is not built yet, so no signal is shown anywhere until it is."
         }
       }
     },
     "backtesting": {
-      "eyebrow": "Strategy Backtesting",
+      "eyebrow": "STRATEGY BACKTESTING",
       "headingLine1": "Test before",
       "headingLine2": "you invest.",
-      "description": "Build a price-based rule set, then run it against CSE historical data. A guided 7-step wizard walks you through setup in minutes, then surfaces a full analytics dashboard.",
+      "description": "Backtesting means running a set of buy and sell rules against past CSE prices. A guided 7-step setup helps you choose a security, define the rules and costs, and review the simulated result.",
       "quickTitle": "Quick Backtest",
-      "quickDescription": "Pick a strategy, pick a stock, run. Default CSE rules, results in seconds.",
+      "quickDescription": "Choose a security and simple price rules. TradeIQ fills in sensible simulation settings so you can learn the flow.",
       "customTitle": "Custom Backtest",
-      "customDescription": "Fine-tune capital, commission, slippage, risk limits, and choose your own metrics.",
-      "cta": "Run your first backtest →",
+      "customDescription": "Choose the starting cash, trading costs, risk limits, and measurements used in the simulation.",
+      "cta": "Run your first backtest",
+      "previewTitle": "Define your strategy",
+      "previewLabel": "Example setup",
+      "previewNote": "Illustrative parameters, not a recommendation. Historical results do not predict future returns.",
       "steps": {
         "mode": "Mode",
         "strategy": "Strategy",
@@ -268,8 +344,8 @@
       "stopLossPct": "Stop Loss"
     },
     "cta": {
-      "heading": "Start trading smarter today.",
-      "subtitle": "Join investors using TradeIQ to analyse the Colombo Stock Exchange with professional-grade tools.",
+      "heading": "Build confidence before you invest.",
+      "subtitle": "Browse CSE securities, test rules on historical prices, and practise trades with virtual money.",
       "button": "Create a free account",
       "dataNote": "End-of-day data · Delayed"
     },
@@ -278,6 +354,87 @@
       "privacy": "Privacy",
       "terms": "Terms",
       "contact": "Contact"
+    }
+  },
+  "howItWorks": {
+    "hero": {
+      "eyebrow": "TradeIQ explained",
+      "heading": "Learn how the platform works before you begin.",
+      "description": "TradeIQ helps you explore the Colombo Stock Exchange, test investing rules on historical prices, and practise trades with virtual money. It is a research and learning workspace, not a broker or investment adviser.",
+      "browse": "Browse CSE markets",
+      "account": "Create an account"
+    },
+    "capabilities": {
+      "eyebrow": "A simple workflow",
+      "heading": "Explore. Test. Practise. Review.",
+      "description": "Each part of TradeIQ answers a different question. You can begin with public market browsing, then use the simulation tools when you are ready.",
+      "step": "Step {{number}}",
+      "items": {
+        "markets": {
+          "title": "Explore market data",
+          "description": "Search CSE-listed companies, compare the latest available end-of-day prices, filter by sector, and open historical price charts. Public market browsing does not require an account."
+        },
+        "backtesting": {
+          "title": "Backtest an idea",
+          "description": "Choose a security and apply defined buy and sell rules to past prices. The simulation can include starting cash, trading costs, and risk limits so you can review how those rules behaved historically."
+        },
+        "paperTrading": {
+          "title": "Practise paper trading",
+          "description": "Place simulated buy and sell orders using virtual cash. Paper trading lets you learn the order workflow and observe the result without sending an order to a real exchange or risking money."
+        },
+        "portfolio": {
+          "title": "Review a simulated portfolio",
+          "description": "Track virtual cash, holdings, orders, and simulated gains or losses in one place. This helps connect individual practice trades to the overall portfolio."
+        }
+      }
+    },
+    "limitations": {
+      "heading": "What TradeIQ does not do",
+      "description": "Clear boundaries matter when a platform deals with financial information. These limitations apply to the current build.",
+      "items": {
+        "marketData": {
+          "title": "It is not a live market terminal",
+          "description": "Prices are end-of-day data and may be delayed. TradeIQ shows the relevant session date where it is available."
+        },
+        "execution": {
+          "title": "It does not place real trades",
+          "description": "Paper-trading orders use virtual money and are not routed to the Colombo Stock Exchange, a broker, or a bank account."
+        },
+        "backtests": {
+          "title": "Historical results are not forecasts",
+          "description": "A backtest describes how selected rules behaved under past conditions. It cannot predict future prices or guarantee a return."
+        },
+        "signals": {
+          "title": "Model-driven signals are not available yet",
+          "description": "TradeIQ does not currently display AI predictions or model-generated trade recommendations. Planned features are not presented as working capabilities."
+        }
+      }
+    },
+    "faq": {
+      "eyebrow": "Common questions",
+      "heading": "TradeIQ FAQ",
+      "items": {
+        "paperTrading": {
+          "question": "What is paper trading?",
+          "answer": "Paper trading is simulated trading with virtual cash. You practise choosing a security, order side, quantity, and order settings, but no real money or exchange order is involved."
+        },
+        "backtesting": {
+          "question": "What is backtesting?",
+          "answer": "Backtesting applies a defined set of trading rules to historical prices. It can help you understand how the rules would have behaved in the selected period, including the effect of assumptions such as commissions and slippage."
+        },
+        "account": {
+          "question": "Do I need an account?",
+          "answer": "No account is needed to browse public CSE market data. An account is required for personal simulations such as backtests, paper-trading orders, and portfolios."
+        },
+        "advice": {
+          "question": "Does TradeIQ provide investment advice?",
+          "answer": "No. TradeIQ provides information, research tools, and simulations for educational use. It does not recommend that you buy or sell a security."
+        },
+        "data": {
+          "question": "How current is the market data?",
+          "answer": "TradeIQ uses end-of-day CSE market data rather than a live intraday feed. The Markets pages show the session date associated with the available prices."
+        }
+      }
     }
   },
   "auth": {
@@ -317,11 +474,16 @@
     "signedOut": "Not signed in"
   },
   "portfolio": {
+    "eyebrow": "Paper portfolio",
     "title": "My Portfolio",
     "asOfLabel": "Valuation date",
+    "asOfHelp": "The service uses the nearest available CSE session on or before this date.",
+    "practiceTrade": "Practice a trade",
     "selector": {
       "label": "Portfolio",
-      "new": "New portfolio"
+      "new": "New portfolio",
+      "paperLabel": "Simulated funds",
+      "toolbarLabel": "Select a paper portfolio"
     },
     "scope": {
       "loading": "Loading portfolios…",
@@ -333,6 +495,7 @@
       "title": "Create a portfolio",
       "name": "Name",
       "startingCapital": "Starting capital (LKR)",
+      "startingCapitalHint": "Choose between LKR 100,000 and LKR 100,000,000. This is simulated money.",
       "submit": "Create portfolio",
       "errors": {
         "idempotencyReused": "This portfolio was already submitted with different details. Try again.",
@@ -365,6 +528,7 @@
         "unrealizedReturnPct": "Return"
       },
       "empty": "No open positions.",
+      "scrollHint": "Scroll horizontally to see valuation and return details.",
       "loading": "Loading positions…",
       "priceUnavailable": "No closing price for {{date}}, so positions cannot be valued. Pick another date.",
       "unreachable": "Could not reach the identity-auth API."
@@ -383,6 +547,7 @@
         "sell_credit": "Sell"
       },
       "empty": "No cash movements yet.",
+      "scrollHint": "Scroll horizontally to see balances and effective dates.",
       "loading": "Loading cash movements…",
       "pagination": {
         "page": "Page {{page}} of {{lastPage}}",
@@ -411,8 +576,10 @@
       "unknown": "This order could not be processed for an unknown reason."
     },
     "page": {
+      "eyebrow": "Paper trading activity",
       "title": "Order history",
-      "subtitle": "Every order you have submitted in this portfolio, filled or rejected."
+      "subtitle": "Review every simulated order submitted for this portfolio, including why an order filled or was rejected.",
+      "placeTrade": "Place a paper trade"
     },
     "tableTitle": "Orders",
     "status": {
@@ -432,9 +599,14 @@
       "actions": "Details"
     },
     "quantityPartial": "{{filled}} of {{quantity}}",
-    "expand": "Show details",
-    "collapse": "Hide details",
+    "expand": "View details",
+    "collapse": "Close details",
+    "scrollHint": "Scroll horizontally to see quantities, outcomes and order details.",
     "detail": {
+      "close": "Close order details",
+      "summary": "{{side}} {{quantity}} shares, submitted {{date}}",
+      "executionTitle": "Execution details",
+      "executionHelp": "These figures are the recorded result of the simulated order. No real trade was sent to the exchange.",
       "loading": "Loading order details…",
       "unreachable": "Could not load order details.",
       "noFill": "This order was not executed.",
@@ -458,8 +630,12 @@
   },
   "paperTrading": {
     "page": {
+      "eyebrow": "Practice with simulated funds",
       "title": "Place an order",
-      "notice": "Simulated trading against end-of-day prices. No real money and no live market feed."
+      "subtitle": "Learn the mechanics of a CSE trade with a quote, fee estimate and recorded outcome before risking real money.",
+      "viewOrders": "View order history",
+      "noticeTitle": "Simulation only",
+      "notice": "Paper trades use the latest eligible end-of-day closing price. No real money is used, no order is sent to the CSE and this is not a live market feed."
     },
     "ticket": {
       "title": "Order ticket",
@@ -473,11 +649,21 @@
         "buy": "Buy",
         "sell": "Sell"
       },
+      "sideHelp": {
+        "buy": "Buy adds shares to this paper portfolio and reduces its simulated cash.",
+        "sell": "Sell removes shares already held and adds the proceeds to simulated cash."
+      },
       "quantity": "Quantity",
+      "quantityHint": "Enter a whole number of shares.",
+      "guide": {
+        "title": "How this order works",
+        "body": "Choose a listed security, select Buy or Sell and enter the number of shares. Preview is required before confirmation so you can review the price, fees and cash impact."
+      },
       "preview": "Preview order",
       "confirm": "Confirm order",
       "estimate": {
         "title": "Estimate",
+        "waiting": "A clear cost breakdown before you confirm",
         "loading": "Getting an estimate…",
         "empty": "Enter a symbol and quantity, then preview to see an estimate.",
         "stale": "Order details changed since this estimate. Preview again before confirming.",
@@ -499,7 +685,8 @@
           "sec_cess": "SEC cess",
           "stl": "Share transaction levy"
         },
-        "subtitle": "Indicative figures for this order, quoted from the last close."
+        "subtitle": "Indicative figures for this order, quoted from the last close.",
+        "explanation": "Gross consideration is the share value before fees. Cash effect is the total simulated cash added or removed. Settlement is the date the simulated trade completes."
       },
       "result": {
         "filledTitle": "{{side}} order filled — {{quantity}} {{symbol}}",

@@ -1,21 +1,29 @@
-import { useTranslation } from 'react-i18next';
-import { localeFor } from '../../i18n';
-import { readErrorText } from './error-text';
-import { changeDirection, formatMoney, formatSignedMoney } from './format';
-import { useOrder } from './useOrders';
-import { DirectionGlyph, ErrorCard } from './ui';
-import { toneClass } from './ui-styles';
+import { useTranslation } from "react-i18next";
+import { localeFor } from "../../i18n";
+import { readErrorText } from "./error-text";
+import { changeDirection, formatMoney, formatSignedMoney } from "./format";
+import { useOrder } from "./useOrders";
+import { DirectionGlyph, ErrorCard } from "./ui";
+import { toneClass } from "./ui-styles";
 
 interface OrderDetailProps {
   portfolioId: string;
   orderId: string;
 }
 
-function DetailRow({ term, children }: { term: string; children: React.ReactNode }) {
+function DetailRow({
+  term,
+  children,
+}: {
+  term: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex items-baseline justify-between gap-3">
       <dt className="text-body-medium text-text-secondary">{term}</dt>
-      <dd className="text-body-medium tabular-nums text-text-primary">{children}</dd>
+      <dd className="text-body-medium tabular-nums text-text-primary">
+        {children}
+      </dd>
     </div>
   );
 }
@@ -40,13 +48,17 @@ export function OrderDetail({ portfolioId, orderId }: OrderDetailProps) {
   if (isPending) {
     return (
       <p className="text-body-medium text-text-secondary" role="status">
-        {t('orders.detail.loading')}
+        {t("orders.detail.loading")}
       </p>
     );
   }
 
   if (isError) {
-    return <ErrorCard>{readErrorText(error, t('orders.detail.unreachable'))}</ErrorCard>;
+    return (
+      <ErrorCard>
+        {readErrorText(error, t("orders.detail.unreachable"))}
+      </ErrorCard>
+    );
   }
 
   const fill = data?.data.fill;
@@ -55,40 +67,80 @@ export function OrderDetail({ portfolioId, orderId }: OrderDetailProps) {
   // has nothing further to show here — its reason is already rendered
   // inline on the row itself, without needing this fetch.
   if (!fill) {
-    return <p className="text-body-medium text-text-secondary">{t('orders.detail.noFill')}</p>;
+    return (
+      <div className="rounded-2xl bg-background-secondary-default p-4">
+        <p className="text-body-medium text-text-secondary">
+          {t("orders.detail.noFill")}
+        </p>
+      </div>
+    );
   }
 
-  const pnlDirection = fill.realized_pnl !== null ? changeDirection(fill.realized_pnl) : 'flat';
+  const pnlDirection =
+    fill.realized_pnl !== null ? changeDirection(fill.realized_pnl) : "flat";
 
   return (
-    <dl className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2">
-      <DetailRow term={t('orders.detail.price')}>{formatMoney(fill.price, locale)}</DetailRow>
-      <DetailRow term={t('orders.detail.fillDate')}>{fill.fill_date}</DetailRow>
-      <DetailRow term={t('orders.detail.settlementDate')}>{fill.settlement_date}</DetailRow>
-      <DetailRow term={t('orders.detail.grossConsideration')}>
-        {formatMoney(fill.gross_consideration, locale)}
-      </DetailRow>
-      <DetailRow term={t('orders.detail.feeTotal')}>{formatMoney(fill.fee_total, locale)}</DetailRow>
-
-      <div className="flex items-baseline justify-between gap-3">
-        <dt className="text-body-medium text-text-secondary">{t('orders.detail.cashEffect')}</dt>
-        <dd className={`text-body-medium tabular-nums ${toneClass(fill.cash_effect)}`}>
-          {formatSignedMoney(fill.cash_effect, locale)}
-        </dd>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <h3 className="text-headline-medium text-text-primary">
+          {t("orders.detail.executionTitle")}
+        </h3>
+        <p className="text-body-regular text-text-secondary">
+          {t("orders.detail.executionHelp")}
+        </p>
       </div>
 
-      {/* realized_pnl is only ever non-null on a sell that closed a FIFO lot
+      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {[
+          [t("orders.detail.price"), formatMoney(fill.price, locale)],
+          [t("orders.detail.fillDate"), fill.fill_date],
+          [t("orders.detail.settlementDate"), fill.settlement_date],
+          [
+            t("orders.detail.grossConsideration"),
+            formatMoney(fill.gross_consideration, locale),
+          ],
+          [t("orders.detail.feeTotal"), formatMoney(fill.fee_total, locale)],
+        ].map(([term, value]) => (
+          <div
+            className="rounded-2xl bg-background-secondary-default p-3"
+            key={term}
+          >
+            <DetailRow term={term}>{value}</DetailRow>
+          </div>
+        ))}
+
+        <div className="rounded-2xl bg-background-secondary-default p-3">
+          <div className="flex items-baseline justify-between gap-3">
+            <dt className="text-body-medium text-text-secondary">
+              {t("orders.detail.cashEffect")}
+            </dt>
+            <dd
+              className={`text-body-medium tabular-nums ${toneClass(fill.cash_effect)}`}
+            >
+              {formatSignedMoney(fill.cash_effect, locale)}
+            </dd>
+          </div>
+        </div>
+
+        {/* realized_pnl is only ever non-null on a sell that closed a FIFO lot
           (§3.3) — a buy's fill always carries `null` here, so this row is
           simply omitted for a buy rather than shown as a meaningless zero. */}
-      {fill.realized_pnl !== null && (
-        <div className="flex items-baseline justify-between gap-3">
-          <dt className="text-body-medium text-text-secondary">{t('orders.detail.realizedPnl')}</dt>
-          <dd className={`text-body-medium tabular-nums ${toneClass(fill.realized_pnl)}`}>
-            <DirectionGlyph direction={pnlDirection} />
-            {formatSignedMoney(fill.realized_pnl, locale)}
-          </dd>
-        </div>
-      )}
-    </dl>
+        {fill.realized_pnl !== null && (
+          <div className="rounded-2xl bg-background-secondary-default p-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <dt className="text-body-medium text-text-secondary">
+                {t("orders.detail.realizedPnl")}
+              </dt>
+              <dd
+                className={`text-body-medium tabular-nums ${toneClass(fill.realized_pnl)}`}
+              >
+                <DirectionGlyph direction={pnlDirection} />
+                {formatSignedMoney(fill.realized_pnl, locale)}
+              </dd>
+            </div>
+          </div>
+        )}
+      </dl>
+    </div>
   );
 }

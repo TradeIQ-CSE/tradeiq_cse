@@ -1,261 +1,252 @@
-import React, { useState, useEffect } from 'react';
-import { useBacktestWizard } from '../hooks/useBacktestWizard';
-import { getSecuritiesUniverse } from '../api/backtestApi';
-import { SecurityListItem } from '../../markets/types';
+import { useEffect, useMemo, useState } from "react";
+import {
+  RiCheckboxCircleLine,
+  RiLoader4Line,
+  RiRefreshLine,
+  RiSearchLine,
+} from "@remixicon/react";
+import { Button } from "@/components/base/buttons/button";
+import { Chip } from "@/components/base/badges/chip";
+import { Input } from "@/components/base/input/input";
+import { SecuritySectorIcon } from "@/features/markets/SecuritySectorIcon";
+import { formatPrice } from "@/features/markets/format";
+import { cx } from "@/utils/cx";
+import { useBacktestWizard } from "../hooks/useBacktestWizard";
+import { getSecuritiesUniverse } from "../api/backtestApi";
+import type { SecurityListItem } from "../../markets/types";
+import {
+  BacktestFieldError,
+  BacktestSectionHeader,
+  BacktestStepHeader,
+} from "./BacktestStepLayout";
 
-const POPULAR_SECURITIES = [
-  { symbol: 'JKH.N0000', name: 'John Keells Holdings PLC', sector: 'Industrial Conglomerates', price: 198.50 },
-  { symbol: 'COMB.N0000', name: 'Commercial Bank of Ceylon PLC', sector: 'Banking', price: 114.25 },
-  { symbol: 'SAMP.N0000', name: 'Sampath Bank PLC', sector: 'Banking', price: 82.00 },
-  { symbol: 'HNB.N0000', name: 'Hatton National Bank PLC', sector: 'Banking', price: 215.75 },
-  { symbol: 'DIAL.N0000', name: 'Dialog Axiata PLC', sector: 'Telecommunications', price: 11.80 },
-  { symbol: 'LOLC.N0000', name: 'LOLC Holdings PLC', sector: 'Financial Services', price: 440.00 },
-];
-
-export const SecurityStep: React.FC = () => {
+export function SecurityStep() {
   const { config, updateConfig, getStepErrors } = useBacktestWizard();
-  const errors = getStepErrors('security');
-  const symbolError = errors.find((e) => e.field === 'symbol');
-
-  const [search, setSearch] = useState('');
+  const symbolError = getStepErrors("security").find(
+    (error) => error.field === "symbol",
+  );
+  const [search, setSearch] = useState("");
   const [securities, setSecurities] = useState<SecurityListItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [requestVersion, setRequestVersion] = useState(0);
 
   useEffect(() => {
-    let isMounted = true;
-    setIsLoading(true);
-
-    getSecuritiesUniverse(search)
-      .then((data) => {
-        if (isMounted) {
+    let isCurrent = true;
+    const timer = window.setTimeout(() => {
+      setIsLoading(true);
+      setLoadError(null);
+      getSecuritiesUniverse(search)
+        .then((data) => {
+          if (!isCurrent) return;
           setSecurities(data);
           setIsLoading(false);
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
+        })
+        .catch(() => {
+          if (!isCurrent) return;
+          setSecurities([]);
+          setLoadError("CSE securities could not be loaded right now.");
           setIsLoading(false);
-        }
-      });
+        });
+    }, 200);
 
     return () => {
-      isMounted = false;
+      isCurrent = false;
+      window.clearTimeout(timer);
     };
-  }, [search]);
+  }, [requestVersion, search]);
 
-  const handleSelectSecurity = (item: {
-    symbol: string;
-    companyName?: string;
-    sector?: string | null;
-    price?: number | null;
-    dataFrom?: string | null;
-    dataTo?: string | null;
-  }) => {
-    updateConfig({
-      security: {
-        symbol: item.symbol,
-        companyName: item.companyName,
-        sector: item.sector,
-        price: item.price,
-        dataFrom: item.dataFrom || '2017-01-02',
-        dataTo: item.dataTo || '2025-12-31',
-      },
+  const selectedSector = useMemo(() => {
+    if (!config.security.sector) return null;
+    return {
+      name: config.security.sector,
+      gics_code: config.security.sectorGicsCode ?? "",
+    };
+  }, [config.security.sector, config.security.sectorGicsCode]);
+
+  const handleSelectSecurity = (security: SecurityListItem) => {
+    updateConfig((previous) => {
+      let startDate = previous.period.startDate;
+      let endDate = previous.period.endDate;
+
+      if (security.data_from && startDate < security.data_from) {
+        startDate = security.data_from;
+      }
+      if (security.data_to && endDate > security.data_to) {
+        endDate = security.data_to;
+      }
+      if (startDate > endDate) {
+        startDate = security.data_from ?? previous.period.startDate;
+        endDate = security.data_to ?? previous.period.endDate;
+      }
+
+      return {
+        ...previous,
+        security: {
+          symbol: security.symbol,
+          companyName: security.company_name,
+          sector: security.sector?.name ?? null,
+          sectorGicsCode: security.sector?.gics_code ?? null,
+          price: security.price,
+          dataFrom: security.data_from,
+          dataTo: security.data_to,
+        },
+        period: { startDate, endDate },
+      };
     });
   };
 
-  const selectedSymbol = config.security?.symbol || '';
-
   return (
-    <div className="security-step">
-      <div className="step-header">
-        <h2 className="step-header__title">1. Select Security</h2>
-        <p className="step-header__desc">
-          Choose a Colombo Stock Exchange (CSE) listed equity with historical daily price coverage for simulation.
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <BacktestStepHeader
+        step={1}
+        title="Choose a CSE security"
+        description="A backtest applies one set of rules to one listed security. Choose from the API-backed CSE universe and check its available historical coverage before continuing."
+      />
 
-      {/* Selected Security Highlight Card */}
-      {config.security?.symbol && (
-        <div
-          style={{
-            background: 'var(--bg-panel)',
-            border: '1px solid var(--accent-border)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '16px',
-            marginBottom: '20px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span
-                  style={{
-                    background: 'var(--accent-soft)',
-                    color: 'var(--accent-text)',
-                    fontWeight: 700,
-                    fontSize: '14px',
-                    padding: '2px 8px',
-                    borderRadius: '4px',
-                  }}
-                >
+      {config.security.symbol && (
+        <section className="flex flex-col gap-4 rounded-2xl border border-border-button-active bg-status-blue-background p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <SecuritySectorIcon sector={selectedSector} />
+            <div className="flex min-w-0 flex-col gap-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <Chip color="blue" variant="subtle">
                   {config.security.symbol}
-                </span>
-                <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-heading)' }}>
-                  {config.security.companyName || 'CSE Equity'}
-                </span>
+                </Chip>
+                <p className="text-body-medium text-text-primary">
+                  {config.security.companyName || "CSE listed security"}
+                </p>
               </div>
-              {config.security.sector && (
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                  Sector: {config.security.sector}
-                </div>
-              )}
+              <p className="text-body-2-regular text-text-secondary">
+                {config.security.sector || "Sector unavailable"}
+              </p>
             </div>
-            {config.security.price && (
-              <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Last Close</span>
-                <strong style={{ fontSize: '16px', color: 'var(--text-heading)' }}>
-                  Rs. {config.security.price.toFixed(2)}
+          </div>
+          {config.security.price !== null &&
+            config.security.price !== undefined && (
+              <div className="flex shrink-0 flex-col sm:items-end">
+                <span className="text-caption-1-medium text-text-tertiary">
+                  Latest available close
+                </span>
+                <strong className="text-title-3-semibold tabular-nums text-text-primary">
+                  LKR {formatPrice(config.security.price, "en-LK")}
                 </strong>
               </div>
             )}
-          </div>
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '12px',
-              color: 'var(--positive)',
-              marginTop: '4px',
-              borderTop: '1px solid var(--border-faint)',
-              paddingTop: '8px',
-            }}
-          >
-            <span>✓</span>
+          <div className="flex items-start gap-2 border-t border-separator-border pt-3 text-body-2-regular text-status-blue-text sm:hidden">
+            <RiCheckboxCircleLine className="mt-0.5 size-4 shrink-0" aria-hidden />
             <span>
-              Validated Data Coverage:{' '}
-              <strong>{config.security.dataFrom || '2017-01-02'}</strong> to{' '}
-              <strong>{config.security.dataTo || '2025-12-31'}</strong>
+              Coverage: {config.security.dataFrom || "not reported"} to{" "}
+              {config.security.dataTo || "not reported"}
             </span>
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Search Input */}
-      <div className="form-group">
-        <label htmlFor="security-search" className="form-label">
-          <span>Search Stock Universe</span>
-          <span className="form-label__hint">Filter by symbol or company name</span>
-        </label>
-        <input
-          id="security-search"
-          type="text"
-          className={`form-input ${symbolError ? 'form-input--error' : ''}`}
-          placeholder="e.g. JKH, Commercial Bank, SAMP..."
+      <div className="flex flex-col gap-2">
+        <Input
+          label="Search CSE securities"
+          hint={
+            symbolError?.message ||
+            "Search by ticker symbol or company name. Results come from the Markets API."
+          }
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={setSearch}
+          placeholder="For example, COMB or Commercial Bank"
+          leadingIcon={RiSearchLine}
+          isInvalid={Boolean(symbolError)}
           autoComplete="off"
+          fieldClassName="ring-1 ring-inset ring-border-button-default"
         />
-        {symbolError && <span className="form-error-text">{symbolError.message}</span>}
+        <BacktestFieldError>{symbolError?.message}</BacktestFieldError>
       </div>
 
-      {/* Popular CSE Presets */}
-      <div style={{ marginBottom: '20px' }}>
-        <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>
-          Popular CSE Equities
-        </span>
-        <div className="quick-chips">
-          {POPULAR_SECURITIES.map((sec) => (
-            <button
-              type="button"
-              key={sec.symbol}
-              className={`chip-btn ${selectedSymbol === sec.symbol ? 'chip-btn--active' : ''}`}
-              onClick={() =>
-                handleSelectSecurity({
-                  symbol: sec.symbol,
-                  companyName: sec.name,
-                  sector: sec.sector,
-                  price: sec.price,
-                })
-              }
-            >
-              {sec.symbol.split('.')[0]} · {sec.name.split(' ')[0]}
-            </button>
-          ))}
-        </div>
-      </div>
+      <section className="flex flex-col gap-3">
+        <BacktestSectionHeader
+          title={search.trim() ? "Matching securities" : "Available securities"}
+          description={
+            isLoading
+              ? "Loading the latest available security list."
+              : `${securities.length} ${securities.length === 1 ? "security" : "securities"} available`
+          }
+        />
 
-      {/* Matching Securities List from API if search present */}
-      {search.trim().length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-            Search Results ({securities.length})
-          </span>
+        <div className="max-h-80 overflow-y-auto rounded-2xl border border-border-table bg-background-primary-default">
           {isLoading ? (
-            <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-              Searching CSE market data...
+            <div
+              className="flex items-center justify-center gap-2 p-8 text-body-regular text-text-secondary"
+              role="status"
+            >
+              <RiLoader4Line className="size-5 animate-spin" aria-hidden />
+              Loading CSE securities
+            </div>
+          ) : loadError ? (
+            <div className="flex flex-col items-center gap-3 p-8 text-center" role="alert">
+              <p className="text-body-regular text-text-secondary">{loadError}</p>
+              <Button
+                variant="secondary"
+                size="small"
+                leadingIcon={RiRefreshLine}
+                onClick={() => setRequestVersion((version) => version + 1)}
+              >
+                Try again
+              </Button>
             </div>
           ) : securities.length === 0 ? (
-            <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-              No securities found matching &ldquo;{search}&rdquo;. You can also enter the symbol manually above.
-            </div>
+            <p className="p-8 text-center text-body-regular text-text-secondary">
+              No securities match “{search}”. Try a ticker or a shorter company name.
+            </p>
           ) : (
-            <div
-              style={{
-                maxHeight: '220px',
-                overflowY: 'auto',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              {securities.map((sec) => (
-                <button
-                  type="button"
-                  key={sec.symbol}
-                  onClick={() =>
-                    handleSelectSecurity({
-                      symbol: sec.symbol,
-                      companyName: sec.company_name,
-                      sector: sec.sector?.name || null,
-                      price: sec.price,
-                      dataFrom: sec.data_from,
-                      dataTo: sec.data_to,
-                    })
-                  }
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    background: selectedSymbol === sec.symbol ? 'var(--accent-soft)' : 'transparent',
-                    border: 'none',
-                    borderBottom: '1px solid var(--border-faint)',
-                    color: 'inherit',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    fontFamily: 'inherit',
-                  }}
-                >
-                  <div>
-                    <strong style={{ color: 'var(--text-heading)', marginRight: '8px' }}>{sec.symbol}</strong>
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>{sec.company_name}</span>
-                  </div>
-                  {sec.price !== null && (
-                    <span style={{ color: 'var(--text-heading)', fontSize: '13px' }}>
-                      Rs. {sec.price.toFixed(2)}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
+            <ul className="divide-y divide-separator-border">
+              {securities.map((security) => {
+                const isSelected = config.security.symbol === security.symbol;
+                return (
+                  <li key={security.symbol}>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectSecurity(security)}
+                      aria-pressed={isSelected}
+                      className={cx(
+                        "flex w-full items-center gap-3 px-3 py-3 text-left outline-none transition-colors sm:px-4",
+                        "hover:bg-background-primary-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-border-focus-ring",
+                        isSelected && "bg-status-blue-background",
+                      )}
+                    >
+                      <SecuritySectorIcon sector={security.sector} />
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <span className="text-body-medium text-text-primary">
+                          {security.symbol}
+                        </span>
+                        <span className="truncate text-body-2-regular text-text-secondary">
+                          {security.company_name}
+                        </span>
+                      </span>
+                      <span className="hidden shrink-0 flex-col items-end sm:flex">
+                        <span className="text-body-medium tabular-nums text-text-primary">
+                          {security.price === null
+                            ? "Price unavailable"
+                            : `LKR ${formatPrice(security.price, "en-LK")}`}
+                        </span>
+                        <span className="text-caption-1-medium text-text-tertiary">
+                          {security.data_from && security.data_to
+                            ? `${security.data_from} to ${security.data_to}`
+                            : "Coverage not reported"}
+                        </span>
+                      </span>
+                      {isSelected && (
+                        <RiCheckboxCircleLine
+                          className="size-5 shrink-0 text-status-blue-text"
+                          aria-hidden
+                        />
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
-      )}
+      </section>
     </div>
   );
-};
+}

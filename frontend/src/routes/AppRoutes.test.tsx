@@ -46,6 +46,21 @@ describe('AppRoutes', () => {
     expect(await screen.findByRole('heading', { name: t('markets.title') })).toBeInTheDocument();
   });
 
+  it('renders the public platform guide while anonymous', async () => {
+    renderWithProviders(<AppRoutes />, {
+      initialEntries: ['/how-it-works'],
+      auth: { status: 'anonymous' },
+    });
+
+    expect(
+      await screen.findByRole('heading', { name: t('howItWorks.hero.heading') }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: t('howItWorks.limitations.heading') }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: t('auth.login.title') })).not.toBeInTheDocument();
+  });
+
   it('renders a lowercase security-detail URL publicly with the canonical symbol', async () => {
     renderWithProviders(<AppRoutes />, {
       initialEntries: ['/markets/jkh.n0000'],

@@ -1,7 +1,7 @@
-import { useTranslation } from 'react-i18next';
-import { localeFor } from '../../i18n';
-import { formatMoney, formatSignedMoney } from './format';
-import { OrderEstimate } from './types';
+import { useTranslation } from "react-i18next";
+import { localeFor } from "../../i18n";
+import { formatMoney, formatSignedMoney } from "./format";
+import { OrderEstimate } from "./types";
 import {
   Card,
   CardHeading,
@@ -9,8 +9,8 @@ import {
   ErrorCard,
   NoticeCard,
   StateMessage,
-} from './ui';
-import { toneClass } from './ui-styles';
+} from "./ui";
+import { toneClass } from "./ui-styles";
 
 interface EstimatePanelProps {
   estimate: OrderEstimate | null;
@@ -34,15 +34,21 @@ function formatRate(value: number, locale: string): string {
 
 // ADR 0008: every figure rendered below is read straight from the estimate
 // response. Nothing here is summed, subtracted or otherwise derived.
-export function EstimatePanel({ estimate, isPending, isStale, errorKey }: EstimatePanelProps) {
+export function EstimatePanel({
+  estimate,
+  isPending,
+  isStale,
+  errorKey,
+}: EstimatePanelProps) {
   const { t, i18n } = useTranslation();
   const locale = localeFor(i18n.resolvedLanguage ?? i18n.language);
 
   if (isPending) {
     return (
-      <Card busy>
-        <CardProgress label={t('paperTrading.ticket.estimate.loading')} />
-        <StateMessage>{t('paperTrading.ticket.estimate.loading')}</StateMessage>
+      <Card busy className="min-h-80">
+        <CardHeading title={t("paperTrading.ticket.estimate.title")} />
+        <CardProgress label={t("paperTrading.ticket.estimate.loading")} />
+        <StateMessage>{t("paperTrading.ticket.estimate.loading")}</StateMessage>
       </Card>
     );
   }
@@ -52,18 +58,37 @@ export function EstimatePanel({ estimate, isPending, isStale, errorKey }: Estima
   // from the exact same order-messages.ts map so the two paths never say
   // different things about, say, INSUFFICIENT_CASH.
   if (errorKey) {
-    return <ErrorCard role="alert">{t(errorKey)}</ErrorCard>;
+    return (
+      <Card className="min-h-80">
+        <CardHeading title={t("paperTrading.ticket.estimate.title")} />
+        <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+          <ErrorCard role="alert">{t(errorKey)}</ErrorCard>
+        </div>
+      </Card>
+    );
   }
 
   if (!estimate) {
-    return <NoticeCard>{t('paperTrading.ticket.estimate.empty')}</NoticeCard>;
+    return (
+      <Card className="min-h-80">
+        <CardHeading
+          title={t("paperTrading.ticket.estimate.title")}
+          subtitle={t("paperTrading.ticket.estimate.waiting")}
+        />
+        <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+          <NoticeCard>{t("paperTrading.ticket.estimate.empty")}</NoticeCard>
+        </div>
+      </Card>
+    );
   }
 
   return (
     <Card>
       <CardHeading
-        title={t('paperTrading.ticket.estimate.title')}
-        subtitle={isStale ? undefined : t('paperTrading.ticket.estimate.subtitle')}
+        title={t("paperTrading.ticket.estimate.title")}
+        subtitle={
+          isStale ? undefined : t("paperTrading.ticket.estimate.subtitle")
+        }
       />
 
       {isStale && (
@@ -71,38 +96,40 @@ export function EstimatePanel({ estimate, isPending, isStale, errorKey }: Estima
           className="mx-4 mb-3 rounded-lg bg-status-yellow-background px-3 py-2 text-body-2-medium text-status-yellow-text"
           role="status"
         >
-          {t('paperTrading.ticket.estimate.stale')}
+          {t("paperTrading.ticket.estimate.stale")}
         </p>
       )}
 
-      <dl className="grid grid-cols-1 gap-x-6 gap-y-2 px-4 pb-4 sm:grid-cols-2">
-        <div className="flex items-baseline justify-between gap-3">
+      <dl className="grid grid-cols-1 gap-3 px-4 pb-4 sm:grid-cols-2 sm:px-5 sm:pb-5">
+        <div className="flex flex-col gap-0.5 rounded-2xl bg-background-secondary-default p-3">
           <dt className="text-body-medium text-text-secondary">
-            {t('paperTrading.ticket.estimate.price')}
+            {t("paperTrading.ticket.estimate.price")}
           </dt>
-          <dd className="text-body-medium tabular-nums text-text-primary">
+          <dd className="text-headline-medium tabular-nums text-text-primary">
             {formatMoney(estimate.price, locale)}
           </dd>
         </div>
-        <div className="flex items-baseline justify-between gap-3">
+        <div className="flex flex-col gap-0.5 rounded-2xl bg-background-secondary-default p-3">
           <dt className="text-body-medium text-text-secondary">
-            {t('paperTrading.ticket.estimate.priceAsOf')}
+            {t("paperTrading.ticket.estimate.priceAsOf")}
           </dt>
-          <dd className="text-body-medium tabular-nums text-text-primary">{estimate.price_as_of}</dd>
+          <dd className="text-headline-medium tabular-nums text-text-primary">
+            {estimate.price_as_of}
+          </dd>
         </div>
-        <div className="flex items-baseline justify-between gap-3">
+        <div className="flex flex-col gap-0.5 rounded-2xl bg-background-secondary-default p-3">
           <dt className="text-body-medium text-text-secondary">
-            {t('paperTrading.ticket.estimate.settlementDate')}
+            {t("paperTrading.ticket.estimate.settlementDate")}
           </dt>
-          <dd className="text-body-medium tabular-nums text-text-primary">
+          <dd className="text-headline-medium tabular-nums text-text-primary">
             {estimate.settlement_date}
           </dd>
         </div>
-        <div className="flex items-baseline justify-between gap-3">
+        <div className="flex flex-col gap-0.5 rounded-2xl bg-background-secondary-default p-3">
           <dt className="text-body-medium text-text-secondary">
-            {t('paperTrading.ticket.estimate.grossConsideration')}
+            {t("paperTrading.ticket.estimate.grossConsideration")}
           </dt>
-          <dd className="text-body-medium tabular-nums text-text-primary">
+          <dd className="text-headline-medium tabular-nums text-text-primary">
             {formatMoney(estimate.gross_consideration, locale)}
           </dd>
         </div>
@@ -112,21 +139,29 @@ export function EstimatePanel({ estimate, isPending, isStale, errorKey }: Estima
         <table className="bui-table bui-table-sm">
           <thead>
             <tr>
-              <th scope="col">{t('paperTrading.ticket.estimate.feeColumns.type')}</th>
-              <th scope="col" className="text-right">
-                {t('paperTrading.ticket.estimate.feeColumns.rate')}
+              <th scope="col">
+                {t("paperTrading.ticket.estimate.feeColumns.type")}
               </th>
               <th scope="col" className="text-right">
-                {t('paperTrading.ticket.estimate.feeColumns.amount')}
+                {t("paperTrading.ticket.estimate.feeColumns.rate")}
+              </th>
+              <th scope="col" className="text-right">
+                {t("paperTrading.ticket.estimate.feeColumns.amount")}
               </th>
             </tr>
           </thead>
           <tbody>
             {estimate.fees.map((fee) => (
               <tr key={fee.type}>
-                <td>{t(`paperTrading.ticket.estimate.feeTypes.${fee.type}`)}</td>
-                <td className="text-right tabular-nums">{formatRate(fee.rate_percent, locale)}</td>
-                <td className="text-right tabular-nums">{formatMoney(fee.amount, locale)}</td>
+                <td>
+                  {t(`paperTrading.ticket.estimate.feeTypes.${fee.type}`)}
+                </td>
+                <td className="text-right tabular-nums">
+                  {formatRate(fee.rate_percent, locale)}
+                </td>
+                <td className="text-right tabular-nums">
+                  {formatMoney(fee.amount, locale)}
+                </td>
               </tr>
             ))}
             {/* There is no "rate" for a total, so that cell is simply empty
@@ -138,12 +173,14 @@ export function EstimatePanel({ estimate, isPending, isStale, errorKey }: Estima
               <th
                 scope="row"
                 className="text-text-primary"
-                style={{ backgroundColor: 'transparent' }}
+                style={{ backgroundColor: "transparent" }}
               >
-                {t('paperTrading.ticket.estimate.feeTotal')}
+                {t("paperTrading.ticket.estimate.feeTotal")}
               </th>
               <td />
-              <td className="text-right tabular-nums">{formatMoney(estimate.fee_total, locale)}</td>
+              <td className="text-right tabular-nums">
+                {formatMoney(estimate.fee_total, locale)}
+              </td>
             </tr>
           </tbody>
         </table>
@@ -151,12 +188,18 @@ export function EstimatePanel({ estimate, isPending, isStale, errorKey }: Estima
 
       <div className="flex items-baseline justify-between gap-3 border-t border-separator-border px-4 py-3">
         <span className="text-body-medium text-text-secondary">
-          {t('paperTrading.ticket.estimate.cashEffect')}
+          {t("paperTrading.ticket.estimate.cashEffect")}
         </span>
-        <span className={`text-headline-medium tabular-nums ${toneClass(estimate.cash_effect)}`}>
+        <span
+          className={`text-headline-medium tabular-nums ${toneClass(estimate.cash_effect)}`}
+        >
           {formatSignedMoney(estimate.cash_effect, locale)}
         </span>
       </div>
+
+      <p className="border-t border-separator-border px-4 py-3 text-body-2-regular text-text-tertiary sm:px-5">
+        {t("paperTrading.ticket.estimate.explanation")}
+      </p>
     </Card>
   );
 }

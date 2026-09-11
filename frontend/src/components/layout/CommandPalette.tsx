@@ -56,7 +56,7 @@ export function CommandPalette({ isOpen, onOpenChange }: CommandPaletteProps) {
       isOpen={isOpen}
       onOpenChange={onOpenChange}
       isDismissable
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 pt-[15vh]"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-app-overlay px-3 pt-[15vh]"
     >
       <Modal className="w-full max-w-md overflow-hidden rounded-2xl border border-border-table bg-background-primary-default shadow-dropdown">
         <Dialog aria-label={t('nav.commandPalette.title')} className="outline-none">

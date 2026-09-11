@@ -12,7 +12,7 @@ function renderTopbar(initialEntries: string[], topbarSearch: { value: string; o
   const onMenuClick = vi.fn();
   renderWithProviders(
     <ShellContext.Provider value={{ topbarSearch, setTopbarSearch: () => {} }}>
-      <Topbar isMobile={false} onMenuClick={onMenuClick} onOpenSearch={onOpenSearch} />
+      <Topbar onMenuClick={onMenuClick} onOpenSearch={onOpenSearch} />
     </ShellContext.Provider>,
     { initialEntries },
   );
@@ -31,6 +31,12 @@ describe('Topbar', () => {
     renderTopbar(['/markets/JKH.N0000']);
 
     expect(screen.getByText(t('nav.items.markets'))).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('resolves every backtest step to the Backtesting crumb', () => {
+    renderTopbar(['/backtests/new/rules']);
+
+    expect(screen.getByText(t('nav.items.backtesting'))).toHaveAttribute('aria-current', 'page');
   });
 
   it('opens the command palette from its trigger', async () => {

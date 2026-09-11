@@ -1,15 +1,16 @@
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { RiLogoutBoxRLine, RiSearchLine, RiSettings4Line, RiShieldUserLine } from '@remixicon/react';
+import { RiCloseLine, RiLogoutBoxRLine, RiSearchLine, RiSettings4Line, RiShieldUserLine } from '@remixicon/react';
 import { SUPPORTED_LANGUAGES } from '../../i18n';
 import { useAuth } from '../../auth/useAuth';
 import { Avatar } from '../base/avatar/avatar';
 import { Kbd } from '../base/kbd/kbd';
 import { Dropdown, DropdownGroup, DropdownItem, DropdownPopover, DropdownTrigger } from '../base/dropdown/dropdown';
 import { ThemeModeControl } from '../../theme/ThemeModeControl';
-import { NAV_GROUPS, NAV_ROUTES, NavRoute } from '../../routes/navigation';
+import { NAV_GROUPS, NAV_ROUTES, NavRoute, navRouteForPath } from '../../routes/navigation';
 import { cx } from '../../utils/cx';
-import logoIcon from '../../assets/icons/logo.svg';
+import { TradeIqLogo } from '../foundations/brand/tradeiq-logo';
+import { Button } from '../base/buttons/button';
 
 function initialOf(displayName: string): string {
   return displayName.trim().charAt(0).toUpperCase() || 'U';
@@ -17,33 +18,37 @@ function initialOf(displayName: string): string {
 
 interface SidebarProps {
   isMobile?: boolean;
+  className?: string;
   onClose?: () => void;
   onOpenSearch: () => void;
 }
 
 function NavRow({ route, isMobile, onClose, muted = false }: { route: NavRoute; isMobile: boolean; onClose?: () => void; muted?: boolean }) {
   const { t } = useTranslation();
+  const { pathname } = useLocation();
   const Icon = route.icon;
+  const isActive = navRouteForPath(pathname)?.key === route.key;
   return (
     <NavLink
       to={route.path}
+      aria-current={isActive ? 'page' : undefined}
       onClick={() => {
         if (isMobile) onClose?.();
       }}
-      className={({ isActive }) =>
+      className={() =>
         cx(
           'flex items-center gap-2 rounded-2lg p-2 text-body-medium transition-colors duration-150 ease',
           isActive
-            ? 'bg-linear-to-b from-accent-500 to-accent-600 text-white'
+            ? 'bui-on-accent bg-linear-to-b from-accent-500 to-accent-600'
             : muted
               ? 'text-text-tertiary hover:bg-background-secondary-hover hover:text-text-secondary'
               : 'text-text-secondary hover:bg-background-secondary-hover',
         )
       }
     >
-      {({ isActive }) => (
+      {() => (
         <>
-          <Icon className={cx('size-5 shrink-0', isActive ? 'text-white' : 'text-foreground-icon-secondary')} aria-hidden />
+          <Icon className={cx('size-5 shrink-0', isActive ? 'text-current' : 'text-foreground-icon-secondary')} aria-hidden />
           <span className="min-w-0 flex-1 truncate">{t(route.labelKey)}</span>
           {route.planned && !isActive && (
             <span className="shrink-0 rounded-full bg-background-tertiary-default px-1.5 py-0.5 text-caption-2-medium whitespace-nowrap text-text-tertiary">
@@ -56,7 +61,7 @@ function NavRow({ route, isMobile, onClose, muted = false }: { route: NavRoute; 
   );
 }
 
-export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProps) {
+export function Sidebar({ isMobile = false, className, onClose, onOpenSearch }: SidebarProps) {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const { user, logout } = useAuth();
@@ -77,25 +82,40 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
   return (
     <aside
       className={cx(
-        'flex h-full w-[260px] shrink-0 flex-col justify-between gap-3 overflow-hidden p-3',
-        !isMobile && 'rounded-3xl border border-border-table bg-background-secondary-default shadow-sidebar',
+        'flex h-full w-[260px] shrink-0 flex-col justify-between gap-3 overflow-hidden rounded-3xl border border-app-glass-border p-3 shadow-sidebar',
+        'app-shell-nav-glass',
+        className,
       )}
-      aria-label="Primary navigation"
+      aria-label={t('shell.navigationDialog')}
     >
       <div className="-m-2 flex min-h-0 flex-col gap-3 overflow-y-auto p-2 [scrollbar-width:none]">
-        <button
-          type="button"
-          className="flex items-center gap-2 rounded-2lg p-2 text-left outline-none hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
-          onClick={() => openPage('/markets')}
-        >
-          <img src={logoIcon} alt="" width={20} height={20} />
-          <span className="text-headline-semibold text-text-primary">{t('app.name')}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="flex min-w-0 flex-1 items-center gap-2 rounded-2lg p-2 text-left outline-none hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+            onClick={() => openPage('/markets')}
+          >
+            <TradeIqLogo size="sm" />
+            <span className="truncate text-headline-semibold text-text-primary">{t('app.name')}</span>
+          </button>
+          {isMobile && (
+            <Button
+              variant="ghost"
+              iconOnly
+              leadingIcon={RiCloseLine}
+              aria-label={t('shell.closeNavigation')}
+              onClick={onClose}
+            />
+          )}
+        </div>
 
         <button
           type="button"
           aria-label={t('nav.commandPalette.trigger')}
-          onClick={onOpenSearch}
+          onClick={() => {
+            if (isMobile) onClose?.();
+            onOpenSearch();
+          }}
           className="flex w-full cursor-pointer items-center gap-2 rounded-full bg-background-tertiary-default p-2 hover:bg-background-tertiary-hover/70"
         >
           <RiSearchLine className="size-5 shrink-0 text-foreground-icon-secondary" aria-hidden />
@@ -171,7 +191,7 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
           </div>
         </div>
 
-        <ThemeModeControl className="w-full justify-between" />
+        <ThemeModeControl className="w-full" />
 
         {user ? (
           <Dropdown>

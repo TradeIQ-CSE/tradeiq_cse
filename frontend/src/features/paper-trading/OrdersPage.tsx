@@ -1,6 +1,12 @@
-import { useTranslation } from 'react-i18next';
-import { OrdersTable } from './OrdersTable';
-import { PortfolioScope } from './PortfolioScope';
+import { useTranslation } from "react-i18next";
+import { RiAddLine } from "@remixicon/react";
+import { ButtonLink } from "../../components/base/buttons/button";
+import {
+  AppPage,
+  PageIntro,
+} from "../../components/application/layout/application-layout";
+import { OrdersTable } from "./OrdersTable";
+import { PortfolioScope } from "./PortfolioScope";
 
 // No AppShell here: AppRoutes' ConsoleShellLayout already wraps every console
 // page in it, same as PortfolioPage.tsx — mounting a second one would nest the
@@ -9,13 +15,21 @@ export function OrdersPage() {
   const { t } = useTranslation();
 
   return (
-    <div className="flex flex-col gap-5">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-title-1-medium text-text-primary">{t('orders.page.title')}</h1>
-        <p className="text-body-2-medium text-text-tertiary">{t('orders.page.subtitle')}</p>
-      </header>
+    <AppPage>
+      <PageIntro
+        eyebrow={t("orders.page.eyebrow")}
+        title={t("orders.page.title")}
+        description={t("orders.page.subtitle")}
+        actions={
+          <ButtonLink href="/paper-trading" leadingIcon={RiAddLine}>
+            {t("orders.page.placeTrade")}
+          </ButtonLink>
+        }
+      />
 
-      <PortfolioScope>{(portfolioId) => <OrdersTable portfolioId={portfolioId} />}</PortfolioScope>
-    </div>
+      <PortfolioScope>
+        {(portfolioId) => <OrdersTable portfolioId={portfolioId} />}
+      </PortfolioScope>
+    </AppPage>
   );
 }

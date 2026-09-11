@@ -1,6 +1,7 @@
 import {
   CreateBacktestRunRequest,
   CreateBacktestRunResponse,
+  BacktestResultsResponse,
   BacktestStatusResponse,
 } from '../domain/types';
 import { ApiError, ApiErrorBody } from '../../../lib/api';
@@ -84,7 +85,7 @@ export async function getBacktestRunStatus(
   runId: string,
 ): Promise<BacktestStatusResponse> {
   const response = await authFetch(
-    `/api/v1/backtests/${runId}`,
+    `/api/v1/backtests/${encodeURIComponent(runId)}`,
     {
       method: 'GET',
       headers: {
@@ -95,6 +96,21 @@ export async function getBacktestRunStatus(
   );
 
   return handleResponse<BacktestStatusResponse>(response);
+}
+
+/** Retrieves the persisted outputs for a completed backtest run. */
+export async function getBacktestRunResults(
+  runId: string,
+): Promise<BacktestResultsResponse> {
+  const response = await authFetch(
+    `/api/v1/backtests/${encodeURIComponent(runId)}/results`,
+    {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    },
+    MARKET_TRADING_API_URL,
+  );
+  return handleResponse<BacktestResultsResponse>(response);
 }
 
 /**

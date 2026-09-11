@@ -1,6 +1,13 @@
-import { useTranslation } from 'react-i18next';
-import { OrderTicket } from './OrderTicket';
-import { PortfolioScope } from './PortfolioScope';
+import { useTranslation } from "react-i18next";
+import { RiHistoryLine } from "@remixicon/react";
+import { ButtonLink } from "../../components/base/buttons/button";
+import {
+  AppPage,
+  AppNotice,
+  PageIntro,
+} from "../../components/application/layout/application-layout";
+import { OrderTicket } from "./OrderTicket";
+import { PortfolioScope } from "./PortfolioScope";
 
 // No AppShell here: AppRoutes' ConsoleShellLayout already wraps every console
 // page in one, and mounting a second would nest the sidebar inside itself —
@@ -11,13 +18,29 @@ export function PaperTradingPage() {
   const { t } = useTranslation();
 
   return (
-    <div className="flex flex-col gap-5">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-title-1-medium text-text-primary">{t('paperTrading.page.title')}</h1>
-        <p className="text-body-2-medium text-text-tertiary">{t('paperTrading.page.notice')}</p>
-      </header>
+    <AppPage>
+      <PageIntro
+        eyebrow={t("paperTrading.page.eyebrow")}
+        title={t("paperTrading.page.title")}
+        description={t("paperTrading.page.subtitle")}
+        actions={
+          <ButtonLink
+            href="/orders"
+            variant="secondary"
+            leadingIcon={RiHistoryLine}
+          >
+            {t("paperTrading.page.viewOrders")}
+          </ButtonLink>
+        }
+      />
 
-      <PortfolioScope>{(portfolioId) => <OrderTicket portfolioId={portfolioId} />}</PortfolioScope>
-    </div>
+      <AppNotice title={t("paperTrading.page.noticeTitle")}>
+        {t("paperTrading.page.notice")}
+      </AppNotice>
+
+      <PortfolioScope>
+        {(portfolioId) => <OrderTicket portfolioId={portfolioId} />}
+      </PortfolioScope>
+    </AppPage>
   );
 }
