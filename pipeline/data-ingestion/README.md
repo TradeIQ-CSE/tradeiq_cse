@@ -1,94 +1,92 @@
 # data-ingestion
 
 Scheduled (not resident) Python job: fetches, normalises, and validates CSE
-end-of-day data. Also provides the **`market-data-seed`** one-shot used on
-`docker compose up`.
+end-of-day data. Also provides the **release importer**, which runs as the
+`market-data-seed` one-shot on `docker compose up`.
 
-## Seed loader (`python -m data_ingestion.seed`)
+## Release importer (`python -m data_ingestion.release_import`)
 
-Bulk-loads the validated 2017–2025 window from
-[cse-dataset](https://github.com/TradeIQ-CSE/cse-dataset) into `market_data`,
-in FK order: `sectors` → `securities` → `trading_calendar` → `ingestion_runs`
-→ `daily_prices` → `indices` → `index_values`.
-
-Guarantees:
-
-- **Idempotent** — safe to run any number of times. All IDs are deterministic
-  (uuid5 over symbol/GICS code/date), mutable fields upsert on conflict, and
-  the single seed `ingestion_runs` row is rewritten per run.
-- **Constraint-safe** — rows failing the `daily_prices` OHLC/volume checks are
-  written to `quarantined_records` (with `failed_checks`) instead of aborting
-  the load.
-- **Atomic** — the whole seed runs in one transaction.
-
-### Bundle contract
-
-A seed bundle is a directory of canonical cse-dataset artifacts:
-
-| File | Required | Loads into |
-| --- | --- | --- |
-| `company_metadata.csv` | yes | `securities` (canonical company metadata columns) |
-| `daily_ohlcv.csv` / `daily_ohlcv.parquet` | yes | `trading_calendar`, `daily_prices` (canonical `ohlcv.schema.json` rows; `turnover`/`trades` are dropped — no schema-v2 columns) |
-| `indices.csv` | no | `indices`, `index_values` (`date,index_name,close`; `ASPI` and `S&P SL20` normalised to `ASPI`/`SL20`) |
-| `sectors.csv` | no | `sectors` (`gics_code,sector_name`); without it, `securities.sector_id` stays NULL |
-
-Bundle resolution order: `--seed-dir` / `CSE_SEED_DATA_DIR` →
-`CSE_DATA_SOURCE_URL` (a `.zip` of the above) → bundled sample fixture
-(`src/data_ingestion/fixtures/sample`, used so a fresh `docker compose up`
-always has queryable data).
-
-### Building a bundle from cse-dataset
-
-cse-dataset's `backfill_ohlcv.py` writes accepted OHLCV **one file per trading
-date** (`data/raw/ohlcv/accepted/<date>/<source>/canonical_ohlcv.csv`), and its
-generated artifacts are gitignored — so a fresh checkout has no bundle to point
-at. `build_seed_bundle` regenerates one:
+Loads a [cse-dataset](https://github.com/TradeIQ-CSE/cse-dataset) release into
+`market_data`. A release is a zip in the format of cse-dataset's artifact
+contract v1 (`docs/contracts/dataset-artifact-v1.md` there). The first one,
+`dataset-2025-12-31.1`, covers 2017-01-02 to 2025-12-31.
 
 ```sh
-# in a cse-dataset checkout — produces the inputs (metadata hits the CSE API)
-uv run python scripts/01_collect_metadata.py
-uv run python scripts/backfill_ohlcv.py   # defaults to the 2025 source file
+# the bundled sample
+uv run python -m data_ingestion.release_import
 
-# back here — consolidate them into a bundle
-uv run python -m data_ingestion.build_seed_bundle \
-    --dataset-root ~/path/to/cse-dataset \
-    --out /tmp/cse-bundle-2025 --from 2025-01-01 --to 2025-12-31
+# the published 2017-2025 release
+uv run python -m data_ingestion.release_import --artifact \
+  https://github.com/TradeIQ-CSE/cse-dataset/releases/download/dataset-2025-12-31.1/cse-dataset-2025-12-31.1.zip
 
-CSE_SEED_DATA_DIR=/tmp/cse-bundle-2025 docker compose up market-data-seed
+# a local zip, or the same files unpacked into a directory
+uv run python -m data_ingestion.release_import --artifact ~/Downloads/cse-dataset-2025-12-31.1.zip
+
+# through compose
+CSE_DATASET_ARTIFACT=https://github.com/.../cse-dataset-2025-12-31.1.zip docker compose up market-data-seed
 ```
 
-It also normalises `listing_date` from the CSE API's `DD/MMM/YYYY` to ISO,
-which `seed_data.parse_date` requires.
+`--artifact` defaults to `CSE_DATASET_ARTIFACT`, then to the bundled sample.
+Only `https://` URLs are fetched. The connection string comes from
+`--database-url` or `DATA_INGESTION_MARKET_DATA_DATABASE_URL`. This is one of
+the direct database writers `docs/api/eod-ingestion-v1.md` allows; daily prices
+arrive through the EOD ingestion API instead.
 
-**Known gaps in the regenerated data:**
+How it behaves:
 
-- **Sectors are unresolved.** `01_collect_metadata.py` hardcodes
-  `sector = "Unknown"`, and no symbol→sector mapping exists in the CSE API,
-  the daily price files (`MAIN TYPE`/`SUB TYPE` are share class), or
-  `39GICS-Daily.xlsx` (sector *index values* only). `securities.sector_id`
-  therefore stays NULL. `https://www.cse.lk/api/allSectors` does return the 22
-  GICS sectors with codes, if a per-company mapping is ever found.
-- **No `market_ratios`.** The seed never populates it, so `pe_ratio` is always
-  null on API responses.
-- **17 quarantined dates in 2025** (23 rejected rows) — a known source-data
-  issue (TIQ-26); `repair_ohlcv_missing.py` upstream recovers 15 of them.
+- **Checked before anything is written.** The whole artifact is validated
+  before the database is opened: manifest, contract version (major 1 only),
+  checksums, file list, columns, values, keys and references. `artifact.py` is
+  cse-dataset's `validate_artifact.py`, copied at b0e6158. A failed check
+  prints `FAIL <code>: <reason>`, exits 1 and changes nothing.
+- **One transaction.** Sectors, securities, the trading calendar, prices and
+  their provenance, indices and index values load together. Then each changed
+  security's coverage dates and weekly and monthly aggregates are rebuilt from
+  every stored row. A failure rolls all of it back and records a `failed` run.
+- **The release is authoritative inside its coverage.** From `coverage.start`
+  to `coverage.end`, rows the release doesn't carry are removed. Nothing after
+  `coverage.end` is touched, so days delivered by the EOD API survive a
+  re-import.
+- **Calendar.** Every session is a trading day, including quarantined ones,
+  which have no prices. Weekdays with no session are recorded as closed.
+  Weekends are left to the weekday rule that `settlement-date.ts` applies.
+- **Securities keep their IDs** and are matched by symbol. A security with
+  prices after the release keeps its newer non-empty metadata. An empty release
+  value never erases a known one.
+- **Index codes are matched exactly.** SL20TRI is a different series from SL20.
+- **Idempotent.** Importing the same release again changes nothing. Each
+  release version has one `ingestion_runs` row, which records
+  `dataset_version`, `dataset_kind`, `coverage_start`, `coverage_end`,
+  `source_url` and `producer_commit`.
+- **Corrections and incrementals** load the same way. They are refused unless
+  their `base_version` has already been imported.
+- **A release never cuts into a larger one.** A release that overlaps an
+  imported one without covering all of it is refused, because it would replace
+  that release's rows in the overlap. With nothing configured and a larger
+  release already loaded, the sample import steps aside and exits 0, so a plain
+  `docker compose up` keeps the real data.
+- **Row checks.** A price the `daily_prices` OHLC check would refuse goes to
+  `quarantined_records`, and the run is marked `partial`.
 
-### Run it
+The run logs inserted, updated, unchanged and removed counts for each table.
+The same summary is stored in the run's `validation_summary`.
 
-```sh
-# default: bundled sample fixture, window 2017-01-01..2025-12-31
-uv run python -m data_ingestion.seed
+### The bundled sample
 
-# full validated dataset once cse-dataset publishes the artifacts
-uv run python -m data_ingestion.seed --seed-dir /path/to/bundle
-# or: CSE_DATA_SOURCE_URL=https://.../bundle.zip docker compose up market-data-seed
+`src/data_ingestion/fixtures/sample` is the small hand-made dataset the old
+seed shipped, rewritten in the v1 format: six securities from 2025-01-02 to
+2025-01-10, four sectors, and ASPI and SL20. cse-dataset didn't build it, so its
+`source_commit` is all zeros. The market-trading e2e tests and the compose
+smoke test assert on its content.
 
-# narrower window
-uv run python -m data_ingestion.seed --from 2020-01-01 --to 2024-12-31
-```
+### Known gaps in `dataset-2025-12-31.1`
 
-Connection string comes from `--database-url` or
-`DATA_INGESTION_MARKET_DATA_DATABASE_URL`.
+- **No sectors.** No per-company GICS mapping has been sourced, so
+  `securities.sector_id` stays NULL.
+- **Listing and delisting dates, ISINs and boards aren't loaded.** `securities`
+  has no columns for them.
+- **94 quarantined sessions have no prices.** The release notes list them.
+- **No `market_ratios`**, so `pe_ratio` is always null on API responses.
 
 ## Development
 
@@ -97,3 +95,15 @@ uv sync --all-groups
 uv run ruff check .
 uv run pytest
 ```
+
+The tests in `tests/test_release_import_db.py` need a `market_data` database
+with the market-trading migrations applied, and they empty its market tables
+before and after each test. Point them at a throwaway database:
+
+```sh
+DATA_INGESTION_TEST_DATABASE_URL=postgresql://market_data:changeme@localhost:5433/market_data \
+  uv run pytest
+```
+
+Without that variable they're skipped. CI also sets
+`DATA_INGESTION_REQUIRE_DB_TESTS=1`, so a missing URL fails the run instead.

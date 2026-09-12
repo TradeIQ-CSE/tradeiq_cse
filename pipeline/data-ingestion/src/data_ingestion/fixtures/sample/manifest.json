@@ -1,0 +1,60 @@
+{
+  "contract_version": "1.0.0",
+  "dataset_version": "2025-01-10.1",
+  "kind": "full",
+  "created_at": "2026-09-12T00:00:00Z",
+  "source_commit": "0000000000000000000000000000000000000000",
+  "coverage": {
+    "start": "2025-01-02",
+    "end": "2025-01-10"
+  },
+  "files": [
+    {
+      "path": "company_metadata.csv",
+      "sha256": "327ff0bcecca0d98bd513ea8602b1ee6dfc217708ff1b26c76a2b713186b6e1c",
+      "rows": 6
+    },
+    {
+      "path": "trading_calendar.csv",
+      "sha256": "049241829299d60c0b268f16b9b8ff12b70be85b0ad57035027da0d36f3c5aa0",
+      "rows": 7
+    },
+    {
+      "path": "daily_ohlcv.csv",
+      "sha256": "fbb736722a07df4c76b13a8ee37247ecb4eec4e370333994ae2152cf4fbe8ef3",
+      "rows": 42
+    },
+    {
+      "path": "indices.csv",
+      "sha256": "59e66cfa3cb58b6016e8838f5ec595c3abefd74a84321fb4de46e52035e54637",
+      "rows": 2
+    },
+    {
+      "path": "index_values.csv",
+      "sha256": "a8fa5830494ba589684e38d0cfd65634b7acd4f5ff11111e83ab22a44eff5519",
+      "rows": 14
+    },
+    {
+      "path": "sectors.csv",
+      "sha256": "37c77ef586ef9d6a8c477f9e3a65a4380a891998db2c58e883572cee997e8bc8",
+      "rows": 4
+    }
+  ],
+  "index_series": [
+    {
+      "index_code": "ASPI",
+      "first_date": "2025-01-02",
+      "last_date": "2025-01-10"
+    },
+    {
+      "index_code": "SL20",
+      "first_date": "2025-01-02",
+      "last_date": "2025-01-10"
+    }
+  ],
+  "quarantine": {
+    "dates": 0,
+    "rows": 0
+  },
+  "known_gaps": []
+}

@@ -1,0 +1,65 @@
+{
+  "contract_version": "1.0.0",
+  "dataset_version": "2025-12-26.1",
+  "kind": "full",
+  "created_at": "2026-09-11T17:09:44Z",
+  "source_commit": "b0e6158fb261edb3da63c206b2c06cbe32114e99",
+  "coverage": {
+    "start": "2025-12-19",
+    "end": "2025-12-26"
+  },
+  "files": [
+    {
+      "path": "company_metadata.csv",
+      "sha256": "bd71333883f38ccf2ac66f28a52eb344ead5d986d43b7ee8e0cb0dc9baf56616",
+      "rows": 3
+    },
+    {
+      "path": "daily_ohlcv.csv",
+      "sha256": "ea4896c48864c2e1c55855667a42ddeebbd4581f01da503340d2453d8201f7a7",
+      "rows": 12
+    },
+    {
+      "path": "index_values.csv",
+      "sha256": "0e20608257c5b7df880604bd18187ebeb5b9843420382c361fabd1143d30a9e0",
+      "rows": 20
+    },
+    {
+      "path": "indices.csv",
+      "sha256": "96faf3458c6a93ecf230d61147ba273e1b281e6be66ce3f86675a333f6116505",
+      "rows": 4
+    },
+    {
+      "path": "trading_calendar.csv",
+      "sha256": "467e2b05761674741501e2dff190eac6fb71c406dadad532b3bfec8f9b8df481",
+      "rows": 5
+    }
+  ],
+  "index_series": [
+    {
+      "index_code": "ASPI",
+      "first_date": "2025-12-19",
+      "last_date": "2025-12-26"
+    },
+    {
+      "index_code": "ASTRI",
+      "first_date": "2025-12-19",
+      "last_date": "2025-12-26"
+    },
+    {
+      "index_code": "SL20",
+      "first_date": "2025-12-19",
+      "last_date": "2025-12-26"
+    },
+    {
+      "index_code": "SL20TRI",
+      "first_date": "2025-12-19",
+      "last_date": "2025-12-26"
+    }
+  ],
+  "quarantine": {
+    "dates": 1,
+    "rows": 0
+  },
+  "known_gaps": []
+}

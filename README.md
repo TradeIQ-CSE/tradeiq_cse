@@ -70,13 +70,12 @@ This starts:
   which it reads market data — it never connects to `market_data` itself
 - `ml-prediction-migrate` — one-shot job applying the Alembic migrations;
   `ml-prediction` starts only after it completes
-- `market-data-seed` — one-shot job that seeds `market_data` from a cse-dataset
-  bundle (sectors → securities → trading calendar → daily prices → indices),
-  once `market-trading` is healthy (i.e. its startup migrations have finished).
-  With no bundle configured it loads a small bundled sample; note the sample
-  lands a few seconds after `market-trading` starts serving. The seed is
-  idempotent — see [`pipeline/data-ingestion/README.md`](./pipeline/data-ingestion/README.md)
-  for the bundle contract and how to load the full 2017–2025 dataset
+- `market-data-seed` — one-shot job that imports a cse-dataset release into
+  `market_data` once `market-trading` is healthy (i.e. its startup migrations
+  have finished). With no release configured it loads a small bundled sample;
+  note the sample lands a few seconds after `market-trading` starts serving.
+  The import is idempotent — see [`pipeline/data-ingestion/README.md`](./pipeline/data-ingestion/README.md)
+  for how to load the full 2017–2025 release
 - `ml-prediction` — the ML inference API
 - `frontend` — the React SPA
 

@@ -84,8 +84,7 @@ export AUTH_EMAIL_ENCRYPTION_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
 export AUTH_REFRESH_COOKIE_SECURE=false
 export MARKET_TRADING_CORS_ORIGINS="http://localhost:${smoke_frontend_port}"
 export IDENTITY_AUTH_CORS_ORIGINS="http://localhost:${smoke_frontend_port}"
-export CSE_SEED_DATA_DIR=
-export CSE_DATA_SOURCE_URL=
+export CSE_DATASET_ARTIFACT=
 export VITE_MARKET_TRADING_API_URL="http://localhost:${smoke_market_port}"
 export VITE_IDENTITY_AUTH_API_URL="http://localhost:${smoke_auth_port}"
 export SMOKE_IMAGE_TAG="$smoke_project"
