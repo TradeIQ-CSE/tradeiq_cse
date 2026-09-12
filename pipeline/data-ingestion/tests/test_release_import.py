@@ -67,6 +67,47 @@ def test_only_https_urls_are_fetched():
         pass
 
 
+RELEASE_URL = "https://example.com/release.zip"
+
+
+def serve_redirects(monkeypatch, *locations: str) -> None:
+    """Redirect RELEASE_URL through ``locations`` in turn, then serve the archive."""
+    httpx = release_import.httpx
+    hops = dict(zip([RELEASE_URL, *locations], locations))
+
+    def handler(request):
+        location = hops.get(str(request.url))
+        if location:
+            return httpx.Response(302, headers={"location": location})
+        return httpx.Response(200, content=b"archive bytes")
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    monkeypatch.setattr(httpx, "stream", client.stream)
+
+
+def test_a_redirect_over_https_is_followed(monkeypatch):
+    serve_redirects(monkeypatch, "https://assets.example.com/asset")
+
+    with fetched(RELEASE_URL) as (path, source_url):
+        assert path.read_bytes() == b"archive bytes"
+        assert source_url == RELEASE_URL
+
+
+def test_a_redirect_to_plain_http_is_refused(monkeypatch):
+    serve_redirects(monkeypatch, "http://assets.example.com/asset")
+
+    with pytest.raises(SystemExit), fetched(RELEASE_URL):
+        pass
+
+
+def test_a_redirect_through_plain_http_is_refused(monkeypatch):
+    # An attacker on the http hop could send the download anywhere, over https.
+    serve_redirects(monkeypatch, "http://mirror.example.com/hop", "https://assets.example.com/asset")
+
+    with pytest.raises(SystemExit), fetched(RELEASE_URL):
+        pass
+
+
 def test_closed_days_are_weekdays_without_a_session():
     sessions = {date(2025, 12, day) for day in (19, 22, 23, 24, 26)}
     # 20 and 21 are a weekend; 25 is the only weekday without a session.

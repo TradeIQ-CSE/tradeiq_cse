@@ -102,6 +102,13 @@ def fetched(source: str) -> Iterator[tuple[Path, str]]:
             log.info("downloading %s", source)
             with httpx.stream("GET", source, follow_redirects=True, timeout=300) as response:
                 response.raise_for_status()
+                # GitHub redirects release downloads to its asset host. Every hop
+                # must stay on https: the manifest only proves the artifact is
+                # consistent with itself, not where it came from.
+                insecure = [str(hop.url) for hop in (*response.history, response)
+                            if hop.url.scheme != "https"]
+                if insecure:
+                    raise SystemExit(f"refusing a download sent over plain http: {insecure[0]}")
                 with archive.open("wb") as fh:
                     for chunk in response.iter_bytes():
                         fh.write(chunk)
