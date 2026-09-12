@@ -8,8 +8,8 @@ end-of-day data. Also provides the **release importer**, which runs as the
 
 Loads a [cse-dataset](https://github.com/TradeIQ-CSE/cse-dataset) release into
 `market_data`. A release is a zip in the format of cse-dataset's artifact
-contract v1 (`docs/contracts/dataset-artifact-v1.md` there). The first one,
-`dataset-2025-12-31.1`, covers 2017-01-02 to 2025-12-31.
+contract v1 (`docs/contracts/dataset-artifact-v1.md` there). The current one,
+`dataset-2025-12-31.2`, covers 2017-01-02 to 2025-12-31.
 
 ```sh
 # the bundled sample
@@ -17,13 +17,13 @@ uv run python -m data_ingestion.release_import
 
 # the published 2017-2025 release
 uv run python -m data_ingestion.release_import --artifact \
-  https://github.com/TradeIQ-CSE/cse-dataset/releases/download/dataset-2025-12-31.1/cse-dataset-2025-12-31.1.zip
+  https://github.com/TradeIQ-CSE/cse-dataset/releases/download/dataset-2025-12-31.2/cse-dataset-2025-12-31.2.zip
 
 # a local zip, or the same files unpacked into a directory
-uv run python -m data_ingestion.release_import --artifact ~/Downloads/cse-dataset-2025-12-31.1.zip
+uv run python -m data_ingestion.release_import --artifact ~/Downloads/cse-dataset-2025-12-31.2.zip
 
 # through compose
-CSE_DATASET_ARTIFACT=https://github.com/.../cse-dataset-2025-12-31.1.zip docker compose up market-data-seed
+CSE_DATASET_ARTIFACT=https://github.com/.../cse-dataset-2025-12-31.2.zip docker compose up market-data-seed
 ```
 
 `--artifact` defaults to `CSE_DATASET_ARTIFACT`, then to the bundled sample.
@@ -79,8 +79,13 @@ seed shipped, rewritten in the v1 format: six securities from 2025-01-02 to
 `source_commit` is all zeros. The market-trading e2e tests and the compose
 smoke test assert on its content.
 
-### Known gaps in `dataset-2025-12-31.1`
+### Known gaps in `dataset-2025-12-31.2`
 
+- **No open price for 2017, 2018, the first quarter of 2021, and 2025.** CSE's
+  official files for those periods repeat the close as the open on every row,
+  so `open` is empty and the chart draws those candles without a body.
+  `dataset-2025-12-31.1` shipped the copied value; importing `.2` over it
+  clears those opens.
 - **No sectors.** No per-company GICS mapping has been sourced, so
   `securities.sector_id` stays NULL.
 - **Listing and delisting dates, ISINs and boards aren't loaded.** `securities`
