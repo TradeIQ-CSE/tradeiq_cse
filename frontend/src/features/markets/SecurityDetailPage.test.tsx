@@ -117,6 +117,51 @@ describe("SecurityDetailPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("labels the close-price fallback when the daily source cannot form real candles", async () => {
+    const bars = Array.from({ length: 20 }, (_, index) => ({
+      date: `2025-01-${String(index + 1).padStart(2, "0")}`,
+      open: 100 + index,
+      high: 101 + index,
+      low: 99 + index,
+      close: 100 + index,
+      adjusted_close: null,
+      volume: 1_000 + index,
+    }));
+    server.use(
+      http.get("*/securities/:symbol/ohlcv", () =>
+        HttpResponse.json({
+          data: {
+            symbol: "JKH.N0000",
+            timeframe: "daily",
+            from: "2025-01-01",
+            to: "2025-01-31",
+            bars,
+          },
+        }),
+      ),
+    );
+
+    renderPage();
+
+    expect(
+      await screen.findByText(t("securityDetail.chart.legend.closePrice")),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(t("securityDetail.chart.legend.closeOnlyHelp")),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("table", {
+        name: t("securityDetail.chart.accessibleCloseLabel", {
+          symbol: "JKH.N0000",
+          timeframe: t("securityDetail.timeframes.daily"),
+        }),
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(t("securityDetail.chart.legend.up")),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows one calendar month at a time on a narrow viewport", async () => {
     setMobileViewport();
     const user = userEvent.setup();

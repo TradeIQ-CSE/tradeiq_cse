@@ -1,8 +1,8 @@
 # TradeIQ Application Design Language Refresh
 
-Status: Stages 1–3 complete; Stage 4 implemented with authenticated visual QA pending; Stages 5–6 remain
+Status: Stages 1–6 implemented; authenticated visual QA remains for Stages 4–6
 Reference implementation: the refreshed landing page and current Markets page
-Working branch: `nimesh/landing-page-refinement`
+Working branch: `nimesh/frontend-improvements`
 
 ## Objective
 
@@ -42,17 +42,17 @@ Green and red remain reserved for positive and negative financial meaning. Blue 
 - Stage 1 now provides the shared static backdrop, responsive React Aria navigation drawer, BoardUI top bar, and reusable application surface patterns.
 - Backtesting now uses the shared application surfaces and BoardUI controls across its seven-step workflow, status polling, and persisted results view.
 
-### Highest inconsistency
+### Remaining review and product boundaries
 
-- Dashboard, Watchlist, and Analytics still use Ant Design, inline styles, hardcoded dark colors, purple actions, and unsupported or fixture-driven wording/data.
-- Admin and planned-feature pages still need the shared hierarchy and honest data-state treatment.
-- Placeholder pages are visually disconnected and occupy navigation space close to working features.
+- Backtesting, Dashboard, Watchlist, Analytics, and Admin now use the shared BoardUI-first application hierarchy; authenticated browser review still needs valid non-production test accounts.
+- AI Insights and Reports remain honest direct-link planned states and are excluded from the sidebar and command palette until supporting product and API contracts exist.
+- Persistent watchlists, broad portfolio analytics, AI insights, reports, and administrative operations remain separate product/API work rather than simulated frontend capabilities.
 
 ## Scope by stage
 
 ### Stage 1: Shared application frame
 
-Status: implementation completed on `nimesh/landing-page-refinement`; authenticated browser review remains pending because the local identity service cannot start with its current encryption-key configuration.
+Status: completed on `nimesh/frontend-improvements`.
 
 - [x] Derive a static, low-cost application backdrop from the landing palette for both themes.
 - [x] Refine the sidebar and top bar as the universal frame: spacing, responsive drawer, page search, breadcrumb behavior, profile state, language controls, and theme control.
@@ -65,7 +65,7 @@ Status: implementation completed on `nimesh/landing-page-refinement`; authentica
 
 Markets remains the first reference screen.
 
-Status: completed on `nimesh/landing-page-refinement`.
+Status: completed on `nimesh/frontend-improvements`.
 
 - [x] Finish BoardUI filters, calendars, menus, Top Movers semantics, responsive table behavior, and data-freshness presentation.
 - [x] Keep securities, overview, sector, sorting, pagination, and `as_of` behavior API-backed.
@@ -76,7 +76,7 @@ Status: completed on `nimesh/landing-page-refinement`.
 
 ### Stage 3: Portfolio, paper trading, and orders
 
-Status: completed on `nimesh/landing-page-refinement`.
+Status: completed on `nimesh/frontend-improvements`.
 
 Portfolio:
 
@@ -100,7 +100,7 @@ Orders:
 
 ### Stage 4: Historical backtesting
 
-Status: completed on `nimesh/landing-page-refinement`.
+Status: implemented on `nimesh/frontend-improvements`; authenticated browser review remains pending.
 
 - [x] Replace the isolated backtesting CSS system with semantic tokens and BoardUI primitives.
 - [x] Keep the existing seven-step domain workflow and validation rules.
@@ -110,35 +110,39 @@ Status: completed on `nimesh/landing-page-refinement`.
 
 ### Stage 5: Dashboard, Watchlist, Analytics, and authentication
 
+Status: implemented on `nimesh/frontend-improvements`; authentication was reviewed in both themes and at desktop/mobile widths, while authenticated console review remains pending.
+
 Dashboard:
 
-- remove fixture candlesticks and unsupported “real-time” claims;
-- compose only API-backed portfolio and market summaries that already exist;
-- otherwise show useful onboarding and next actions rather than invented metrics.
+- [x] Remove fixture candlesticks and unsupported “real-time” claims.
+- [x] Compose only API-backed portfolio and market summaries that already exist.
+- [x] Otherwise show useful onboarding and next actions rather than invented metrics.
 
 Watchlist:
 
-- present an honest empty state until persistence exists;
-- do not imply that the current local Markets star state is synced across sessions unless an API contract is added separately.
+- [x] Present an honest empty state until persistence exists.
+- [x] Do not imply that the current local Markets star state is synced across sessions unless an API contract is added separately.
 
 Analytics:
 
-- treat as a capability guide or clear planned state until real analytics endpoints exist;
-- do not fabricate performance, risk, benchmark, or prediction values.
+- [x] Treat as a capability guide or clear planned state until real analytics endpoints exist.
+- [x] Do not fabricate performance, risk, benchmark, or prediction values.
 
 Authentication:
 
-- retain the current BoardUI form controls and API behavior;
-- align its background, branding, typography, and trust copy with the landing page;
-- preserve exact validation and session-loss behavior.
+- [x] Retain the current BoardUI form controls and API behavior.
+- [x] Align its background, branding, typography, and trust copy with the landing page.
+- [x] Preserve exact validation and session-loss behavior.
 
 ### Stage 6: Admin, planned features, and cleanup
 
-- Refresh admin only after investor workflows are stable.
-- Give AI Insights and Reports a consistent, honest planned-feature treatment or remove them from primary navigation until useful.
-- Promote feature-local paper-trading presentation primitives into shared components where behavior and appearance truly match.
-- Remove Ant Design and obsolete CSS only after repository-wide consumer checks.
-- Remove fixture data from product routes; retain fixtures only in tests and explicit component previews.
+Status: implemented on `nimesh/frontend-improvements`; authenticated browser review remains pending.
+
+- [x] Refresh Admin with the shared application hierarchy and disabled, capability-aware controls because audited admin operation endpoints do not exist.
+- [x] Give AI Insights and Reports consistent, honest direct-link planned states and remove them from primary sidebar and command-palette discovery.
+- [x] Promote the financial direction and signed-value tone presentation shared by Dashboard and paper-trading screens into application-level components.
+- [x] Remove Ant Design, its provider/theme adapters, the obsolete compatibility stylesheet, and verified-unused legacy SVG icons after repository-wide consumer checks.
+- [x] Remove fixture data from product routes; retain fixtures only in tests and the explicitly static landing-page preview.
 
 ## Responsive and accessibility scope
 

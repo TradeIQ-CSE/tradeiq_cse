@@ -23,7 +23,7 @@ interface SidebarProps {
   onOpenSearch: () => void;
 }
 
-function NavRow({ route, isMobile, onClose, muted = false }: { route: NavRoute; isMobile: boolean; onClose?: () => void; muted?: boolean }) {
+function NavRow({ route, isMobile, onClose }: { route: NavRoute; isMobile: boolean; onClose?: () => void }) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const Icon = route.icon;
@@ -40,9 +40,7 @@ function NavRow({ route, isMobile, onClose, muted = false }: { route: NavRoute; 
           'flex items-center gap-2 rounded-2lg p-2 text-body-medium transition-colors duration-150 ease',
           isActive
             ? 'bui-on-accent bg-linear-to-b from-accent-500 to-accent-600'
-            : muted
-              ? 'text-text-tertiary hover:bg-background-secondary-hover hover:text-text-secondary'
-              : 'text-text-secondary hover:bg-background-secondary-hover',
+            : 'text-text-secondary hover:bg-background-secondary-hover',
         )
       }
     >
@@ -50,11 +48,6 @@ function NavRow({ route, isMobile, onClose, muted = false }: { route: NavRoute; 
         <>
           <Icon className={cx('size-5 shrink-0', isActive ? 'text-current' : 'text-foreground-icon-secondary')} aria-hidden />
           <span className="min-w-0 flex-1 truncate">{t(route.labelKey)}</span>
-          {route.planned && !isActive && (
-            <span className="shrink-0 rounded-full bg-background-tertiary-default px-1.5 py-0.5 text-caption-2-medium whitespace-nowrap text-text-tertiary">
-              {t('nav.items.planned')}
-            </span>
-          )}
         </>
       )}
     </NavLink>
@@ -71,7 +64,6 @@ export function Sidebar({ isMobile = false, className, onClose, onOpenSearch }: 
     ...group,
     items: NAV_ROUTES.filter((route) => route.group === group.key && !route.planned && !route.adminOnly),
   })).filter((group) => group.items.length > 0);
-  const plannedItems = NAV_ROUTES.filter((route) => route.planned);
   const adminItems = NAV_ROUTES.filter((route) => route.adminOnly && isAdmin);
 
   function openPage(path: string) {
@@ -134,15 +126,6 @@ export function Sidebar({ isMobile = false, className, onClose, onOpenSearch }: 
               ))}
             </section>
           ))}
-
-          {plannedItems.length > 0 && (
-            <section className="flex flex-col gap-1">
-              <h2 className="px-2 text-body-medium text-text-tertiary">{t('nav.items.planned')}</h2>
-              {plannedItems.map((route) => (
-                <NavRow key={route.key} route={route} isMobile={isMobile} onClose={onClose} muted />
-              ))}
-            </section>
-          )}
 
           {adminItems.length > 0 && (
             <section className="flex flex-col gap-1">

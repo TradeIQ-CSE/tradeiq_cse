@@ -25,7 +25,7 @@ import { cx } from "../../utils/cx";
 import { localeFor } from "../../i18n";
 import { ApiError } from "../../lib/api";
 import { formatCount, formatPrice, formatSigned, formatVolume } from "./format";
-import { normalizeOhlcvBars } from "./ohlcv-chart";
+import { normalizeOhlcvBars, priceChartMode } from "./ohlcv-chart";
 import {
   ListingStatus,
   OhlcvRange,
@@ -222,6 +222,7 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
     () => (chartQuery.data ? normalizeOhlcvBars(chartQuery.data) : []),
     [chartQuery.data],
   );
+  const chartMode = priceChartMode(timeframe, chartData);
 
   if (detailQuery.isPending) {
     return <DetailState kind="loading" symbol={symbol} />;
@@ -436,30 +437,51 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
               </div>
             ) : (
               <div className="flex flex-col gap-3">
-                <div className="flex flex-wrap items-center gap-4 text-body-2-medium text-text-secondary">
-                  <span className="inline-flex items-center gap-1.5">
-                    <span
-                      className="size-2.5 rounded-sm bg-status-lime-text"
-                      aria-hidden
-                    />
-                    {t("securityDetail.chart.legend.up")}
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <span
-                      className="size-2.5 rounded-sm bg-status-rose-text"
-                      aria-hidden
-                    />
-                    {t("securityDetail.chart.legend.down")}
-                  </span>
-                  <span>{t("securityDetail.chart.legend.help")}</span>
-                </div>
+                {chartMode === "close" ? (
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-body-2-medium text-text-secondary">
+                    <span className="inline-flex items-center gap-1.5 text-text-primary">
+                      <span
+                        className="h-0.5 w-4 rounded-full bg-accent-500"
+                        aria-hidden
+                      />
+                      {t("securityDetail.chart.legend.closePrice")}
+                    </span>
+                    <span>
+                      {t("securityDetail.chart.legend.closeOnlyHelp")}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-4 text-body-2-medium text-text-secondary">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span
+                        className="size-2.5 rounded-sm bg-status-lime-text"
+                        aria-hidden
+                      />
+                      {t("securityDetail.chart.legend.up")}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span
+                        className="size-2.5 rounded-sm bg-status-rose-text"
+                        aria-hidden
+                      />
+                      {t("securityDetail.chart.legend.down")}
+                    </span>
+                    <span>{t("securityDetail.chart.legend.help")}</span>
+                  </div>
+                )}
                 <CandlestickChart
                   data={chartData}
+                  mode={chartMode}
                   locale={locale}
-                  accessibleLabel={t("securityDetail.chart.accessibleLabel", {
-                    symbol: detail.symbol,
-                    timeframe: t(`securityDetail.timeframes.${timeframe}`),
-                  })}
+                  accessibleLabel={t(
+                    chartMode === "close"
+                      ? "securityDetail.chart.accessibleCloseLabel"
+                      : "securityDetail.chart.accessibleLabel",
+                    {
+                      symbol: detail.symbol,
+                      timeframe: t(`securityDetail.timeframes.${timeframe}`),
+                    },
+                  )}
                   labels={{
                     date: t("securityDetail.chart.values.date"),
                     open: t("securityDetail.chart.values.open"),

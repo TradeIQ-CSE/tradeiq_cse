@@ -1,11 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { AppShell } from '../components/layout/AppShell';
-import {
-  AppPage,
-  PageIntro,
-  PageState,
-} from '../components/application/layout/application-layout';
+import { PageState } from '../components/application/layout/application-layout';
 import { RequireAuth } from '../auth/RequireAuth';
 import { RequireAdmin } from '../auth/RequireAdmin';
 import { useAuth } from '../auth/useAuth';
@@ -60,6 +56,7 @@ const Dashboard = lazy(() => import('../pages/investor/Dashboard'));
 const Watchlist = lazy(() => import('../pages/investor/Watchlist'));
 const Analytics = lazy(() => import('../pages/investor/Analytics'));
 const AdminHome = lazy(() => import('../pages/admin/AdminHome'));
+const PlannedFeaturePage = lazy(() => import('../pages/PlannedFeaturePage'));
 const BacktestWizard = lazy(() =>
   import('../features/backtesting/components/BacktestWizard').then((module) => ({
     default: module.BacktestWizard,
@@ -131,19 +128,6 @@ function ConsoleShellLayout() {
   );
 }
 
-function PlannedFeature({ title }: { title: string }) {
-  const { t } = useTranslation();
-  return (
-    <AppPage width="reading">
-      <PageIntro
-        eyebrow={t('shell.plannedEyebrow')}
-        title={title}
-        description={t('shell.plannedDescription')}
-      />
-    </AppPage>
-  );
-}
-
 export function AppRoutes() {
   return (
     <Suspense fallback={<LoadingFallback />}>
@@ -165,8 +149,8 @@ export function AppRoutes() {
           <Route path="/orders" element={<Orders />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/paper-trading" element={<PaperTrading />} />
-          <Route path="/ai-insights" element={<PlannedFeature title="Machine Learning Insights" />} />
-          <Route path="/reports" element={<PlannedFeature title="Reports" />} />
+          <Route path="/ai-insights" element={<PlannedFeaturePage feature="aiInsights" />} />
+          <Route path="/reports" element={<PlannedFeaturePage feature="reports" />} />
           <Route
             path="/admin"
             element={

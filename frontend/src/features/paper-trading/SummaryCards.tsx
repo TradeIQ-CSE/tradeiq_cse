@@ -18,8 +18,11 @@ import {
   formatSignedMoney,
 } from "./format";
 import { usePortfolioSummary } from "./usePortfolios";
-import { DirectionGlyph, ErrorCard, NoticeCard } from "./ui";
-import { toneClass } from "./ui-styles";
+import { ErrorCard, NoticeCard } from "./ui";
+import {
+  FinancialDirectionGlyph,
+  financialToneClass,
+} from "../../components/application/financial-data";
 import { cx } from "../../utils/cx";
 
 interface SummaryCardsProps {
@@ -138,16 +141,16 @@ export function SummaryCards({ portfolioId, asOf }: SummaryCardsProps) {
         <SummaryCard
           icon={RiLineChartLine}
           label={t("portfolio.summary.totalPnl")}
-          tone={toneClass(summary.total_pnl)}
+          tone={financialToneClass(summary.total_pnl)}
           value={
             <>
-              <DirectionGlyph direction={totalDirection} />
+              <FinancialDirectionGlyph direction={totalDirection} />
               {formatSignedMoney(summary.total_pnl, locale)}
             </>
           }
           sub={
             <>
-              <DirectionGlyph direction={returnDirection} />
+              <FinancialDirectionGlyph direction={returnDirection} />
               {formatPercent(summary.total_return_pct, locale)}
             </>
           }
@@ -155,10 +158,10 @@ export function SummaryCards({ portfolioId, asOf }: SummaryCardsProps) {
         <SummaryCard
           icon={RiCoinsLine}
           label={t("portfolio.summary.realizedPnl")}
-          tone={toneClass(summary.realized_pnl)}
+          tone={financialToneClass(summary.realized_pnl)}
           value={
             <>
-              <DirectionGlyph direction={realizedDirection} />
+              <FinancialDirectionGlyph direction={realizedDirection} />
               {formatSignedMoney(summary.realized_pnl, locale)}
             </>
           }
@@ -166,10 +169,10 @@ export function SummaryCards({ portfolioId, asOf }: SummaryCardsProps) {
         <SummaryCard
           icon={RiLineChartLine}
           label={t("portfolio.summary.unrealizedPnl")}
-          tone={toneClass(summary.unrealized_pnl)}
+          tone={financialToneClass(summary.unrealized_pnl)}
           value={
             <>
-              <DirectionGlyph direction={unrealizedDirection} />
+              <FinancialDirectionGlyph direction={unrealizedDirection} />
               {formatSignedMoney(summary.unrealized_pnl, locale)}
             </>
           }

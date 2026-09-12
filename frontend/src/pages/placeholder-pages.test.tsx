@@ -3,24 +3,57 @@ import { renderWithProviders, screen } from '../test/render';
 import { Watchlist } from './investor/Watchlist';
 import { Analytics } from './investor/Analytics';
 import { AdminHome } from './admin/AdminHome';
+import { PlannedFeaturePage } from './PlannedFeaturePage';
+import i18n from '../i18n';
 
-// Watchlist, Analytics and AdminHome are static Ant Design shells: no props,
-// no state, no data fetching, and every button rendered `disabled`. There is
-// no behaviour here for a test to pin down, so this is a smoke test and
-// nothing more — it only proves each page mounts and renders its heading. It
-// cannot fail against any plausible wrong implementation beyond a typo'd
-// heading or a render crash, and it should be deleted as each page gains
-// real behaviour under issue #40.
-const pages = [
-  { name: 'Watchlist', Component: Watchlist, heading: 'Watchlist' },
-  { name: 'Analytics', Component: Analytics, heading: 'Backtesting & Analytics' },
-  { name: 'AdminHome', Component: AdminHome, heading: 'Admin Panel' },
-];
+const t = i18n.t.bind(i18n);
 
-describe('placeholder console pages (smoke test only, see #40)', () => {
-  it.each(pages)('$name renders its heading without crashing', ({ Component, heading }) => {
-    renderWithProviders(<Component />);
+describe('Stage 5 capability pages', () => {
+  it('makes the watchlist persistence boundary explicit', () => {
+    renderWithProviders(<Watchlist />);
 
-    expect(screen.getByRole('heading', { name: heading })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: t('watchlistPage.title') })).toBeInTheDocument();
+    expect(screen.getByText(t('watchlistPage.emptyTitle'))).toBeInTheDocument();
+    expect(screen.getByText(t('watchlistPage.notice'))).toBeInTheDocument();
+    expect(screen.queryByText(/manage watchlist/i)).not.toBeInTheDocument();
+  });
+
+  it('explains backtesting without claiming unsupported analytics', () => {
+    renderWithProviders(<Analytics />);
+
+    expect(screen.getByRole('heading', { name: t('analyticsPage.title') })).toBeInTheDocument();
+    expect(screen.getByText(t('analyticsPage.notice'))).toBeInTheDocument();
+    expect(screen.getByText(t('analyticsPage.plannedDescription'))).toBeInTheDocument();
+    expect(screen.queryByText(/complex risk analytics models/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('Stage 6 capability pages', () => {
+  it('keeps unsupported admin operations honest and disabled', () => {
+    renderWithProviders(<AdminHome />);
+
+    expect(screen.getByRole('heading', { name: t('adminPage.title') })).toBeInTheDocument();
+    expect(screen.getByText(t('adminPage.notice'))).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: t('adminPage.capabilities.data.action') }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: t('adminPage.capabilities.access.action') }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: t('adminPage.capabilities.diagnostics.action') }),
+    ).toBeDisabled();
+  });
+
+  it('offers a working alternative instead of invented AI results', () => {
+    renderWithProviders(<PlannedFeaturePage feature="aiInsights" />);
+
+    expect(
+      screen.getByRole('heading', { name: t('plannedFeatures.aiInsights.title') }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(t('plannedFeatures.notice'))).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: t('plannedFeatures.aiInsights.alternative') }),
+    ).toBeEnabled();
   });
 });

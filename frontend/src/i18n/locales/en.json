@@ -23,8 +23,7 @@
       "aiInsights": "AI Insights",
       "reports": "Reports",
       "admin": "Admin",
-      "settings": "Settings",
-      "planned": "Coming soon"
+      "settings": "Settings"
     },
     "language": "Language",
     "languageUnavailable": "{{language}} translation is not available yet",
@@ -48,9 +47,142 @@
     "closeNavigation": "Close navigation",
     "navigationDialog": "Application navigation",
     "loadingTitle": "Loading view",
-    "loadingDescription": "Preparing this part of TradeIQ.",
-    "plannedEyebrow": "Planned capability",
-    "plannedDescription": "This interface is planned and is not available in the current build."
+    "loadingDescription": "Preparing this part of TradeIQ."
+  },
+  "dashboardPage": {
+    "eyebrow": "Your TradeIQ workspace",
+    "title": "Dashboard",
+    "description": "A clear starting point for CSE research, historical testing and simulated portfolio activity.",
+    "dataNoticeTitle": "End-of-day and simulated data",
+    "dataNotice": "Market prices are end-of-day values. Portfolio figures come from paper trades and do not represent real money or a brokerage account.",
+    "actions": {
+      "markets": "Browse markets",
+      "portfolio": "Open portfolio",
+      "createPortfolio": "Create a paper portfolio",
+      "retry": "Try again",
+      "viewAll": "View all markets",
+      "paperTrade": "Practise a paper trade",
+      "backtest": "Test a strategy"
+    },
+    "portfolio": {
+      "title": "Paper portfolio snapshot",
+      "description": "Your first paper portfolio will appear here after you create it.",
+      "selected": "Latest available figures for {{name}}.",
+      "equity": "Total equity",
+      "cash": "Available cash",
+      "return": "Total P/L",
+      "pricedAt": "Valued at {{date}}",
+      "noPriceDate": "No priced CSE session is available yet",
+      "simulatedFunds": "Simulated funds",
+      "emptyTitle": "Create a portfolio to start practising",
+      "emptyDescription": "Choose a starting amount of virtual money, then place practice trades without sending an order to the CSE.",
+      "errorTitle": "Portfolios are unavailable",
+      "errorDescription": "TradeIQ could not load your paper portfolios. Your market research tools are still available.",
+      "summaryErrorTitle": "Portfolio figures are unavailable",
+      "summaryErrorDescription": "TradeIQ could not value this portfolio for the latest available session."
+    },
+    "market": {
+      "title": "Latest market leaders",
+      "description": "The strongest price moves for the latest available CSE session.",
+      "asOf": "Top gainers for {{date}}.",
+      "gainers": "Top gaining CSE securities",
+      "mostActive": "Most active: {{symbol}}, {{volume}} shares traded.",
+      "emptyTitle": "No ranked market data",
+      "emptyDescription": "The latest session does not contain enough complete price data to rank securities.",
+      "errorTitle": "Market summary is unavailable",
+      "errorDescription": "TradeIQ could not reach the market data service."
+    },
+    "next": {
+      "eyebrow": "Continue learning",
+      "title": "Put an idea into practice",
+      "description": "Use a historical backtest to examine rules on past prices, or use a paper trade to learn what an order changes."
+    }
+  },
+  "watchlistPage": {
+    "eyebrow": "Saved market research",
+    "title": "Watchlist",
+    "description": "A watchlist will keep selected CSE securities together once account-backed saving is available.",
+    "browse": "Browse markets",
+    "emptyTitle": "Saved watchlists are not available yet",
+    "emptyDescription": "The star controls in Markets currently help you mark rows during that visit only. TradeIQ does not save or sync those choices to your account yet.",
+    "findSecurity": "Find a security",
+    "noticeTitle": "Nothing is being saved silently",
+    "notice": "Persistent watchlists require an account API that is not part of the current product contract. Until that is built, this page will not invent saved securities or imply cross-device sync."
+  },
+  "analyticsPage": {
+    "eyebrow": "Historical strategy research",
+    "title": "Backtesting guide",
+    "description": "Learn how TradeIQ applies a clear set of buy and sell rules to past CSE prices, then open the guided workflow when you are ready.",
+    "start": "Start a backtest",
+    "noticeTitle": "Historical simulation, not a forecast",
+    "notice": "A backtest describes how selected rules would have behaved on available past data. It does not predict future returns or recommend a security.",
+    "guideEyebrow": "How it works",
+    "guideTitle": "From an idea to a reviewable result",
+    "guideDescription": "The full workflow contains seven guided steps. These three ideas are the important parts to understand before you begin.",
+    "step": "Step {{number}}",
+    "steps": {
+      "security": {
+        "title": "Choose the evidence",
+        "description": "Select a CSE security and a historical date range with available end-of-day prices."
+      },
+      "rules": {
+        "title": "Define the rules",
+        "description": "State when the simulation can buy or sell and review its execution and fee assumptions."
+      },
+      "review": {
+        "title": "Read the result",
+        "description": "Review persisted results with their dates and assumptions, without treating past performance as a promise."
+      }
+    },
+    "openWizard": "Open the 7-step workflow",
+    "plannedTitle": "Broader portfolio analytics are planned",
+    "plannedDescription": "TradeIQ does not currently provide API-backed benchmark, risk, attribution or prediction metrics. Those figures will appear only after their product and data contracts exist."
+  },
+  "plannedFeatures": {
+    "eyebrow": "Planned capability",
+    "unavailableTitle": "Not available in this build",
+    "noticeTitle": "No data is being generated",
+    "notice": "TradeIQ will not display placeholder results, predictions or account figures for a capability that has no supporting product and API contract.",
+    "aiInsights": {
+      "title": "AI insights",
+      "description": "This direct link is retained for product planning, but AI-generated market analysis is not part of the current TradeIQ build.",
+      "unavailableDescription": "There is no model endpoint, recommendation service or validated explanation contract behind this page. Use the historical backtesting guide to evaluate explicit rules against past data.",
+      "alternative": "Open the backtesting guide"
+    },
+    "reports": {
+      "title": "Reports",
+      "description": "This direct link is retained for product planning, but downloadable or scheduled account reports are not part of the current TradeIQ build.",
+      "unavailableDescription": "There is no report-generation or delivery endpoint behind this page. Your API-backed paper portfolio remains the current source for simulated account figures.",
+      "alternative": "Open your portfolio"
+    }
+  },
+  "adminPage": {
+    "eyebrow": "Restricted workspace",
+    "title": "Administration",
+    "description": "A role-protected overview of operational capabilities planned for TradeIQ administrators.",
+    "noticeTitle": "Administrative actions are not connected",
+    "notice": "The current backend exposes no audited admin operation endpoints. These controls remain disabled so this screen cannot imply that a maintenance task has run.",
+    "operationsTitle": "Operational controls",
+    "operationsDescription": "Each capability stays unavailable until it has an authenticated endpoint, an audit trail and a clear result state.",
+    "capabilities": {
+      "data": {
+        "title": "Market data operations",
+        "description": "Review or trigger ingestion only after a protected administration contract is available.",
+        "action": "Data controls unavailable"
+      },
+      "access": {
+        "title": "Access verification",
+        "description": "Verify service credentials and signatures only through an auditable server-side workflow.",
+        "action": "Verification unavailable"
+      },
+      "diagnostics": {
+        "title": "System diagnostics",
+        "description": "Expose service health and logs only after sensitive operational details can be handled safely.",
+        "action": "Diagnostics unavailable"
+      }
+    },
+    "accessTitle": "Role protection is active",
+    "accessDescription": "The application restricts this route to authenticated admin users. That access check does not create or simulate administrative backend capabilities."
   },
   "markets": {
     "eyebrow": "CSE market research",
@@ -178,9 +310,12 @@
       "legend": {
         "up": "Closed above open",
         "down": "Closed below open",
-        "help": "Volume appears below the price chart"
+        "help": "Volume appears below the price chart",
+        "closePrice": "Daily close price",
+        "closeOnlyHelp": "This source does not provide distinct daily opening prices. Volume appears below."
       },
       "accessibleLabel": "{{timeframe}} OHLCV history for {{symbol}}",
+      "accessibleCloseLabel": "{{timeframe}} close-price and volume history for {{symbol}}",
       "values": {
         "date": "Date",
         "open": "Open",
@@ -438,9 +573,29 @@
     }
   },
   "auth": {
+    "trust": {
+      "label": "Why use TradeIQ",
+      "eyebrow": "CSE research and practice",
+      "title": "Build confidence before you risk real money.",
+      "description": "TradeIQ brings market research, historical strategy testing and paper trading into one clear learning workspace.",
+      "points": {
+        "market": {
+          "title": "Read the market clearly",
+          "description": "Browse available CSE end-of-day prices with the session date shown."
+        },
+        "practice": {
+          "title": "Practise without real funds",
+          "description": "Paper orders use virtual money and are never sent to an exchange."
+        },
+        "history": {
+          "title": "Test rules on past prices",
+          "description": "Backtests are historical simulations, not forecasts or investment advice."
+        }
+      }
+    },
     "login": {
       "title": "Sign in",
-      "subtitle": "Sign in to your TradeIQ CSE account.",
+      "subtitle": "Continue to your TradeIQ CSE research and practice workspace.",
       "submit": "Sign in",
       "noAccount": "No account yet?",
       "createOne": "Create one",
@@ -448,7 +603,7 @@
     },
     "signup": {
       "title": "Create an account",
-      "subtitle": "Paper trading, signals and portfolio analytics for Sri Lankan investors.",
+      "subtitle": "Save your paper portfolios, practise orders and run historical backtests.",
       "submit": "Create account",
       "haveAccount": "Already have an account?",
       "signIn": "Sign in",

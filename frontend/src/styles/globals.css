@@ -16,6 +16,34 @@
  * --------------------------------------------------------------------------- */
 @custom-variant dark (&:where(.dark, .dark *));
 
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-background-primary-default);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button,
+  input,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-border-focus-ring);
+    outline-offset: 2px;
+  }
+}
+
 /* The next theme is revealed by ThemeToggle from the exact interaction point.
  * Native view-transition crossfades are disabled so only the soft circular
  * clip-path animation runs; unsupported browsers simply ignore these rules. */

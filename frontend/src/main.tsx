@@ -5,10 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
 import { AuthProvider } from "./auth/AuthProvider";
 import { ThemeProvider } from "./theme/ThemeProvider";
-import { AntdThemeBridge } from "./theme/AntdThemeBridge";
 import "./i18n";
 import "./styles/globals.css";
-import "./theme/theme.css";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,9 +23,7 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
       <BrowserRouter>
         <ThemeProvider>
           <AuthProvider>
-            <AntdThemeBridge>
-              <App />
-            </AntdThemeBridge>
+            <App />
           </AuthProvider>
         </ThemeProvider>
       </BrowserRouter>

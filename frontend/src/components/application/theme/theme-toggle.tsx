@@ -96,6 +96,11 @@ function storedTheme(): ThemeMode {
 export function applyTheme(theme: ThemeMode, { persist = true }: { persist?: boolean } = {}) {
   if (typeof document === "undefined") return;
   document.documentElement.classList.toggle("dark", theme === "dark");
+  // Native controls, browser autofill, and date/search fields use
+  // `color-scheme` independently from our semantic CSS tokens. Keep the
+  // property synchronized with the class so switching from dark to light
+  // cannot leave white browser-provided input text on a light surface.
+  document.documentElement.style.colorScheme = theme;
   if (persist) {
     try {
       window.localStorage.setItem(THEME_STORAGE_KEY, theme);

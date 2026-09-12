@@ -16,13 +16,15 @@ import {
   Card,
   CardHeading,
   CardProgress,
-  DirectionGlyph,
   ErrorCard,
   NoticeCard,
   SkeletonRow,
   StateMessage,
 } from "./ui";
-import { toneClass } from "./ui-styles";
+import {
+  FinancialDirectionGlyph,
+  financialToneClass,
+} from "../../components/application/financial-data";
 
 interface PositionsTableProps {
   portfolioId: string;
@@ -127,7 +129,7 @@ export function PositionsTable({ portfolioId, asOf }: PositionsTableProps) {
                       const direction = changeDirection(
                         position.unrealized_pnl,
                       );
-                      const tone = toneClass(position.unrealized_pnl);
+                      const tone = financialToneClass(position.unrealized_pnl);
                       return (
                         <tr key={position.symbol}>
                           <td className="text-text-primary">
@@ -155,11 +157,11 @@ export function PositionsTable({ portfolioId, asOf }: PositionsTableProps) {
                             {formatMoney(position.market_value, locale)}
                           </td>
                           <td className={`text-right tabular-nums ${tone}`}>
-                            <DirectionGlyph direction={direction} />
+                            <FinancialDirectionGlyph direction={direction} />
                             {formatSignedMoney(position.unrealized_pnl, locale)}
                           </td>
                           <td className={`text-right tabular-nums ${tone}`}>
-                            <DirectionGlyph direction={direction} />
+                            <FinancialDirectionGlyph direction={direction} />
                             {formatPercent(
                               position.unrealized_return_pct,
                               locale,

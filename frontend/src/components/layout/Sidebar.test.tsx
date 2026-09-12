@@ -16,6 +16,8 @@ describe('Sidebar profile', () => {
     });
 
     expect(screen.getByText('Ama Perera')).toBeInTheDocument();
+    expect(screen.queryByText(t('nav.items.aiInsights'))).not.toBeInTheDocument();
+    expect(screen.queryByText(t('nav.items.reports'))).not.toBeInTheDocument();
   });
 
   it('offers a sign-in link when anonymous', () => {

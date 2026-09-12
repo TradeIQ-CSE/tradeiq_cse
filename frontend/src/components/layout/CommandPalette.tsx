@@ -29,9 +29,9 @@ export function CommandPalette({ isOpen, onOpenChange }: CommandPaletteProps) {
 
   const results = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase();
-    return NAV_ROUTES.filter((route) => !route.adminOnly || user?.role === 'admin').filter((route) =>
-      t(route.labelKey).toLocaleLowerCase().includes(normalized),
-    );
+    return NAV_ROUTES.filter((route) => !route.planned)
+      .filter((route) => !route.adminOnly || user?.role === 'admin')
+      .filter((route) => t(route.labelKey).toLocaleLowerCase().includes(normalized));
   }, [query, t, user?.role]);
 
   useEffect(() => {

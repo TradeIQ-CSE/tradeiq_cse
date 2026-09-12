@@ -134,19 +134,6 @@ export function NoticeCard({ children }: { children: ReactNode }) {
 }
 
 /** ▲/▼ so direction is never carried by colour alone. */
-export function DirectionGlyph({
-  direction,
-}: {
-  direction: "up" | "down" | "flat";
-}) {
-  if (direction === "flat") return null;
-  return (
-    <span aria-hidden="true" className="mr-1">
-      {direction === "up" ? "▲" : "▼"}
-    </span>
-  );
-}
-
 /**
  * The Previous/Next pager used by the orders history and the cash ledger.
  * BoardUI ships a numbered Pagination component, but it hardcodes English

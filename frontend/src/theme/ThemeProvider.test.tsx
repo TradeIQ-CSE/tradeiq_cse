@@ -30,6 +30,7 @@ function renderProbe() {
 // outside the render container testing-library's cleanup() tears down.
 afterEach(() => {
   document.documentElement.classList.remove('dark');
+  document.documentElement.style.removeProperty('color-scheme');
 });
 
 describe('ThemeProvider', () => {
@@ -60,6 +61,20 @@ describe('ThemeProvider', () => {
     await waitFor(() => expect(document.documentElement.classList.contains('dark')).toBe(true));
     expect(screen.getByTestId('resolved')).toHaveTextContent('dark');
     expect(localStorage.getItem(PREFERENCE_KEY)).toBe('dark');
+    expect(document.documentElement.style.colorScheme).toBe('dark');
+  });
+
+  it('updates native field styling when switching from dark to light', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(PREFERENCE_KEY, 'dark');
+    renderProbe();
+
+    expect(document.documentElement.style.colorScheme).toBe('dark');
+    await user.click(screen.getByRole('radio', { name: 'Light' }));
+
+    await waitFor(() => expect(document.documentElement.classList.contains('dark')).toBe(false));
+    expect(screen.getByTestId('resolved')).toHaveTextContent('light');
+    expect(document.documentElement.style.colorScheme).toBe('light');
   });
 
   it('switching back to system re-resolves against the OS instead of keeping the old explicit choice', async () => {
@@ -73,6 +88,7 @@ describe('ThemeProvider', () => {
     await waitFor(() => expect(document.documentElement.classList.contains('dark')).toBe(false));
     expect(screen.getByTestId('preference')).toHaveTextContent('system');
     expect(localStorage.getItem(PREFERENCE_KEY)).toBe('system');
+    expect(document.documentElement.style.colorScheme).toBe('light');
   });
 
   it('marks the control reachable and visibly focused via keyboard alone', async () => {

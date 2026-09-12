@@ -14,7 +14,7 @@ import {
   SkeletonRow,
   StateMessage,
 } from "./ui";
-import { toneClass } from "./ui-styles";
+import { financialToneClass } from "../../components/application/financial-data";
 
 interface CashLedgerProps {
   portfolioId: string;
@@ -102,7 +102,7 @@ export function CashLedger({ portfolioId }: CashLedgerProps) {
                           {t(`portfolio.cashLedger.types.${transaction.type}`)}
                         </td>
                         <td
-                          className={`text-right tabular-nums ${toneClass(transaction.amount)}`}
+                          className={`text-right tabular-nums ${financialToneClass(transaction.amount)}`}
                         >
                           {formatSignedMoney(transaction.amount, locale)}
                         </td>

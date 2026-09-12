@@ -13,6 +13,8 @@
  */
 
 export interface ChartPalette {
+  /** Close-price line used when the source cannot form real candle bodies. */
+  price: string;
   /** Close above open. */
   up: string;
   /** Close below open. */
@@ -30,6 +32,7 @@ export interface ChartPalette {
 }
 
 export const chartPalette: ChartPalette = {
+  price: "var(--color-accent-500)",
   up: "var(--color-status-lime-text)",
   down: "var(--color-status-rose-text)",
   // Not --color-chart-neutral: that is slate-800 in dark, invisible against

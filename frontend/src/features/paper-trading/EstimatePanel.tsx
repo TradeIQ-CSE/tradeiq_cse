@@ -10,7 +10,7 @@ import {
   NoticeCard,
   StateMessage,
 } from "./ui";
-import { toneClass } from "./ui-styles";
+import { financialToneClass } from "../../components/application/financial-data";
 
 interface EstimatePanelProps {
   estimate: OrderEstimate | null;
@@ -191,7 +191,7 @@ export function EstimatePanel({
           {t("paperTrading.ticket.estimate.cashEffect")}
         </span>
         <span
-          className={`text-headline-medium tabular-nums ${toneClass(estimate.cash_effect)}`}
+          className={`text-headline-medium tabular-nums ${financialToneClass(estimate.cash_effect)}`}
         >
           {formatSignedMoney(estimate.cash_effect, locale)}
         </span>

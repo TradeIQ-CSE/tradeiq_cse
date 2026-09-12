@@ -23,7 +23,7 @@ export interface NavRoute {
   path: string;
   icon: IconComponent;
   group: NavGroupKey;
-  /** Not yet built — shown de-emphasized in the sidebar, not hidden. */
+  /** Not yet built — retained for direct URLs and breadcrumbs, not primary discovery. */
   planned?: boolean;
   /** Excluded from the sidebar and command palette for non-admins. */
   adminOnly?: boolean;

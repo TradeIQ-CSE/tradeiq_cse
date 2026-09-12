@@ -46,6 +46,13 @@ describe('CommandPalette', () => {
     expect(screen.queryByText(t('nav.items.admin'))).not.toBeInTheDocument();
   });
 
+  it('keeps planned routes out of primary page search', () => {
+    renderWithProviders(<CommandPalette isOpen onOpenChange={() => {}} />);
+
+    expect(screen.queryByText(t('nav.items.aiInsights'))).not.toBeInTheDocument();
+    expect(screen.queryByText(t('nav.items.reports'))).not.toBeInTheDocument();
+  });
+
   it('shows the admin-only route for an admin user', () => {
     renderWithProviders(<CommandPalette isOpen onOpenChange={() => {}} />, {
       auth: {

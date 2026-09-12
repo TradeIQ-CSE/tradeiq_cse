@@ -13,11 +13,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@ant-design/icons": "^5.4.0",
     "@internationalized/date": "^3.12.1",
     "@remixicon/react": "^4.9.0",
     "@tanstack/react-query": "^5.101.4",
-    "antd": "^5.20.0",
     "i18next": "^26.3.6",
     "motion": "^12.42.2",
     "react": "^19.2.8",

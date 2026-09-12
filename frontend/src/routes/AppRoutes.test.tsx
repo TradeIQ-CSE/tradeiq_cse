@@ -27,6 +27,30 @@ describe('AppRoutes', () => {
     ).toBeInTheDocument();
   });
 
+  it('retains an honest direct route for a planned capability', async () => {
+    renderWithProviders(<AppRoutes />, { initialEntries: ['/ai-insights'] });
+
+    expect(
+      await screen.findByRole('heading', { name: t('plannedFeatures.aiInsights.title') }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(t('plannedFeatures.notice'))).toBeInTheDocument();
+  });
+
+  it('renders the restricted administration overview for an admin', async () => {
+    renderWithProviders(<AppRoutes />, {
+      initialEntries: ['/admin'],
+      auth: {
+        status: 'authenticated',
+        user: { user_id: 'admin-1', display_name: 'Admin', role: 'admin' },
+      },
+    });
+
+    expect(
+      await screen.findByRole('heading', { name: t('adminPage.title') }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(t('adminPage.notice'))).toBeInTheDocument();
+  });
+
   it('redirects a guarded route to /login while anonymous', async () => {
     renderWithProviders(<AppRoutes />, {
       initialEntries: ['/paper-trading'],

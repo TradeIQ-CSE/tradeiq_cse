@@ -3,8 +3,11 @@ import { localeFor } from "../../i18n";
 import { readErrorText } from "./error-text";
 import { changeDirection, formatMoney, formatSignedMoney } from "./format";
 import { useOrder } from "./useOrders";
-import { DirectionGlyph, ErrorCard } from "./ui";
-import { toneClass } from "./ui-styles";
+import { ErrorCard } from "./ui";
+import {
+  FinancialDirectionGlyph,
+  financialToneClass,
+} from "../../components/application/financial-data";
 
 interface OrderDetailProps {
   portfolioId: string;
@@ -115,7 +118,7 @@ export function OrderDetail({ portfolioId, orderId }: OrderDetailProps) {
               {t("orders.detail.cashEffect")}
             </dt>
             <dd
-              className={`text-body-medium tabular-nums ${toneClass(fill.cash_effect)}`}
+              className={`text-body-medium tabular-nums ${financialToneClass(fill.cash_effect)}`}
             >
               {formatSignedMoney(fill.cash_effect, locale)}
             </dd>
@@ -132,9 +135,9 @@ export function OrderDetail({ portfolioId, orderId }: OrderDetailProps) {
                 {t("orders.detail.realizedPnl")}
               </dt>
               <dd
-                className={`text-body-medium tabular-nums ${toneClass(fill.realized_pnl)}`}
+                className={`text-body-medium tabular-nums ${financialToneClass(fill.realized_pnl)}`}
               >
-                <DirectionGlyph direction={pnlDirection} />
+                <FinancialDirectionGlyph direction={pnlDirection} />
                 {formatSignedMoney(fill.realized_pnl, locale)}
               </dd>
             </div>
