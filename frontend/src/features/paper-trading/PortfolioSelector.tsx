@@ -1,6 +1,9 @@
-import { useTranslation } from 'react-i18next';
-import { Portfolio } from './types';
-import './paper-trading.css';
+import { useTranslation } from "react-i18next";
+import { RiAddLine } from "@remixicon/react";
+import { Button } from "../../components/base/buttons/button";
+import { Select, SelectItem } from "../../components/base/select/select";
+import { PageToolbar } from "../../components/application/layout/application-layout";
+import { Portfolio } from "./types";
 
 interface PortfolioSelectorProps {
   portfolios: Portfolio[];
@@ -21,24 +24,46 @@ export function PortfolioSelector({
   const { t } = useTranslation();
 
   return (
-    <div className="portfolio-selector">
-      <label className="portfolio-selector__field">
-        <span>{t('portfolio.selector.label')}</span>
-        <select
-          className="portfolio-select"
-          value={selectedId ?? ''}
-          onChange={(event) => onSelect(event.target.value)}
+    <PageToolbar
+      className="sm:flex-nowrap"
+      aria-label={t("portfolio.selector.toolbarLabel")}
+    >
+      <div className="flex min-w-0 flex-1 flex-col gap-1 sm:max-w-sm">
+        <span className="text-body-2-medium text-text-secondary">
+          {t("portfolio.selector.label")}
+        </span>
+        <Select
+          aria-label={t("portfolio.selector.label")}
+          className="w-full"
+          selectedKey={selectedId}
+          onSelectionChange={(key) => onSelect(String(key))}
         >
           {portfolios.map((portfolio) => (
-            <option key={portfolio.portfolio_id} value={portfolio.portfolio_id}>
-              {portfolio.name}
-            </option>
+            <SelectItem
+              key={portfolio.portfolio_id}
+              id={portfolio.portfolio_id}
+              textValue={portfolio.name}
+            >
+              <span className="flex min-w-0 flex-col">
+                <span className="truncate text-body-medium text-text-primary">
+                  {portfolio.name}
+                </span>
+                <span className="text-caption-1-medium text-text-tertiary">
+                  {t("portfolio.selector.paperLabel")}
+                </span>
+              </span>
+            </SelectItem>
           ))}
-        </select>
-      </label>
-      <button type="button" className="portfolio-selector__new" onClick={onCreateNew}>
-        {t('portfolio.selector.new')}
-      </button>
-    </div>
+        </Select>
+      </div>
+      <Button
+        className="sm:ml-auto"
+        variant="secondary"
+        leadingIcon={RiAddLine}
+        onClick={onCreateNew}
+      >
+        {t("portfolio.selector.new")}
+      </Button>
+    </PageToolbar>
   );
 }

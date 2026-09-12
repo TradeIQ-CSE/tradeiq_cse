@@ -1,60 +1,41 @@
 import { useTranslation } from 'react-i18next';
-import modelIcon from '../../assets/icons/model.svg';
+import { RiArrowRightUpLine, RiTestTubeLine, RiPieChartLine, RiExchangeLine } from '@remixicon/react';
+import { LinkButton } from '@/components/base/buttons/link-button';
+import { LANDING_CONTAINER } from './layout';
 
-type Tone = 'bull' | 'flat' | 'bear';
-
-const PROBABILITIES: { symbol: string; bull: number; flat: number; bear: number; tone: Tone }[] = [
-  { symbol: 'JKH', bull: 54, flat: 19, bear: 27, tone: 'bull' },
-  { symbol: 'COMB', bull: 32, flat: 38, bear: 30, tone: 'flat' },
-  { symbol: 'DIAL', bull: 49, flat: 24, bear: 27, tone: 'bull' },
-  { symbol: 'LOLC', bull: 21, flat: 28, bear: 51, tone: 'bear' },
-  { symbol: 'HNB', bull: 44, flat: 28, bear: 28, tone: 'bull' },
-  { symbol: 'CTC', bull: 35, flat: 38, bear: 27, tone: 'flat' },
-];
+const CAPABILITIES = [
+  { key: 'charting', icon: RiTestTubeLine, href: '/backtests/new/security' },
+  { key: 'trading', icon: RiExchangeLine, href: '/paper-trading' },
+  { key: 'portfolio', icon: RiPieChartLine, href: '/portfolio' },
+] as const;
 
 export function LandingInsights() {
   const { t } = useTranslation();
-
   return (
-    <section className="landing-insights">
-      <div className="landing-insights__panel">
-        <div className="landing-insights__panel-head">
-          <img src={modelIcon} alt="" width={14} height={14} />
-          <span className="landing-insights__panel-title">{t('landing.insights.panelTitle')}</span>
-          <span className="landing-insights__panel-badge">{t('landing.insights.panelBadge')}</span>
-        </div>
-
-        {PROBABILITIES.map((row) => (
-          <div key={row.symbol} className="landing-insights__row">
-            <span className="landing-insights__symbol">{row.symbol}</span>
-            <span className="landing-insights__bar">
-              <span className="landing-insights__seg landing-insights__seg--bull" style={{ width: `${row.bull}%` }}>
-                {row.bull}%
-              </span>
-              <span className="landing-insights__seg landing-insights__seg--flat" style={{ width: `${row.flat}%` }}>
-                {row.flat}%
-              </span>
-              <span className="landing-insights__seg landing-insights__seg--bear" style={{ width: `${row.bear}%` }}>
-                {row.bear}%
-              </span>
-            </span>
-            <span className={`landing-insights__label landing-insights__label--${row.tone}`}>
-              {t(`landing.insights.${row.tone}`)}
-            </span>
+    <section id="workspace" className={LANDING_CONTAINER}>
+      <div className="landing-glass-panel landing-glass-panel-major rounded-3xl p-6 sm:p-8 lg:p-12">
+        <div className="grid items-end gap-5 lg:grid-cols-2 lg:gap-16">
+          <div>
+            <p className="text-headline-semibold text-status-blue-text">{t('landing.insights.eyebrow')}</p>
+            <h2 className="landing-display mt-4 max-w-lg text-display-4-bold text-text-primary sm:text-display-3-bold">{t('landing.insights.heading')}</h2>
           </div>
-        ))}
-      </div>
-
-      <div className="landing-insights__intro">
-        <span className="landing-section-eyebrow">{t('landing.insights.eyebrow')}</span>
-        <h2 className="landing-section-heading">
-          <span>{t('landing.insights.headingLine1')}</span>
-          <span>{t('landing.insights.headingLine2')}</span>
-        </h2>
-        <p className="landing-section-copy">{t('landing.insights.description')}</p>
-        <a className="landing-section-link" href="/markets">
-          {t('landing.insights.cta')}
-        </a>
+          <p className="landing-lead max-w-lg text-headline-regular text-text-secondary">{t('landing.insights.description')}</p>
+        </div>
+        <ul className="mt-10 grid gap-4 sm:grid-cols-3">
+          {CAPABILITIES.map(({ key, icon: Icon, href }, index) => (
+            <li key={key} className="landing-glass-card flex flex-col items-start rounded-3xl p-5 sm:p-6">
+              <div className="mb-6 flex w-full items-center justify-between">
+                <Icon className="size-6 text-status-blue-text" aria-hidden />
+                <span className="text-caption-1-medium text-text-secondary">0{index + 1}</span>
+              </div>
+              <h3 className="text-title-3-semibold text-text-primary">{t(`landing.insights.capabilities.${key}.title`)}</h3>
+              <p className="mb-5 mt-3 text-body-regular text-text-secondary">{t(`landing.insights.capabilities.${key}.description`)}</p>
+              <LinkButton href={href} trailingIcon={RiArrowRightUpLine} className="mt-auto text-title-3-semibold text-status-blue-text">
+                {t(`landing.insights.capabilities.${key}.cta`)}
+              </LinkButton>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );

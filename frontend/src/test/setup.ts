@@ -1,15 +1,40 @@
-import '@testing-library/jest-dom/vitest';
+import "@testing-library/jest-dom/vitest";
 // i18next initialises synchronously on import, and main.tsx renders with no
 // I18nextProvider — components reach the singleton directly. Importing it
 // once here mirrors production.
-import i18n, { DEFAULT_LANGUAGE } from '../i18n';
-import { afterAll, afterEach, beforeAll } from 'vitest';
-import { cleanup } from '@testing-library/react';
-import { server } from './server';
+import i18n, { DEFAULT_LANGUAGE } from "../i18n";
+import { afterAll, afterEach, beforeAll } from "vitest";
+import { cleanup } from "@testing-library/react";
+import { server } from "./server";
+
+// Node 26 exposes an incomplete global localStorage unless a backing file is
+// configured. That can shadow jsdom's implementation with `undefined`, so
+// restore the small Storage contract the browser-facing tests exercise.
+if (!window.localStorage) {
+  const values = new Map<string, string>();
+  const storage: Storage = {
+    get length() {
+      return values.size;
+    },
+    clear: () => values.clear(),
+    getItem: (key) => values.get(key) ?? null,
+    key: (index) => [...values.keys()][index] ?? null,
+    removeItem: (key) => values.delete(key),
+    setItem: (key, value) => values.set(key, String(value)),
+  };
+  Object.defineProperty(window, "localStorage", {
+    configurable: true,
+    value: storage,
+  });
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: storage,
+  });
+}
 
 // --- window.matchMedia -----------------------------------------------------
-// antd's Grid.useBreakpoint() (used by AppShell) subscribes through
-// matchMedia, and jsdom has no implementation at all. Model a real viewport
+// Theme behavior and responsive components subscribe through matchMedia, and
+// jsdom has no implementation at all. Model a real viewport
 // width so both "max-width" and "min-width" queries resolve consistently,
 // default to a desktop width, and let tests flip to mobile.
 
@@ -59,7 +84,10 @@ class MockMediaQueryList {
   }
 
   notify() {
-    const event = { matches: this.matches, media: this.media } as MediaQueryListEvent;
+    const event = {
+      matches: this.matches,
+      media: this.media,
+    } as MediaQueryListEvent;
     this.listeners.forEach((listener) => listener(event));
     this.onchange?.(event);
   }
@@ -90,12 +118,13 @@ class MockResizeObserver {
   unobserve() {}
   disconnect() {}
 }
-globalThis.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+globalThis.ResizeObserver =
+  MockResizeObserver as unknown as typeof ResizeObserver;
 
 // --- MSW lifecycle -----------------------------------------------------------
 // Fail loudly on an unhandled request: that is what stops a test silently
 // passing against a real network call.
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
@@ -111,6 +140,6 @@ afterEach(async () => {
   }
   // i18n writes tradeiq.language on every languageChanged event, so clear
   // storage after resetting the language, not before.
-  localStorage.clear();
+  window.localStorage.clear();
   setDesktopViewport();
 });

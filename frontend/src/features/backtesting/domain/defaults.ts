@@ -47,12 +47,13 @@ export const AVAILABLE_METRICS = [
 export function createDefaultBacktestConfig(): BacktestConfig {
   return {
     security: {
-      symbol: 'JKH.N0000',
-      companyName: 'John Keells Holdings PLC',
-      sector: 'Industrial Conglomerates',
-      dataFrom: '2017-01-02',
-      dataTo: '2025-12-31',
-      price: 198.50,
+      symbol: '',
+      companyName: '',
+      sector: null,
+      sectorGicsCode: null,
+      dataFrom: null,
+      dataTo: null,
+      price: null,
     },
     period: {
       startDate: '2024-01-01',

@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import boltIcon from '../../assets/icons/bolt.svg';
-import flaskIcon from '../../assets/icons/flask.svg';
+import { RiArrowRightLine, RiCheckLine, RiFlashlightLine, RiFlaskLine } from '@remixicon/react';
+import { LinkButton } from '@/components/base/buttons/link-button';
+import { cx } from '../../utils/cx';
+import { LANDING_CONTAINER } from './layout';
 
 const WIZARD_STEPS = [
   { key: 'mode', state: 'done' },
@@ -17,116 +19,145 @@ const WIZARD_STEPS = [
 // entries (MA/RSI/MACD/BB) are chart overlays in v1, so they must not be
 // advertised here as selectable strategies.
 const RULES = [
-  { key: 'priceFalls', glyph: '↓', kind: 'buy', active: true },
-  { key: 'takeProfit', glyph: '◎', kind: 'sell', active: true },
-  { key: 'stopLoss', glyph: '⊘', kind: 'sell', active: true },
-  { key: 'endOfPeriod', glyph: '⇥', kind: 'sell', active: false },
+  { key: 'priceFalls', kind: 'buy', active: true },
+  { key: 'takeProfit', kind: 'sell', active: true },
+  { key: 'stopLoss', kind: 'sell', active: true },
+  { key: 'endOfPeriod', kind: 'sell', active: false },
 ] as const;
 
+const HIGHLIGHTS = [
+  { key: 'quick', icon: RiFlashlightLine },
+  { key: 'custom', icon: RiFlaskLine },
+] as const;
+
+/**
+ * The "sample results" tiles that used to close this panel (+58.3% total
+ * return, -12.4% max drawdown, 18.6% volatility) are gone. They were invented,
+ * and a return figure on a public page for an investing product reads as a
+ * performance claim whatever the label above it says. What is shown now is the
+ * wizard and the rule set, both of which exist.
+ */
 export function LandingBacktesting() {
   const { t } = useTranslation();
 
   return (
-    <section className="landing-backtesting">
-      <div className="landing-backtesting__intro">
-        <span className="landing-section-eyebrow landing-backtesting__eyebrow">
+    <section id="backtesting" className={LANDING_CONTAINER}>
+      <div className="landing-glass-panel landing-glass-panel-major grid items-center gap-10 rounded-3xl p-6 sm:p-8 lg:grid-cols-2 lg:gap-16 lg:p-12">
+      <div className="flex flex-col items-start">
+        <span className="text-headline-semibold text-status-blue-text">
           {t('landing.backtesting.eyebrow')}
         </span>
-        <h2 className="landing-section-heading">
-          <span>{t('landing.backtesting.headingLine1')}</span>
-          <span>{t('landing.backtesting.headingLine2')}</span>
+        <h2 className="landing-display mt-4 text-display-4-bold text-text-primary sm:text-display-3-bold">
+          {t('landing.backtesting.headingLine1')}<br />{t('landing.backtesting.headingLine2')}
         </h2>
-        <p className="landing-section-copy">{t('landing.backtesting.description')}</p>
+        <p className="landing-lead mt-5 max-w-prose text-headline-regular text-text-secondary">
+          {t('landing.backtesting.description')}
+        </p>
 
-        <div className="landing-backtesting__card landing-backtesting__card--quick">
-          <img className="landing-backtesting__card-icon" src={boltIcon} alt="" width={16} height={16} />
-          <div>
-            <p className="landing-backtesting__card-title">{t('landing.backtesting.quickTitle')}</p>
-            <p className="landing-backtesting__card-description">
-              {t('landing.backtesting.quickDescription')}
-            </p>
-          </div>
-        </div>
-        <div className="landing-backtesting__card landing-backtesting__card--custom">
-          <img className="landing-backtesting__card-icon" src={flaskIcon} alt="" width={16} height={16} />
-          <div>
-            <p className="landing-backtesting__card-title">{t('landing.backtesting.customTitle')}</p>
-            <p className="landing-backtesting__card-description">
-              {t('landing.backtesting.customDescription')}
-            </p>
-          </div>
-        </div>
-
-        <a className="landing-section-link landing-backtesting__link" href="/markets">
-          {t('landing.backtesting.cta')}
-        </a>
-      </div>
-
-      <div className="landing-backtesting__panel">
-        <div className="landing-backtesting__wizard">
-          {WIZARD_STEPS.map((step, i) => (
-            <div key={step.key} className="landing-backtesting__wizard-step">
-              <span className={`landing-backtesting__wizard-badge landing-backtesting__wizard-badge--${step.state}`}>
-                {step.state === 'done' ? '✓' : i + 1}
+        <div className="mt-6 flex w-full flex-col gap-3">
+          {HIGHLIGHTS.map(({ key, icon: Icon }) => (
+            <div
+              key={key}
+              className="landing-glass-card flex items-start gap-3 rounded-3xl p-5"
+            >
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-background-secondary-default">
+                <Icon className="size-5 text-foreground-icon-primary" aria-hidden />
               </span>
-              <span className={`landing-backtesting__wizard-label landing-backtesting__wizard-label--${step.state}`}>
-                {t(`landing.backtesting.steps.${step.key}`)}
-              </span>
-              {i < WIZARD_STEPS.length - 1 && <span className="landing-backtesting__wizard-divider" />}
+              <div className="flex flex-col gap-0.5">
+                <p className="text-headline-semibold text-text-primary">
+                  {t(`landing.backtesting.${key}Title`)}
+                </p>
+                <p className="text-body-regular text-text-secondary">
+                  {t(`landing.backtesting.${key}Description`)}
+                </p>
+              </div>
             </div>
           ))}
         </div>
 
-        <div className="landing-backtesting__body">
-          <p className="landing-backtesting__label">{t('landing.backtesting.selectStrategy')}</p>
-          <div className="landing-backtesting__strategies">
-            {RULES.map((rule) => (
-              <div
-                key={rule.key}
-                className={`landing-backtesting__strategy${
-                  rule.active ? ' landing-backtesting__strategy--active' : ''
-                }`}
+        <LinkButton href="/backtests/new/security" trailingIcon={RiArrowRightLine} className="mt-5 text-title-3-semibold text-status-blue-text">
+          {t('landing.backtesting.cta')}
+        </LinkButton>
+      </div>
+
+      <div className="landing-glass-card flex flex-col gap-5 rounded-3xl p-5 sm:p-8">
+        <div className="flex items-center justify-between gap-4 border-b border-separator-border pb-5">
+          <span className="text-headline-medium text-text-primary">{t('landing.backtesting.previewTitle')}</span>
+          <span className="text-caption-1-medium text-text-secondary">{t('landing.backtesting.previewLabel')}</span>
+        </div>
+        <ol className="flex flex-wrap gap-x-4 gap-y-2">
+          {WIZARD_STEPS.map((step, index) => (
+            <li key={step.key} className="flex items-center gap-1.5">
+              <span
+                className={cx(
+                  'flex size-5 shrink-0 items-center justify-center rounded-full text-caption-1-medium',
+                  step.state === 'done' && 'bg-status-lime-background text-status-lime-text',
+                  step.state === 'active' && 'bg-button-primary bui-on-accent',
+                  step.state === 'todo' && 'bg-background-tertiary-default text-text-tertiary',
+                )}
               >
-                <span className="landing-backtesting__strategy-glyph">{rule.glyph}</span>
-                <span>{t(`landing.backtesting.rules.${rule.key}`)}</span>
-              </div>
+                {step.state === 'done' ? (
+                  <RiCheckLine className="size-3" aria-hidden />
+                ) : (
+                  index + 1
+                )}
+              </span>
+              <span
+                className={cx(
+                  'text-body-2-medium',
+                  step.state === 'todo' ? 'text-text-tertiary' : 'text-text-primary',
+                )}
+              >
+                {t(`landing.backtesting.steps.${step.key}`)}
+              </span>
+            </li>
+          ))}
+        </ol>
+
+        <div className="flex flex-col gap-2 border-t border-separator-border pt-4">
+          <p className="text-body-medium text-text-secondary">
+            {t('landing.backtesting.selectStrategy')}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {RULES.map((rule) => (
+              <span
+                key={rule.key}
+                className={cx(
+                  'rounded-lg px-2.5 py-1.5 text-body-2-medium',
+                  rule.active
+                    ? rule.kind === 'buy'
+                      ? 'bg-status-lime-background text-status-lime-text'
+                      : 'bg-status-rose-background text-status-rose-text'
+                    : 'bg-background-tertiary-default text-text-tertiary',
+                )}
+              >
+                {t(`landing.backtesting.rules.${rule.key}`)}
+              </span>
             ))}
           </div>
-
-          <div className="landing-backtesting__params">
-            <p className="landing-backtesting__params-label">{t('landing.backtesting.parameters')}</p>
-            <div className="landing-backtesting__params-grid">
-              <div>
-                <p className="landing-backtesting__field-label">{t('landing.backtesting.takeProfitPct')}</p>
-                <div className="landing-backtesting__field-value">10%</div>
-              </div>
-              <div>
-                <p className="landing-backtesting__field-label">{t('landing.backtesting.stopLossPct')}</p>
-                <div className="landing-backtesting__field-value">5%</div>
-              </div>
-            </div>
-          </div>
         </div>
 
-        <div className="landing-backtesting__results">
-          <p className="landing-backtesting__label">{t('landing.backtesting.sampleResults')}</p>
-          <div className="landing-backtesting__results-grid">
-            <div className="landing-backtesting__stat">
-              <p className="landing-backtesting__stat-label">{t('landing.backtesting.totalReturn')}</p>
-              <p className="landing-backtesting__stat-value landing-backtesting__stat-value--positive">+58.3%</p>
-            </div>
-            <div className="landing-backtesting__stat">
-              <p className="landing-backtesting__stat-label">{t('landing.backtesting.maxDrawdown')}</p>
-              <p className="landing-backtesting__stat-value landing-backtesting__stat-value--negative">
-                -12.4%
+        <div className="flex flex-col gap-2 border-t border-separator-border pt-4">
+          <p className="text-body-medium text-text-secondary">
+            {t('landing.backtesting.parameters')}
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg bg-background-primary-default px-3 py-2">
+              <p className="text-body-2-medium text-text-tertiary">
+                {t('landing.backtesting.takeProfitPct')}
               </p>
+              <p className="text-headline-medium tabular-nums text-text-primary">10%</p>
             </div>
-            <div className="landing-backtesting__stat">
-              <p className="landing-backtesting__stat-label">{t('landing.backtesting.volatility')}</p>
-              <p className="landing-backtesting__stat-value">18.6%</p>
+            <div className="rounded-lg bg-background-primary-default px-3 py-2">
+              <p className="text-body-2-medium text-text-tertiary">
+                {t('landing.backtesting.stopLossPct')}
+              </p>
+              <p className="text-headline-medium tabular-nums text-text-primary">5%</p>
             </div>
           </div>
         </div>
+        <p className="text-caption-1-regular text-text-secondary">{t('landing.backtesting.previewNote')}</p>
+      </div>
       </div>
     </section>
   );

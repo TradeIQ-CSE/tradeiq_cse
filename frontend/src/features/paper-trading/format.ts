@@ -36,6 +36,17 @@ export function formatQuantity(value: number, locale: string): string {
   return value.toLocaleString(locale);
 }
 
+// `placed_at` (§6.2/§6.3) is the only timestamp (not a plain date) this
+// feature renders — every other date field (fill_date, settlement_date,
+// effective_date) is already a display-ready "YYYY-MM-DD" and is rendered
+// verbatim elsewhere. This only localises the ISO string; it derives nothing.
+export function formatDateTime(value: string, locale: string): string {
+  return new Date(value).toLocaleString(locale, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+}
+
 /** Direction for the ▲/▼ non-colour indicator (colour alone must not carry the signal). */
 export function changeDirection(value: number): 'up' | 'down' | 'flat' {
   if (value > 0) return 'up';

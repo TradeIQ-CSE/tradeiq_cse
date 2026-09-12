@@ -1,34 +1,44 @@
-import React from 'react';
-import { useBacktestWizard, BacktestWizardProvider } from '../hooks/useBacktestWizard';
-import { StepIndicator } from './StepIndicator';
-import { ValidationSummary } from './ValidationSummary';
-import { SecurityStep } from './SecurityStep';
-import { PeriodStep } from './PeriodStep';
-import { RulesStep } from './RulesStep';
-import { ExecutionStep } from './ExecutionStep';
-import { PortfolioStep } from './PortfolioStep';
-import { MetricsStep } from './MetricsStep';
-import { ReviewStep } from './ReviewStep';
-import '../backtesting.css';
+import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react";
+import { Button } from "@/components/base/buttons/button";
+import {
+  AppNotice,
+  AppPage,
+  AppPanel,
+  PageIntro,
+} from "@/components/application/layout/application-layout";
+import {
+  useBacktestWizard,
+  BacktestWizardProvider,
+} from "../hooks/useBacktestWizard";
+import { StepIndicator } from "./StepIndicator";
+import { ValidationSummary } from "./ValidationSummary";
+import { SecurityStep } from "./SecurityStep";
+import { PeriodStep } from "./PeriodStep";
+import { RulesStep } from "./RulesStep";
+import { ExecutionStep } from "./ExecutionStep";
+import { PortfolioStep } from "./PortfolioStep";
+import { MetricsStep } from "./MetricsStep";
+import { ReviewStep } from "./ReviewStep";
 
-const WizardContent: React.FC = () => {
-  const { currentStep, stepIndex, totalSteps, goNext, goBack } = useBacktestWizard();
+function WizardContent() {
+  const { currentStep, stepIndex, totalSteps, goNext, goBack } =
+    useBacktestWizard();
 
   const renderStep = () => {
     switch (currentStep) {
-      case 'security':
+      case "security":
         return <SecurityStep />;
-      case 'period':
+      case "period":
         return <PeriodStep />;
-      case 'rules':
+      case "rules":
         return <RulesStep />;
-      case 'execution':
+      case "execution":
         return <ExecutionStep />;
-      case 'portfolio':
+      case "portfolio":
         return <PortfolioStep />;
-      case 'metrics':
+      case "metrics":
         return <MetricsStep />;
-      case 'review':
+      case "review":
         return <ReviewStep />;
       default:
         return <SecurityStep />;
@@ -36,68 +46,65 @@ const WizardContent: React.FC = () => {
   };
 
   return (
-    <div className="backtest-workflow">
-      {/* Workflow Header */}
-      <header className="backtest-header">
-        <span className="backtest-header__badge">
-          TradeIQ Simulation · v1 Price DSL
-        </span>
-        <h1 className="backtest-header__title">Configure Backtest Strategy</h1>
-        <p className="backtest-header__subtitle">
-          Build and validate price-based rules, define execution parameters, and model historical strategy returns on the Colombo Stock Exchange.
-        </p>
-      </header>
+    <AppPage className="max-w-5xl">
+      <PageIntro
+        eyebrow="Historical simulation"
+        title="Test a strategy against the past"
+        description="Build simple price-based rules, choose realistic execution assumptions, and see how they would have behaved on available CSE end-of-day data."
+      />
 
-      {/* 7-Step Stepper */}
+      <AppNotice title="A backtest is evidence, not a forecast">
+        Historical results can help you understand a rule&apos;s behaviour, but
+        they do not predict future prices or guarantee future returns.
+      </AppNotice>
+
       <StepIndicator />
-
-      {/* Validation Banner if errors present */}
       <ValidationSummary />
 
-      {/* Main Form Content Card */}
-      <main className="backtest-card" aria-live="polite">
-        {renderStep()}
+      <AppPanel className="overflow-hidden p-0">
+        <section className="flex flex-col gap-6 p-4 sm:p-6" aria-live="polite">
+          {renderStep()}
 
-        {/* Wizard Footer Controls */}
-        <div className="wizard-actions">
-          <button
-            type="button"
-            className="btn btn--ghost"
-            onClick={goBack}
-            aria-label="Navigate to previous step"
-          >
-            ← Back
-          </button>
-
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-            Step {stepIndex + 1} of {totalSteps}
-          </span>
-
-          {currentStep !== 'review' ? (
-            <button
-              type="button"
-              className="btn btn--primary"
-              onClick={goNext}
-              aria-label="Advance to next step"
+          <footer className="flex flex-col-reverse gap-3 border-t border-separator-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <Button
+              variant="secondary"
+              leadingIcon={RiArrowLeftLine}
+              onClick={goBack}
+              aria-label="Navigate to previous step"
+              className="w-full sm:w-auto"
             >
-              <span>Next Step</span>
-              <span>→</span>
-            </button>
-          ) : (
-            <div style={{ width: '90px' }} />
-          )}
-        </div>
-      </main>
-    </div>
-  );
-};
+              {stepIndex === 0 ? "Back to markets" : "Back"}
+            </Button>
 
-export const BacktestWizard: React.FC = () => {
+            <p className="text-center text-body-2-medium text-text-tertiary">
+              Step {stepIndex + 1} of {totalSteps}
+            </p>
+
+            {currentStep !== "review" ? (
+              <Button
+                trailingIcon={RiArrowRightLine}
+                onClick={goNext}
+                aria-label="Advance to next step"
+                className="w-full sm:w-auto"
+              >
+                Continue
+              </Button>
+            ) : (
+              <span className="hidden w-24 sm:block" aria-hidden="true" />
+            )}
+          </footer>
+        </section>
+      </AppPanel>
+    </AppPage>
+  );
+}
+
+export function BacktestWizard() {
   return (
     <BacktestWizardProvider>
       <WizardContent />
     </BacktestWizardProvider>
   );
-};
+}
 
 export default BacktestWizard;

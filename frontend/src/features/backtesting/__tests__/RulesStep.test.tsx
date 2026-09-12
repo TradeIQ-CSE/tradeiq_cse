@@ -2,6 +2,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { RulesStep } from '../components/RulesStep';
 import { BacktestWizardProvider } from '../context/BacktestContext';
@@ -55,7 +56,7 @@ describe('RulesStep Event & Toggle Behavior', () => {
     expect(getTargetPriceSells().length).toBe(0);
   });
 
-  it('handles keyboard Space and Enter keys on card container without double toggling', () => {
+  it('handles the standard keyboard Space interaction without double toggling', async () => {
     let latestConfig: BacktestConfig | null = null;
 
     render(
@@ -67,16 +68,16 @@ describe('RulesStep Event & Toggle Behavior', () => {
     );
 
     const targetPriceCard = screen.getByRole('checkbox', { name: /Target Exit Price/i });
+    const user = userEvent.setup({ delay: null });
 
     const getTargetPriceSells = () =>
       latestConfig?.rules?.sells?.filter((s: SellCondition) => s.type === 'target_price') || [];
 
-    // Press Space on card container
-    fireEvent.keyDown(targetPriceCard, { key: ' ' });
+    targetPriceCard.focus();
+    await user.keyboard('[Space]');
     expect(getTargetPriceSells().length).toBe(1);
 
-    // Press Enter on card container to deselect
-    fireEvent.keyDown(targetPriceCard, { key: 'Enter' });
+    await user.keyboard('[Space]');
     expect(getTargetPriceSells().length).toBe(0);
   });
 });

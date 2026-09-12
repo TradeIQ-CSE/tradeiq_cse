@@ -1,60 +1,89 @@
-import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Button, Typography, Space, Card } from 'antd';
-import { ExperimentOutlined } from '@ant-design/icons';
+import {
+  RiArrowRightLine,
+  RiBarChartGroupedLine,
+  RiFlaskLine,
+  RiHistoryLine,
+  RiInformationLine,
+} from '@remixicon/react';
+import {
+  AppNotice,
+  AppPage,
+  AppPanel,
+  PageIntro,
+} from '../../components/application/layout/application-layout';
+import { Button } from '../../components/base/buttons/button';
 
-const { Title, Text, Paragraph } = Typography;
+const STEPS = [
+  { key: 'security', icon: RiBarChartGroupedLine },
+  { key: 'rules', icon: RiFlaskLine },
+  { key: 'review', icon: RiHistoryLine },
+] as const;
 
-export const Analytics: React.FC = () => {
+export function Analytics() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  return (
-    <div style={{ color: '#e2e8f0' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <Title level={2} style={{ color: '#f1f5f9', margin: 0, fontWeight: 600 }}>
-          Backtesting & Analytics
-        </Title>
-        <Text style={{ color: '#90a1b9', fontSize: '13px' }}>
-          Evaluate historical strategy performance and run complex risk analytics models.
-        </Text>
-      </div>
 
-      <Card
-        style={{
-          backgroundColor: '#0b0e13',
-          borderColor: 'rgba(255,255,255,0.04)',
-        }}
-      >
-        <Title level={4} style={{ color: '#e2e8f0', marginTop: 0 }}>
-          Simulation Engine
-        </Title>
-        <Paragraph style={{ color: '#64748b' }}>
-          Configure a price-rule backtesting workflow across Sri Lanka Colombo Stock Exchange historical market data.
-        </Paragraph>
-        
-        <div style={{ padding: '30px 0', display: 'flex', justifyContent: 'center', margin: '20px 0', border: '1px dashed rgba(255,255,255,0.06)', borderRadius: '6px' }}>
-          <Space direction="vertical" align="center" size={12}>
-            <Text style={{ color: '#a78bfa', fontSize: '13px', fontWeight: 500 }}>
-              Ready to configure a v1 price-rule backtest strategy
-            </Text>
-            <Text style={{ color: '#64748b', fontSize: '12px' }}>
-              Guided 7-step wizard: Security · Period · Rules · Execution · Portfolio · Metrics · Review
-            </Text>
-          </Space>
+  return (
+    <AppPage width="reading">
+      <PageIntro
+        eyebrow={t('analyticsPage.eyebrow')}
+        title={t('analyticsPage.title')}
+        description={t('analyticsPage.description')}
+        actions={
+          <Button leadingIcon={RiFlaskLine} onClick={() => navigate('/backtests/new/security')}>
+            {t('analyticsPage.start')}
+          </Button>
+        }
+      />
+
+      <AppNotice title={t('analyticsPage.noticeTitle')}>
+        {t('analyticsPage.notice')}
+      </AppNotice>
+
+      <AppPanel className="flex flex-col gap-5">
+        <div>
+          <p className="text-caption-1-semibold text-status-blue-text">{t('analyticsPage.guideEyebrow')}</p>
+          <h2 className="mt-1 text-title-2-medium text-text-primary">{t('analyticsPage.guideTitle')}</h2>
+          <p className="mt-1 max-w-2xl text-body-regular text-text-secondary">
+            {t('analyticsPage.guideDescription')}
+          </p>
         </div>
 
-        <Space size={12} wrap style={{ width: '100%' }}>
-          <Button
-            type="primary"
-            icon={<ExperimentOutlined />}
-            style={{ backgroundColor: '#722ed1', borderColor: '#722ed1' }}
-            onClick={() => navigate('/backtests/new/security')}
-          >
-            Start Strategy Backtest
-          </Button>
-        </Space>
-      </Card>
-    </div>
+        <ol className="grid gap-3 sm:grid-cols-3">
+          {STEPS.map(({ key, icon: Icon }, index) => (
+            <li key={key} className="rounded-2xl border border-border-button-default bg-background-secondary-default p-4">
+              <span className="flex size-9 items-center justify-center rounded-xl bg-stat-card-icon-background text-foreground-icon-primary">
+                <Icon className="size-5" aria-hidden />
+              </span>
+              <p className="mt-3 text-caption-1-semibold text-text-tertiary">
+                {t('analyticsPage.step', { number: index + 1 })}
+              </p>
+              <h3 className="mt-0.5 text-headline-medium text-text-primary">
+                {t(`analyticsPage.steps.${key}.title`)}
+              </h3>
+              <p className="mt-1 text-body-2-regular text-text-secondary">
+                {t(`analyticsPage.steps.${key}.description`)}
+              </p>
+            </li>
+          ))}
+        </ol>
+
+        <Button className="self-start" trailingIcon={RiArrowRightLine} onClick={() => navigate('/backtests/new/security')}>
+          {t('analyticsPage.openWizard')}
+        </Button>
+      </AppPanel>
+
+      <AppPanel tone="subtle" className="flex items-start gap-3">
+        <RiInformationLine className="mt-0.5 size-5 shrink-0 text-foreground-icon-secondary" aria-hidden />
+        <div>
+          <h2 className="text-headline-medium text-text-primary">{t('analyticsPage.plannedTitle')}</h2>
+          <p className="mt-1 text-body-regular text-text-secondary">{t('analyticsPage.plannedDescription')}</p>
+        </div>
+      </AppPanel>
+    </AppPage>
   );
-};
+}
 
 export default Analytics;

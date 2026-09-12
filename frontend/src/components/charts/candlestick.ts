@@ -2,6 +2,8 @@
 // component-only module: exporting helpers alongside the component breaks
 // fast refresh, and this logic needs no React to be tested.
 
+import { chartPalette } from './chart-theme';
+
 export interface CandleDatum {
   open: number | null;
   high: number;
@@ -36,11 +38,15 @@ export function candleWick(point: CandleDatum): [number, number] {
   return [bodyHigh - point.low, point.high - bodyHigh];
 }
 
+/**
+ * The candle's colour, chosen from a theme-resolved palette rather than fixed
+ * hexes — the chart has to read on both a light and a dark ground.
+ */
 export function candleColor(point: CandleDatum): string {
-  if (point.open === null) return '#90a1b9';
-  if (point.close > point.open) return '#00d492';
-  if (point.close < point.open) return '#ff6467';
-  return '#90a1b9';
+  if (point.open === null) return chartPalette.neutral;
+  if (point.close > point.open) return chartPalette.up;
+  if (point.close < point.open) return chartPalette.down;
+  return chartPalette.neutral;
 }
 
 function asUtcDate(day: string): Date {

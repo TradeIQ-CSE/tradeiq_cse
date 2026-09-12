@@ -1,12 +1,20 @@
-import { lazy, ReactNode, Suspense } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { AppShell } from '../components/layout/AppShell';
+import { PageState } from '../components/application/layout/application-layout';
 import { RequireAuth } from '../auth/RequireAuth';
+import { RequireAdmin } from '../auth/RequireAdmin';
 import { useAuth } from '../auth/useAuth';
+import { useTranslation } from 'react-i18next';
 
 const LandingPage = lazy(() =>
   import('../features/landing/LandingPage').then((module) => ({
     default: module.LandingPage,
+  })),
+);
+const HowItWorksPage = lazy(() =>
+  import('../features/landing/HowItWorksPage').then((module) => ({
+    default: module.HowItWorksPage,
   })),
 );
 const MarketsPage = lazy(() =>
@@ -34,11 +42,21 @@ const Portfolio = lazy(() =>
     default: module.PortfolioPage,
   })),
 );
+const PaperTrading = lazy(() =>
+  import('../features/paper-trading/PaperTradingPage').then((module) => ({
+    default: module.PaperTradingPage,
+  })),
+);
+const Orders = lazy(() =>
+  import('../features/paper-trading/OrdersPage').then((module) => ({
+    default: module.OrdersPage,
+  })),
+);
 const Dashboard = lazy(() => import('../pages/investor/Dashboard'));
 const Watchlist = lazy(() => import('../pages/investor/Watchlist'));
-const Orders = lazy(() => import('../pages/investor/Orders'));
 const Analytics = lazy(() => import('../pages/investor/Analytics'));
 const AdminHome = lazy(() => import('../pages/admin/AdminHome'));
+const PlannedFeaturePage = lazy(() => import('../pages/PlannedFeaturePage'));
 const BacktestWizard = lazy(() =>
   import('../features/backtesting/components/BacktestWizard').then((module) => ({
     default: module.BacktestWizard,
@@ -51,10 +69,28 @@ const StatusStep = lazy(() =>
 );
 
 function LoadingFallback() {
+  const { t } = useTranslation();
   return (
-    <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
-      Loading view…
+    <div className="min-h-dvh bg-background-full p-4 sm:p-6">
+      <PageState
+        kind="loading"
+        title={t('shell.loadingTitle')}
+        description={t('shell.loadingDescription')}
+      />
     </div>
+  );
+}
+
+// Every screen inside the shell — public Markets pages and the authenticated
+// console alike — mounts through this one layout, so there is exactly one
+// AppShell instance in the tree rather than a copy per page. React Router
+// keeps it mounted across navigation between sibling routes here, which also
+// means the sidebar/topbar no longer remount when moving between them.
+function ShellLayout() {
+  return (
+    <AppShell>
+      <Outlet />
+    </AppShell>
   );
 }
 
@@ -72,28 +108,23 @@ function LoadingFallback() {
 // render() flushes effects inside act(), so the shell is already gone before
 // any assertion can run. The frame this avoids exists only in a real browser,
 // which paints between commit and effect.
-function ConsoleRoute({ children }: { children: ReactNode }) {
+function ConsoleShellLayout() {
   const { status } = useAuth();
 
   if (status === 'anonymous') {
-    return <RequireAuth>{children}</RequireAuth>;
+    return (
+      <RequireAuth>
+        <Outlet />
+      </RequireAuth>
+    );
   }
 
   return (
     <AppShell>
-      <RequireAuth>{children}</RequireAuth>
+      <RequireAuth>
+        <Outlet />
+      </RequireAuth>
     </AppShell>
-  );
-}
-
-function PlannedFeature({ title }: { title: string }) {
-  return (
-    <div style={{ color: '#e2e8f0' }}>
-      <h1 style={{ fontSize: '24px', fontWeight: 600 }}>{title}</h1>
-      <p style={{ color: '#90a1b9' }}>
-        This interface is planned and is not available in the current build.
-      </p>
-    </div>
   );
 }
 
@@ -102,100 +133,38 @@ export function AppRoutes() {
     <Suspense fallback={<LoadingFallback />}>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/markets" element={<MarketsPage />} />
-        <Route path="/markets/:symbol" element={<SecurityDetailPage />} />
+        <Route path="/how-it-works" element={<HowItWorksPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
-        <Route
-          path="/dashboard"
-          element={
-            <ConsoleRoute>
-              <Dashboard />
-            </ConsoleRoute>
-          }
-        />
-        <Route
-          path="/watchlist"
-          element={
-            <ConsoleRoute>
-              <Watchlist />
-            </ConsoleRoute>
-          }
-        />
-        <Route
-          path="/portfolio"
-          element={
-            <ConsoleRoute>
-              <Portfolio />
-            </ConsoleRoute>
-          }
-        />
-        <Route
-          path="/orders"
-          element={
-            <ConsoleRoute>
-              <Orders />
-            </ConsoleRoute>
-          }
-        />
-        <Route
-          path="/analytics"
-          element={
-            <ConsoleRoute>
-              <Analytics />
-            </ConsoleRoute>
-          }
-        />
-        <Route
-          path="/paper-trading"
-          element={
-            <ConsoleRoute>
-              <PlannedFeature title="Paper Trading" />
-            </ConsoleRoute>
-          }
-        />
-        <Route
-          path="/ai-insights"
-          element={
-            <ConsoleRoute>
-              <PlannedFeature title="Machine Learning Insights" />
-            </ConsoleRoute>
-          }
-        />
-        <Route
-          path="/reports"
-          element={
-            <ConsoleRoute>
-              <PlannedFeature title="Reports" />
-            </ConsoleRoute>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <ConsoleRoute>
-              <AdminHome />
-            </ConsoleRoute>
-          }
-        />
-        <Route path="/backtests" element={<Navigate to="/backtests/new/security" replace />} />
-        <Route path="/backtests/new" element={<Navigate to="/backtests/new/security" replace />} />
-        <Route
-          path="/backtests/new/:step"
-          element={
-            <ConsoleRoute>
-              <BacktestWizard />
-            </ConsoleRoute>
-          }
-        />
-        <Route
-          path="/backtests/:runId/status"
-          element={
-            <ConsoleRoute>
-              <StatusStep />
-            </ConsoleRoute>
-          }
-        />
+
+        <Route element={<ShellLayout />}>
+          <Route path="/markets" element={<MarketsPage />} />
+          <Route path="/markets/:symbol" element={<SecurityDetailPage />} />
+        </Route>
+
+        <Route element={<ConsoleShellLayout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/watchlist" element={<Watchlist />} />
+          <Route path="/portfolio" element={<Portfolio />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/paper-trading" element={<PaperTrading />} />
+          <Route path="/ai-insights" element={<PlannedFeaturePage feature="aiInsights" />} />
+          <Route path="/reports" element={<PlannedFeaturePage feature="reports" />} />
+          <Route
+            path="/admin"
+            element={
+              <RequireAdmin>
+                <AdminHome />
+              </RequireAdmin>
+            }
+          />
+          <Route path="/backtests" element={<Navigate to="/backtests/new/security" replace />} />
+          <Route path="/backtests/new" element={<Navigate to="/backtests/new/security" replace />} />
+          <Route path="/backtests/new/:step" element={<BacktestWizard />} />
+          <Route path="/backtests/:runId/status" element={<StatusStep />} />
+        </Route>
+
         <Route path="*" element={<Navigate to="/markets" replace />} />
       </Routes>
     </Suspense>

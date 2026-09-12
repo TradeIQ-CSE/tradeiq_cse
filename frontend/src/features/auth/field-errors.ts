@@ -1,14 +1,14 @@
 import { ApiError } from '../../lib/api';
 
 export interface MappedFieldErrors<Name extends string> {
-  /** Ready for antd's `form.setFields`. */
+  /** One entry per field this form renders, with every reason for it. */
   fields: { name: Name; errors: string[] }[];
   /** Reasons for fields this form does not render, so they are still shown. */
   unmatched: string[];
 }
 
 /**
- * Turns a 400 VALIDATION_FAILED into antd `setFields` input.
+ * Groups a 400 VALIDATION_FAILED by field, for a form to render.
  *
  * The envelope carries one entry per failed constraint, so a single field can
  * appear more than once — grouping keeps every reason instead of the last one

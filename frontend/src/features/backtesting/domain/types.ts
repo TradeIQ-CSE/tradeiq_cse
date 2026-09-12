@@ -2,6 +2,7 @@ export interface SecuritySelection {
   symbol: string;
   companyName?: string;
   sector?: string | null;
+  sectorGicsCode?: string | null;
   dataFrom?: string | null;
   dataTo?: string | null;
   price?: number | null;
@@ -138,4 +139,41 @@ export interface BacktestStatusResponse {
   startedAt?: string;
   completedAt?: string;
   failureReason?: string;
+}
+
+export interface BacktestFeeBreakdown {
+  brokerage: number;
+  cse: number;
+  cds: number;
+  secCess: number;
+  stl: number;
+  total: number;
+}
+
+export interface BacktestTrade {
+  id: number;
+  date: string;
+  type: 'BUY' | 'SELL';
+  executionPrice: number;
+  quantity: number;
+  grossValue: number;
+  fees: BacktestFeeBreakdown;
+  netCashFlow: number;
+  reason: string;
+}
+
+export interface BacktestEquityPoint {
+  date: string;
+  cash: number;
+  positionQuantity: number;
+  positionMarketValue: number;
+  totalEquity: number;
+}
+
+export interface BacktestResultsResponse {
+  initialCapital: number;
+  finalCash: number;
+  finalEquity: number;
+  trades: BacktestTrade[];
+  equityCurve: BacktestEquityPoint[];
 }

@@ -7,7 +7,7 @@ import { PortfolioSelector } from './PortfolioSelector';
 import * as queryKeys from './queryKeys';
 import { usePortfolioSummary, usePortfolios } from './usePortfolios';
 import { useSelectedPortfolio } from './useSelectedPortfolio';
-import './paper-trading.css';
+import { ErrorCard, StateMessage } from './ui';
 
 interface PortfolioScopeProps {
   children: (portfolioId: string) => ReactNode;
@@ -61,16 +61,16 @@ export function PortfolioScope({ children }: PortfolioScopeProps) {
   }, [canary.isError, canary.error, clearSelection, portfolioId, queryClient]);
 
   if (portfoliosQuery.isPending) {
-    return <div className="portfolio-scope__state">{t('portfolio.scope.loading')}</div>;
+    return <StateMessage>{t('portfolio.scope.loading')}</StateMessage>;
   }
 
   if (portfoliosQuery.isError) {
     return (
-      <div className="portfolio-scope__state portfolio-scope__state--error">
+      <ErrorCard>
         {portfoliosQuery.error instanceof ApiError
           ? portfoliosQuery.error.body.message
           : t('portfolio.scope.unreachable')}
-      </div>
+      </ErrorCard>
     );
   }
 
@@ -85,7 +85,7 @@ export function PortfolioScope({ children }: PortfolioScopeProps) {
   const showCreateForm = creating || portfolios.length === 0 || noSelectablePortfolio;
 
   return (
-    <div className="portfolio-scope">
+    <div className="flex flex-col gap-5">
       {portfolios.length > 0 && (
         <PortfolioSelector
           portfolios={portfolios}
@@ -99,9 +99,15 @@ export function PortfolioScope({ children }: PortfolioScopeProps) {
       )}
 
       {showCreateForm ? (
-        <div className="portfolio-scope__empty">
-          {portfolios.length === 0 && <p>{t('portfolio.scope.empty')}</p>}
-          {noSelectablePortfolio && <p>{t('portfolio.scope.unavailable')}</p>}
+        <div className="flex flex-col gap-3">
+          {portfolios.length === 0 && (
+            <p className="text-body-medium text-text-secondary">{t('portfolio.scope.empty')}</p>
+          )}
+          {noSelectablePortfolio && (
+            <p className="text-body-medium text-text-secondary">
+              {t('portfolio.scope.unavailable')}
+            </p>
+          )}
           <CreatePortfolioForm
             onCreated={(portfolio) => {
               rejectedIds.current.delete(portfolio.portfolio_id);

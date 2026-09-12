@@ -1,293 +1,249 @@
-import React from 'react';
-import { useBacktestWizard } from '../hooks/useBacktestWizard';
+import { Chip } from "@/components/base/badges/chip";
+import { CheckboxCard } from "@/components/base/checkbox/checkbox-card";
+import { Input } from "@/components/base/input/input";
+import { RadioCard } from "@/components/base/radio/radio-card";
+import { RadioGroup } from "@/components/base/radio/radio";
+import { AppNotice } from "@/components/application/layout/application-layout";
+import { cx } from "@/utils/cx";
+import { useBacktestWizard } from "../hooks/useBacktestWizard";
 import {
+  DISALLOWED_INDICATOR_STRATEGIES,
   V1_BUY_RULES,
   V1_SELL_RULES,
-  DISALLOWED_INDICATOR_STRATEGIES,
-} from '../domain/v1Rules';
-import { BuyConditionType, SellConditionType } from '../domain/types';
+} from "../domain/v1Rules";
+import type { BuyConditionType, SellConditionType } from "../domain/types";
+import {
+  BacktestFieldError,
+  BacktestSectionHeader,
+  BacktestStepHeader,
+  ParameterPanel,
+} from "./BacktestStepLayout";
 
-export const RulesStep: React.FC = () => {
+export function RulesStep() {
   const { config, updateConfig, getStepErrors } = useBacktestWizard();
-  const errors = getStepErrors('rules');
+  const errors = getStepErrors("rules");
+  const buyError = errors.find((error) => error.field.startsWith("buy"));
+  const sellsError = errors.find((error) => error.field.startsWith("sells"));
+  const selectedBuy = config.rules.buy;
+  const selectedSells = config.rules.sells;
+  const selectedBuyMeta = V1_BUY_RULES.find(
+    (rule) => rule.type === selectedBuy.type,
+  );
 
-  const buyError = errors.find((e) => e.field.startsWith('buy'));
-  const sellsError = errors.find((e) => e.field.startsWith('sells'));
+  const selectBuy = (type: BuyConditionType) => {
+    let value: number | undefined;
+    if (type === "price_falls_pct_from_period_start") value = 5;
+    if (type === "price_falls_to") {
+      value = config.security.price
+        ? Math.round(config.security.price * 0.95)
+        : 100;
+    }
+    updateConfig((previous) => ({
+      ...previous,
+      rules: { ...previous.rules, buy: { type, value } },
+    }));
+  };
 
-  const selectedBuy = config.rules?.buy || { type: 'period_start' };
-  const selectedSells = config.rules?.sells || [];
-
-  // Exactly 1 buy condition
-  const handleSelectBuy = (type: BuyConditionType) => {
-    let defaultValue: number | undefined = undefined;
-    if (type === 'price_falls_pct_from_period_start') defaultValue = 5;
-    if (type === 'price_falls_to') defaultValue = config.security?.price ? Math.round(config.security.price * 0.95) : 100;
-
-    updateConfig((prev) => ({
-      ...prev,
+  const updateBuyValue = (value: string) => {
+    updateConfig((previous) => ({
+      ...previous,
       rules: {
-        ...prev.rules,
-        buy: {
-          type,
-          value: defaultValue,
-        },
+        ...previous.rules,
+        buy: { ...previous.rules.buy, value: Number.parseFloat(value) },
       },
     }));
   };
 
-  const handleBuyValueChange = (val: number) => {
-    updateConfig((prev) => ({
-      ...prev,
-      rules: {
-        ...prev.rules,
-        buy: {
-          ...prev.rules.buy,
-          value: val,
-        },
-      },
-    }));
-  };
-
-  // At least 1 sell condition
-  const handleToggleSell = (type: SellConditionType) => {
-    updateConfig((prev) => {
-      const currentSells = prev.rules?.sells || [];
-      const exists = currentSells.some((s) => s.type === type);
-
+  const toggleSell = (type: SellConditionType) => {
+    updateConfig((previous) => {
+      const exists = previous.rules.sells.some((rule) => rule.type === type);
       if (exists) {
-        // Remove sell rule (if at least one will remain or user deselects)
         return {
-          ...prev,
+          ...previous,
           rules: {
-            ...prev.rules,
-            sells: currentSells.filter((s) => s.type !== type),
-          },
-        };
-      } else {
-        // Add sell rule
-        let defaultValue: number | undefined = undefined;
-        if (type === 'take_profit_pct') defaultValue = 10;
-        if (type === 'stop_loss_pct') defaultValue = 5;
-        if (type === 'target_price') defaultValue = config.security?.price ? Math.round(config.security.price * 1.15) : 150;
-
-        return {
-          ...prev,
-          rules: {
-            ...prev.rules,
-            sells: [...currentSells, { type, value: defaultValue }],
+            ...previous.rules,
+            sells: previous.rules.sells.filter((rule) => rule.type !== type),
           },
         };
       }
+
+      let value: number | undefined;
+      if (type === "take_profit_pct") value = 10;
+      if (type === "stop_loss_pct") value = 5;
+      if (type === "target_price") {
+        value = config.security.price
+          ? Math.round(config.security.price * 1.15)
+          : 150;
+      }
+      return {
+        ...previous,
+        rules: {
+          ...previous.rules,
+          sells: [...previous.rules.sells, { type, value }],
+        },
+      };
     });
   };
 
-  const handleSellValueChange = (type: SellConditionType, val: number) => {
-    updateConfig((prev) => ({
-      ...prev,
+  const updateSellValue = (type: SellConditionType, value: string) => {
+    updateConfig((previous) => ({
+      ...previous,
       rules: {
-        ...prev.rules,
-        sells: prev.rules.sells.map((s) => (s.type === type ? { ...s, value: val } : s)),
+        ...previous.rules,
+        sells: previous.rules.sells.map((rule) =>
+          rule.type === type
+            ? { ...rule, value: Number.parseFloat(value) }
+            : rule,
+        ),
       },
     }));
   };
 
   return (
-    <div className="rules-step">
-      <div className="step-header">
-        <h2 className="step-header__title">3. Configure Strategy Rules (v1 Price DSL)</h2>
-        <p className="step-header__desc">
-          Define price-based entry and exit conditions. Exactly 1 buy condition and at least 1 sell condition are required.
-        </p>
-      </div>
+    <div className="flex flex-col gap-7">
+      <BacktestStepHeader
+        step={3}
+        title="Define entry and exit rules"
+        description="An entry rule decides when the simulation buys. One or more exit rules decide when it sells; if several trigger on the same bar, the engine uses its fixed precedence rules."
+      />
 
-      {/* Scope Disclaimer Banner regarding Indicators */}
-      <div className="info-banner" style={{ borderLeft: '3px solid var(--accent)' }}>
-        <span style={{ fontSize: '16px' }}>ℹ️</span>
-        <div>
-          <strong style={{ color: 'var(--text-heading)', display: 'block', marginBottom: '2px' }}>
-            ADR 0002: v1 DSL Scope (Price-Based Only)
-          </strong>
-          <span>
-            Technical indicators (
-            {DISALLOWED_INDICATOR_STRATEGIES.map((i) => i.code).join(', ')}
-            ) are available as chart overlays only and are strictly excluded from executable rule sets in v1.
-          </span>
-        </div>
-      </div>
+      <AppNotice title="Version 1 supports price rules only">
+        Indicators such as{" "}
+        {DISALLOWED_INDICATOR_STRATEGIES.map((item) => item.code).join(", ")}
+        {" "}may be useful for research, but the current execution API does not
+        accept them as backtest rules.
+      </AppNotice>
 
-      {/* Section 1: Buy Condition (Exactly 1) */}
-      <div style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-          <div>
-            <h3 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-heading)', margin: 0 }}>
-              Entry Rule (Buy Condition)
-            </h3>
-            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-              Select exactly 1 trigger to establish a long position
-            </span>
-          </div>
-          <span style={{ fontSize: '11px', color: 'var(--accent-text)', background: 'var(--accent-soft)', padding: '2px 8px', borderRadius: '10px' }}>
-            Exactly 1 required
-          </span>
-        </div>
+      <section className="flex flex-col gap-3">
+        <BacktestSectionHeader
+          title="Entry rule"
+          description="Choose exactly one condition that opens a long position."
+          aside={<Chip color="blue">One required</Chip>}
+        />
+        <BacktestFieldError>{buyError?.message}</BacktestFieldError>
+        <RadioGroup
+          value={selectedBuy.type}
+          onChange={(value) => selectBuy(value as BuyConditionType)}
+          aria-label="Entry rule"
+          className="grid gap-3 md:grid-cols-3"
+          isInvalid={Boolean(buyError)}
+        >
+          {V1_BUY_RULES.map((rule) => (
+            <RadioCard
+              key={rule.type}
+              value={rule.type}
+              title={rule.label}
+              description={rule.description}
+              className={({ isSelected }) =>
+                cx(
+                  "h-full items-start",
+                  isSelected &&
+                    "border-border-button-active bg-status-blue-background",
+                )
+              }
+            />
+          ))}
+        </RadioGroup>
 
-        {buyError && <div className="form-error-text" style={{ marginBottom: '10px' }}>{buyError.message}</div>}
+        {selectedBuyMeta?.requiresValue && (
+          <ParameterPanel>
+            <Input
+              type="number"
+              label={selectedBuyMeta.valueLabel}
+              value={Number.isNaN(selectedBuy.value)
+                ? ""
+                : String(selectedBuy.value ?? "")}
+              onChange={updateBuyValue}
+              min={selectedBuyMeta.min}
+              max={selectedBuyMeta.max}
+              step={selectedBuyMeta.step}
+              placeholder={selectedBuyMeta.valuePlaceholder}
+              hint={
+                selectedBuyMeta.valueSuffix
+                  ? `Enter a value in ${selectedBuyMeta.valueSuffix}.`
+                  : undefined
+              }
+              fieldClassName="ring-1 ring-inset ring-border-button-default"
+              className="max-w-sm"
+            />
+          </ParameterPanel>
+        )}
+      </section>
 
-        <div className="grid-3">
-          {V1_BUY_RULES.map((rule) => {
-            const isSelected = selectedBuy.type === rule.type;
-
-            return (
-              <div
-                key={rule.type}
-                className={`option-card ${isSelected ? 'option-card--selected' : ''}`}
-                onClick={() => handleSelectBuy(rule.type)}
-                role="radio"
-                aria-checked={isSelected}
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === ' ' || e.key === 'Enter') {
-                    e.preventDefault();
-                    handleSelectBuy(rule.type);
-                  }
-                }}
-              >
-                <div className="option-card__header">
-                  <div className="option-card__title-wrap">
-                    <span className="option-card__glyph">{rule.glyph}</span>
-                    <span className="option-card__title">{rule.label}</span>
-                  </div>
-                  <input
-                    type="radio"
-                    name="buy_condition"
-                    checked={isSelected}
-                    readOnly
-                    tabIndex={-1}
-                    aria-hidden="true"
-                    style={{ accentColor: 'var(--accent)', pointerEvents: 'none' }}
-                  />
-                </div>
-
-                <p className="option-card__desc">{rule.description}</p>
-
-                {rule.requiresValue && isSelected && (
-                  <div className="option-card__input-wrap" onClick={(e) => e.stopPropagation()}>
-                    <label htmlFor={`buy-value-${rule.type}`} style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      {rule.valueLabel}:
-                    </label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
-                      <input
-                        id={`buy-value-${rule.type}`}
-                        type="number"
-                        className="form-input"
-                        style={{ padding: '6px 8px', fontSize: '13px' }}
-                        value={selectedBuy.value ?? ''}
-                        min={rule.min}
-                        max={rule.max}
-                        step={rule.step}
-                        placeholder={rule.valuePlaceholder}
-                        onChange={(e) => handleBuyValueChange(parseFloat(e.target.value))}
-                      />
-                      {rule.valueSuffix && (
-                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                          {rule.valueSuffix}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Section 2: Sell Conditions (At least 1) */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-          <div>
-            <h3 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-heading)', margin: 0 }}>
-              Exit Rules (Sell Conditions)
-            </h3>
-            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-              Select one or more conditions. First triggered condition closes the position.
-            </span>
-          </div>
-          <span style={{ fontSize: '11px', color: 'var(--accent-text)', background: 'var(--accent-soft)', padding: '2px 8px', borderRadius: '10px' }}>
-            At least 1 required
-          </span>
-        </div>
-
-        {sellsError && <div className="form-error-text" style={{ marginBottom: '10px' }}>{sellsError.message}</div>}
-
-        <div className="grid-2">
+      <section className="flex flex-col gap-3 border-t border-separator-border pt-6">
+        <BacktestSectionHeader
+          title="Exit rules"
+          description="Choose one or more. The first condition reached closes the open position."
+          aside={<Chip color="blue">At least one required</Chip>}
+        />
+        <BacktestFieldError>{sellsError?.message}</BacktestFieldError>
+        <div
+          className="grid gap-3 md:grid-cols-2"
+          role="group"
+          aria-label="Exit rules"
+        >
           {V1_SELL_RULES.map((rule) => {
-            const currentRule = selectedSells.find((s) => s.type === rule.type);
-            const isSelected = !!currentRule;
-
+            const isSelected = selectedSells.some(
+              (selected) => selected.type === rule.type,
+            );
             return (
-              <div
+              <CheckboxCard
                 key={rule.type}
-                className={`option-card ${isSelected ? 'option-card--selected' : ''}`}
-                onClick={() => handleToggleSell(rule.type)}
-                role="checkbox"
-                aria-checked={isSelected}
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === ' ' || e.key === 'Enter') {
-                    e.preventDefault();
-                    handleToggleSell(rule.type);
-                  }
-                }}
-              >
-                <div className="option-card__header">
-                  <div className="option-card__title-wrap">
-                    <span className="option-card__glyph">{rule.glyph}</span>
-                    <span className="option-card__title">{rule.label}</span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    readOnly
-                    tabIndex={-1}
-                    aria-hidden="true"
-                    style={{ accentColor: 'var(--accent)', pointerEvents: 'none' }}
-                  />
-                </div>
-
-                <p className="option-card__desc">{rule.description}</p>
-
-                {rule.requiresValue && isSelected && (
-                  <div className="option-card__input-wrap" onClick={(e) => e.stopPropagation()}>
-                    <label htmlFor={`sell-value-${rule.type}`} style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      {rule.valueLabel}:
-                    </label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
-                      <input
-                        id={`sell-value-${rule.type}`}
-                        type="number"
-                        className="form-input"
-                        style={{ padding: '6px 8px', fontSize: '13px' }}
-                        value={currentRule?.value ?? ''}
-                        min={rule.min}
-                        max={rule.max}
-                        step={rule.step}
-                        placeholder={rule.valuePlaceholder}
-                        onChange={(e) => handleSellValueChange(rule.type, parseFloat(e.target.value))}
-                      />
-                      {rule.valueSuffix && (
-                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                          {rule.valueSuffix}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+                isSelected={isSelected}
+                onChange={() => toggleSell(rule.type)}
+                title={rule.label}
+                description={rule.description}
+                className={({ isSelected: selected }) =>
+                  cx(
+                    "h-full items-start",
+                    selected &&
+                      "border-border-button-active bg-status-blue-background",
+                  )
+                }
+              />
             );
           })}
         </div>
-      </div>
+
+        {selectedSells.some((selected) =>
+          V1_SELL_RULES.find((rule) => rule.type === selected.type)
+            ?.requiresValue,
+        ) && (
+          <ParameterPanel>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {selectedSells.map((selected) => {
+                const metadata = V1_SELL_RULES.find(
+                  (rule) => rule.type === selected.type,
+                );
+                if (!metadata?.requiresValue) return null;
+                return (
+                  <Input
+                    key={selected.type}
+                    type="number"
+                    label={metadata.valueLabel}
+                    value={Number.isNaN(selected.value)
+                      ? ""
+                      : String(selected.value ?? "")}
+                    onChange={(value) =>
+                      updateSellValue(selected.type, value)
+                    }
+                    min={metadata.min}
+                    max={metadata.max}
+                    step={metadata.step}
+                    placeholder={metadata.valuePlaceholder}
+                    hint={
+                      metadata.valueSuffix
+                        ? `Enter a value in ${metadata.valueSuffix}.`
+                        : undefined
+                    }
+                    fieldClassName="ring-1 ring-inset ring-border-button-default"
+                  />
+                );
+              })}
+            </div>
+          </ParameterPanel>
+        )}
+      </section>
     </div>
   );
-};
+}

@@ -22,5 +22,14 @@ module.exports = {
         "react-refresh/only-export-components": "off",
       },
     },
+    {
+      // BoardUI-installed components (mcp__boardui__install_components) —
+      // vendored source we keep upstream-syncable rather than hand-editing
+      // for lint nits.
+      files: ["src/components/**"],
+      rules: {
+        "react-refresh/only-export-components": "off",
+      },
+    },
   ],
 };

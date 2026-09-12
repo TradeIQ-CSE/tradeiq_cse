@@ -1,0 +1,109 @@
+.aurora-background {
+  --aurora-surface: var(--color-slate-50);
+  --aurora-surface-end: color-mix(in srgb, var(--color-blue-50) 66%, var(--color-slate-50));
+  --aurora-field-primary: color-mix(in srgb, var(--color-blue-300) 56%, transparent);
+  --aurora-field-secondary: color-mix(in srgb, var(--color-blue-200) 62%, transparent);
+  --aurora-field-deep: color-mix(in srgb, var(--color-blue-500) 30%, transparent);
+  --aurora-vignette: rgb(255 255 255 / 0.28);
+  background-color: var(--aurora-surface);
+  background-image: linear-gradient(180deg, var(--aurora-surface), var(--aurora-surface-end));
+}
+
+.dark .aurora-background {
+  --aurora-surface: var(--color-background-media-default);
+  --aurora-surface-end: color-mix(in srgb, var(--color-blue-950) 22%, var(--color-background-media-default));
+  --aurora-field-primary: color-mix(in srgb, var(--color-blue-500) 58%, transparent);
+  --aurora-field-secondary: color-mix(in srgb, var(--color-blue-400) 42%, transparent);
+  --aurora-field-deep: color-mix(in srgb, var(--color-blue-700) 50%, transparent);
+  --aurora-vignette: rgb(2 6 23 / 0.32);
+}
+
+.aurora-background__glow {
+  contain: paint;
+}
+
+.aurora-background__glow--radial::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: linear-gradient(180deg, var(--aurora-vignette), transparent 12% 88%, var(--aurora-vignette));
+}
+
+.aurora-background__field {
+  position: absolute;
+  display: block;
+  width: clamp(30rem, 56vw, 52rem);
+  aspect-ratio: 1.55;
+  border-radius: 50%;
+  opacity: 0.72;
+  filter: blur(26px) saturate(108%);
+  transform: translate3d(0, 0, 0);
+  will-change: transform, opacity;
+}
+
+.aurora-background__field--north {
+  top: -8rem;
+  left: -12rem;
+  background: radial-gradient(ellipse, var(--aurora-field-primary), transparent 69%);
+  animation: tradeiq-field-north 26s ease-in-out infinite alternate;
+}
+
+.aurora-background__field--east {
+  top: 34%;
+  right: -16rem;
+  width: clamp(32rem, 60vw, 56rem);
+  background: radial-gradient(ellipse, var(--aurora-field-secondary), transparent 70%);
+  animation: tradeiq-field-east 30s ease-in-out infinite alternate;
+}
+
+.aurora-background__field--south {
+  bottom: -10rem;
+  left: 12%;
+  width: clamp(28rem, 52vw, 48rem);
+  background: radial-gradient(ellipse, var(--aurora-field-deep), transparent 70%);
+  animation: tradeiq-field-south 28s ease-in-out infinite alternate;
+}
+
+@keyframes tradeiq-field-north {
+  0% {
+    opacity: 0.64;
+    transform: translate3d(-4%, -2%, 0) scale(0.96);
+  }
+
+  100% {
+    opacity: 0.76;
+    transform: translate3d(12%, 7%, 0) scale(1.07);
+  }
+}
+
+@keyframes tradeiq-field-east {
+  0% {
+    opacity: 0.58;
+    transform: translate3d(7%, -6%, 0) scale(1.04);
+  }
+
+  100% {
+    opacity: 0.74;
+    transform: translate3d(-12%, 8%, 0) scale(0.95);
+  }
+}
+
+@keyframes tradeiq-field-south {
+  0% {
+    opacity: 0.62;
+    transform: translate3d(-5%, 5%, 0) scale(0.98);
+  }
+
+  100% {
+    opacity: 0.76;
+    transform: translate3d(10%, -7%, 0) scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora-background__field {
+    animation: none;
+    transform: none;
+    will-change: auto;
+  }
+}
