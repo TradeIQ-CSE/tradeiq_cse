@@ -7,6 +7,7 @@ export type ApiErrorCode =
   | 'VALIDATION_FAILED'
   | 'NOT_FOUND'
   | 'SECURITY_NOT_FOUND'
+  | 'INDEX_NOT_FOUND'
   | 'UNAUTHENTICATED'
   | 'FORBIDDEN'
   | 'DEPENDENCY_UNAVAILABLE'
@@ -69,6 +70,12 @@ export class ValidationFailedException extends ApiException {
 export class SecurityNotFoundException extends ApiException {
   constructor() {
     super(HttpStatus.NOT_FOUND, 'SECURITY_NOT_FOUND', 'Security not found.');
+  }
+}
+
+export class IndexNotFoundException extends ApiException {
+  constructor() {
+    super(HttpStatus.NOT_FOUND, 'INDEX_NOT_FOUND', 'Index not found.');
   }
 }
 

@@ -29,6 +29,21 @@ export function toIsoDate(value: Date | string | null): string | null {
   return `${value.getFullYear()}-${month}-${day}`;
 }
 
+// Default start of a range that ends on `day`: the same date a calendar year
+// earlier.
+export function oneCalendarYearBefore(day: string): string {
+  const [year, month, date] = day.split('-').map(Number);
+  const targetYear = year - 1;
+  const candidate = new Date(Date.UTC(targetYear, month - 1, date));
+
+  // JavaScript rolls 2024-02-29 back to 2023-03-01. A calendar-year window
+  // should clamp that one exceptional case to the last day of February.
+  if (candidate.getUTCMonth() !== month - 1) {
+    candidate.setUTCDate(0);
+  }
+  return candidate.toISOString().slice(0, 10);
+}
+
 // Resolve one comparable EOD session for every row in an endpoint response.
 // Explicit weekends and holidays settle to the latest session on or before
 // the requested date. Empty databases have no effective session.

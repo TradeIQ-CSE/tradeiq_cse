@@ -47,6 +47,7 @@ Success responses never contain `error`; error responses never contain `data`.
 | 403 | `FORBIDDEN` | — | Authenticated but not allowed (incl. non-admin on admin routes, SRS 3.1.2.2) | Hide the affordance; do not retry |
 | 404 | `NOT_FOUND` | — | No resource at this path | Generic fallback 404 |
 | 404 | `SECURITY_NOT_FOUND` | — | `{symbol}` matches no security | Show "unknown symbol" state |
+| 404 | `INDEX_NOT_FOUND` | — | `{code}` matches no market index | Show "unknown index" state |
 | 409 | `CONFLICT` | — | State conflict (e.g. duplicate unique value) | Refresh state, surface message |
 | 422 | `BUSINESS_RULE_VIOLATION` | — | Well-formed request rejected by a domain rule (e.g. insufficient buying power) | Surface `message`; no field highlight |
 | 429 | `RATE_LIMITED` | — | Quota exceeded (per-key, per-user, or per-IP; model per SRS 3.1.3.3) | Back off until `reset_at` |

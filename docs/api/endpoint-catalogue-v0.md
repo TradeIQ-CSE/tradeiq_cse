@@ -10,7 +10,9 @@
 
 ## 1. Scope
 
-These four endpoints are the **week-1 market-data slice** consumed by the React SPA:
+These endpoints are the **market-data slice** consumed by the React SPA. The
+first four were the week-1 slice; the two index endpoints (§9, §10) followed
+with TIQ-98:
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -18,14 +20,16 @@ These four endpoints are the **week-1 market-data slice** consumed by the React 
 | GET | `/securities/{symbol}` | Single security detail |
 | GET | `/securities/{symbol}/ohlcv` | OHLCV bars (daily/weekly/monthly) |
 | GET | `/market/overview` | Top gainers / losers / most-active |
+| GET | `/indices` | Market indices with their latest close and change |
+| GET | `/indices/{code}/values` | Daily close series for one index |
 
 They are the **web application's internal API** (SRS 3.1.2.1). The **public developer
 API** (SRS 3.1.3) is a *separate, versioned* surface scheduled for Phase 8 — nothing
 here is versioned, and no `/v1` prefix is introduced in v0.
 
-All four endpoints are **public market-data reads**: no authentication, read-only
+All of them are **public market-data reads**: no authentication, read-only
 (SRS 3.1.1.1, 3.1.2.2). Served by `market-trading` from the `market_data` database
-(schema v2; ERD v2).
+(schema v2; ERD v2), which no other service reads.
 
 This catalogue is not the whole of `market-trading`. The service also serves the
 authenticated paper-trading surface — portfolios, orders, fills, positions and
@@ -85,6 +89,9 @@ Everywhere a "latest" value appears it is relative to `as_of` = the most recent
 trading day in `trading_calendar` that has price data. Requests made on weekends,
 holidays, or before the day's ingestion completes simply return the latest
 completed trading day — this is normal operation, not an error.
+
+Market indices are the exception: each index is valued at its own latest date,
+which can differ from the price `as_of` (see §9).
 
 ### 2.5 Rate limiting
 
@@ -391,6 +398,7 @@ All errors use the envelope in [error-envelope.md](./error-envelope.md):
 |---|---|---|
 | 400 | `VALIDATION_FAILED` | All endpoints — offending fields enumerated in `error.fields[]` (SRS 3.1.2.3) |
 | 404 | `SECURITY_NOT_FOUND` | `/securities/{symbol}`, `/securities/{symbol}/ohlcv` |
+| 404 | `INDEX_NOT_FOUND` | `/indices/{code}/values` |
 | 429 | `RATE_LIMITED` | All endpoints — see §2.5 |
 | 500 | `INTERNAL` | Unconditional fallback; generic message + `trace_id` only |
 
@@ -405,3 +413,123 @@ All errors use the envelope in [error-envelope.md](./error-envelope.md):
 3. **No API versioning** on this internal surface; versioning arrives with the
    separate public developer API (SRS 3.1.3, Phase 8).
 4. **Ratios coverage:** P/E and P/B only, matching schema v2 `market_ratios`.
+
+---
+
+## 9. `GET /indices`
+
+Market indices with their latest close, for the index cards on the markets page
+and dashboard.
+
+### Query parameters
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `as_of` | date | latest available | Each index reports its latest close on or before this date |
+
+### 200 — example
+
+`GET /indices`
+
+```json
+{
+  "data": [
+    {
+      "code": "ASPI",
+      "name": "All Share Price Index",
+      "latest": {
+        "date": "2025-01-10",
+        "close": 15736.91,
+        "previous_date": "2025-01-09",
+        "change": -87.4,
+        "change_pct": -0.55
+      }
+    },
+    {
+      "code": "SL20",
+      "name": "S&P Sri Lanka 20",
+      "latest": {
+        "date": "2025-01-10",
+        "close": 4734.44,
+        "previous_date": "2025-01-09",
+        "change": -27.87,
+        "change_pct": -0.59
+      }
+    }
+  ]
+}
+```
+
+### Field notes
+
+- Every index in `market_data.indices` is listed, ordered by `code`. The current
+  cse-dataset release carries `ASPI`, `ASTRI`, `SL20` and `SL20TRI`.
+- Index codes are exact: `SL20TRI` is a different series from `SL20`.
+- Indices are close-only: no official source publishes an index open, high or
+  low.
+- Each index is valued at its own latest date on or before `as_of`. A series the
+  exchange didn't publish on a day has no value for it, so two indices can show
+  different dates.
+- `change` and `change_pct` compare `close` with the index's previous value, dated
+  `previous_date`. That is normally the previous session, but across a gap in the
+  series it can be much older, so check `previous_date` before presenting it as
+  a daily change. Both are `null` when there is no previous value.
+- `latest` is `null` for an index with no value on or before `as_of`.
+
+### Errors
+
+| Status | Code | When |
+|---|---|---|
+| 400 | `VALIDATION_FAILED` | malformed `as_of` |
+
+---
+
+## 10. `GET /indices/{code}/values`
+
+Daily close series for one index, for charts and the backtest benchmark line.
+
+### Query parameters
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `from` | date | `to` − 1 year | Range start (inclusive) |
+| `to` | date | latest index date | Range end (inclusive) |
+
+Validation: `from` must be ≤ `to`; both must be valid calendar dates. The
+defaults follow §5, with `to` defaulting to the latest date any index has a value
+for.
+
+### 200 — example
+
+`GET /indices/SL20/values?from=2025-01-02&to=2025-01-03`
+
+```json
+{
+  "data": {
+    "code": "SL20",
+    "name": "S&P Sri Lanka 20",
+    "from": "2025-01-02",
+    "to": "2025-01-03",
+    "values": [
+      { "date": "2025-01-02", "close": 4732.06 },
+      { "date": "2025-01-03", "close": 4732.58 }
+    ]
+  }
+}
+```
+
+### Field notes
+
+- `code` is matched case-insensitively but otherwise exactly; the response
+  carries the canonical uppercase code.
+- Values are **ascending** by date, and only dates with a value are returned: no
+  gap-filling and no carried-forward values.
+- A range with no data returns `200` with `"values": []`, not an error, so a
+  benchmark line can be left out instead of failing the page.
+
+### Errors
+
+| Status | Code | When |
+|---|---|---|
+| 400 | `VALIDATION_FAILED` | malformed `from`/`to`; `from` > `to`; `code` longer than 20 characters |
+| 404 | `INDEX_NOT_FOUND` | `code` matches no index |
