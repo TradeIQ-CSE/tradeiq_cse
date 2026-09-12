@@ -184,6 +184,61 @@
     "accessTitle": "Role protection is active",
     "accessDescription": "The application restricts this route to authenticated admin users. That access check does not create or simulate administrative backend capabilities."
   },
+  "marketTerms": {
+    "explain": "Explain {{term}}",
+    "security": {
+      "label": "Security",
+      "description": "A tradable investment, such as shares in a company listed on the CSE."
+    },
+    "sector": {
+      "label": "Sector",
+      "description": "A group of companies with similar business activities, such as banking or telecommunications."
+    },
+    "marketCap": {
+      "label": "Market capitalisation",
+      "description": "A company’s total market value, calculated as share price multiplied by shares outstanding."
+    },
+    "change": {
+      "label": "Change",
+      "description": "How much the closing price moved compared with the previous trading session."
+    },
+    "changePercent": {
+      "label": "Percentage change",
+      "description": "The price change shown as a percentage of the previous session’s closing price."
+    },
+    "volume": {
+      "label": "Volume",
+      "description": "The number of shares traded during a market session or chart period."
+    },
+    "peRatio": {
+      "label": "P/E ratio",
+      "description": "The share price divided by earnings per share, used to compare how the market values company earnings."
+    },
+    "pbRatio": {
+      "label": "P/B ratio",
+      "description": "The share price divided by book value per share, comparing market value with accounting value."
+    },
+    "open": {
+      "label": "Open",
+      "description": "The first price at which shares traded during the day or chart period."
+    },
+    "high": {
+      "label": "High",
+      "description": "The highest price reached during the day or chart period."
+    },
+    "low": {
+      "label": "Low",
+      "description": "The lowest price reached during the day or chart period."
+    },
+    "close": {
+      "label": "Close",
+      "description": "The final traded price recorded for the day or chart period."
+    },
+    "sharesOutstanding": {
+      "label": "Shares outstanding",
+      "description": "The total number of company shares currently held by investors."
+    }
+  },
   "markets": {
     "eyebrow": "CSE market research",
     "title": "Browse Securities",
@@ -198,6 +253,8 @@
       "sector": "Sector",
       "marketCap": "Market capitalisation",
       "allSectors": "All sectors",
+      "sectorUnavailable": "Sector data unavailable",
+      "sectorUnavailableHelp": "Company sector classifications are not available in this dataset.",
       "selectSegment": "Select Segment",
       "selectMarketCap": "Select Market Cap"
     },
@@ -307,6 +364,7 @@
       "range": "{{from}} – {{to}} · end-of-day data",
       "rangeUnavailable": "No coverage dates available",
       "timeframeLabel": "Chart timeframe",
+      "termsLabel": "Stock-market chart terms",
       "legend": {
         "up": "Closed above open",
         "down": "Closed below open",

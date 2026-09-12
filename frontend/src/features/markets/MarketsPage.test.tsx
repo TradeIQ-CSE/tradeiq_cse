@@ -49,6 +49,43 @@ describe('MarketsPage', () => {
     }
   });
 
+  it('explains when the dataset has no company sector classifications', async () => {
+    const rowsWithoutSectors = securitiesFixture.map((security) => ({
+      ...security,
+      sector: null,
+    }));
+    server.use(
+      http.get('*/securities', () =>
+        HttpResponse.json({
+          data: rowsWithoutSectors,
+          meta: {
+            page: 1,
+            page_size: 200,
+            total: rowsWithoutSectors.length,
+            as_of: '2026-09-02',
+            available_from: '2020-01-02',
+            available_to: '2026-09-02',
+          },
+        }),
+      ),
+    );
+
+    renderWithProviders(<MarketsPage />);
+
+    const unavailableLabels = await screen.findAllByText(
+      t('markets.filters.sectorUnavailable'),
+    );
+    const sectorSelect = unavailableLabels
+      .map((label) => label.closest('button'))
+      .find(Boolean) as HTMLButtonElement;
+    expect(sectorSelect).not.toBeNull();
+    expect(sectorSelect).toBeDisabled();
+    expect(sectorSelect).toHaveTextContent(t('markets.filters.sectorUnavailable'));
+    expect(
+      screen.getByText(t('markets.filters.sectorUnavailableHelp')),
+    ).toBeInTheDocument();
+  });
+
   it('shows reusable sector marks beside securities in the table', async () => {
     renderWithProviders(<MarketsPage />);
 

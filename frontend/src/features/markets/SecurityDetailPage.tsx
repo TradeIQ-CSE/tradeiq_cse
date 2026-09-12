@@ -21,6 +21,11 @@ import {
   PageState,
   PageToolbar,
 } from "../../components/application/layout/application-layout";
+import {
+  MarketTerm,
+  MarketTermHelp,
+  type MarketTermKey,
+} from "../../components/domain/market-term";
 import { cx } from "../../utils/cx";
 import { localeFor } from "../../i18n";
 import { ApiError } from "../../lib/api";
@@ -56,10 +61,21 @@ function isoDateLabel(day: string | null, locale: string): string {
 
 // The <dt>/<dd> pair must stay wrapped in this one element: the tests reach a
 // value through its label's parentElement.
-function InfoItem({ label, value }: { label: string; value: string }) {
+function InfoItem({
+  label,
+  value,
+  term,
+}: {
+  label: string;
+  value: string;
+  term?: MarketTermKey;
+}) {
   return (
     <div className="flex items-baseline justify-between gap-3 border-b border-separator-border py-2 last:border-b-0">
-      <dt className="text-body-medium text-text-secondary">{label}</dt>
+      <dt className="inline-flex items-center gap-1 text-body-medium text-text-secondary">
+        {label}
+        {term && <MarketTermHelp term={term} />}
+      </dt>
       <dd className="text-right text-body-medium tabular-nums text-text-primary">
         {value}
       </dd>
@@ -469,6 +485,17 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
                     <span>{t("securityDetail.chart.legend.help")}</span>
                   </div>
                 )}
+                <div
+                  className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption-1-medium text-text-tertiary"
+                  aria-label={t("securityDetail.chart.termsLabel")}
+                >
+                  {(chartMode === "candlestick"
+                    ? (["open", "high", "low", "close", "volume"] as const)
+                    : (["close", "volume"] as const)
+                  ).map((term) => (
+                    <MarketTerm key={term} term={term} />
+                  ))}
+                </div>
                 <CandlestickChart
                   data={chartData}
                   mode={chartMode}
@@ -507,6 +534,7 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
             <InfoItem
               label={t("securityDetail.info.sector")}
               value={detail.sector?.name ?? "—"}
+              term="sector"
             />
             <InfoItem
               label={t("securityDetail.info.cseCode")}
@@ -525,6 +553,7 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
               value={
                 detail.latest ? formatVolume(detail.latest.volume, locale) : "—"
               }
+              term="volume"
             />
             <InfoItem
               label={t("securityDetail.info.sharesOutstanding")}
@@ -533,6 +562,7 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
                   ? "—"
                   : formatCount(detail.shares_outstanding, locale)
               }
+              term="sharesOutstanding"
             />
             <InfoItem
               label={t("securityDetail.info.coverage")}
@@ -546,6 +576,7 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
                   ? "—"
                   : formatPrice(detail.ratios.pe_ratio, locale)
               }
+              term="peRatio"
             />
             <InfoItem
               label={t("securityDetail.info.pbRatio")}
@@ -555,6 +586,7 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
                   ? "—"
                   : formatPrice(detail.ratios.pb_ratio, locale)
               }
+              term="pbRatio"
             />
             <InfoItem
               label={t("securityDetail.info.ratioDate")}

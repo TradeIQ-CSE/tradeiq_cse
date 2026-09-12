@@ -14,6 +14,10 @@ import { DatePicker } from "../../components/base/date-picker/date-picker";
 import { Pagination } from "../../components/base/pagination/pagination";
 import { Select, SelectItem } from "../../components/base/select/select";
 import {
+  MarketTerm,
+  MarketTermHelp,
+} from "../../components/domain/market-term";
+import {
   AppPage,
   AppPanel,
   PageIntro,
@@ -51,7 +55,14 @@ export function MarketsPage() {
   const [selectedSector, setSelectedSector] = useState<string>("");
   const [watchedSymbols, setWatchedSymbols] = useState<Set<string>>(new Set());
 
-  const { data: sectorOptions } = useSectorOptions();
+  const {
+    data: sectorOptions,
+    isPending: isSectorOptionsPending,
+    isError: isSectorOptionsError,
+  } = useSectorOptions();
+  const isSectorFilterUnavailable =
+    !isSectorOptionsPending &&
+    (isSectorOptionsError || sectorOptions?.length === 0);
 
   const { data, isPending, isFetching, isError, error } = useSecurities({
     search: searchQuery.trim(),
@@ -127,7 +138,14 @@ export function MarketsPage() {
       <TopMovers asOf={selectedTradingDate} sector={selectedSector} />
 
       <PageToolbar aria-label={t("markets.filters.label")}>
-        <div className="flex min-w-0 flex-1 flex-col gap-1 sm:max-w-72">
+        <div
+          className="flex min-w-0 flex-1 flex-col gap-1 sm:max-w-72"
+          title={
+            isSectorFilterUnavailable
+              ? t("markets.filters.sectorUnavailableHelp")
+              : undefined
+          }
+        >
           <span className="text-body-2-medium text-text-secondary">
             {t("markets.filters.sector")}
           </span>
@@ -135,13 +153,25 @@ export function MarketsPage() {
             aria-label={t("markets.filters.selectSegment")}
             className="w-full"
             selectedKey={selectedSector || "all"}
+            isDisabled={isSectorFilterUnavailable}
             onSelectionChange={(key) => {
               setSelectedSector(key === "all" ? "" : String(key));
               setCurrentPage(1);
             }}
           >
-            <SelectItem id="all" textValue={t("markets.filters.allSectors")}>
-              {t("markets.filters.allSectors")}
+            <SelectItem
+              id="all"
+              textValue={t(
+                isSectorFilterUnavailable
+                  ? "markets.filters.sectorUnavailable"
+                  : "markets.filters.allSectors",
+              )}
+            >
+              {t(
+                isSectorFilterUnavailable
+                  ? "markets.filters.sectorUnavailable"
+                  : "markets.filters.allSectors",
+              )}
             </SelectItem>
             {sectorOptions?.map((sector) => (
               <SelectItem
@@ -153,6 +183,11 @@ export function MarketsPage() {
               </SelectItem>
             ))}
           </Select>
+          {isSectorFilterUnavailable && (
+            <span className="text-caption-1-regular text-text-tertiary">
+              {t("markets.filters.sectorUnavailableHelp")}
+            </span>
+          )}
         </div>
 
         <div
@@ -235,15 +270,18 @@ export function MarketsPage() {
                 <thead>
                   <tr>
                     <th scope="col">
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1 text-body-medium text-text-tertiary"
-                        onClick={() => toggleSort("symbol")}
-                        aria-current={securitySort === "symbol"}
-                      >
-                        {t("markets.columns.symbol")}
-                        <ChevronUpDownSmall className="size-4 text-foreground-icon-secondary" />
-                      </button>
+                      <span className="inline-flex items-center gap-1">
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 text-body-medium text-text-tertiary"
+                          onClick={() => toggleSort("symbol")}
+                          aria-current={securitySort === "symbol"}
+                        >
+                          {t("markets.columns.symbol")}
+                          <ChevronUpDownSmall className="size-4 text-foreground-icon-secondary" />
+                        </button>
+                        <MarketTermHelp term="security" />
+                      </span>
                     </th>
                     <th scope="col">
                       <button
@@ -256,21 +294,38 @@ export function MarketsPage() {
                         <ChevronUpDownSmall className="size-4 text-foreground-icon-secondary" />
                       </button>
                     </th>
-                    <th scope="col">{t("markets.columns.cap")}</th>
+                    <th scope="col">
+                      <MarketTerm
+                        term="marketCap"
+                        label={t("markets.columns.cap")}
+                      />
+                    </th>
                     <th scope="col" className="market-numeric-heading">
                       {t("markets.columns.price")}
                     </th>
                     <th scope="col" className="market-numeric-heading">
-                      {t("markets.columns.change")}
+                      <MarketTerm
+                        term="change"
+                        label={t("markets.columns.change")}
+                      />
                     </th>
                     <th scope="col" className="market-numeric-heading">
-                      {t("markets.columns.changePct")}
+                      <MarketTerm
+                        term="changePercent"
+                        label={t("markets.columns.changePct")}
+                      />
                     </th>
                     <th scope="col" className="market-numeric-heading">
-                      {t("markets.columns.volume")}
+                      <MarketTerm
+                        term="volume"
+                        label={t("markets.columns.volume")}
+                      />
                     </th>
                     <th scope="col" className="market-numeric-heading">
-                      {t("markets.columns.peRatio")}
+                      <MarketTerm
+                        term="peRatio"
+                        label={t("markets.columns.peRatio")}
+                      />
                     </th>
                     <th scope="col" className="market-watch-heading">
                       {t("markets.columns.watch")}

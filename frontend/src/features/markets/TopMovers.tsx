@@ -5,6 +5,7 @@ import {
   SegmentedControl,
   SegmentedControlItem,
 } from "../../components/base/segmented-control/segmented-control";
+import { MarketTerm } from "../../components/domain/market-term";
 import { cx } from "../../utils/cx";
 import { localeFor } from "../../i18n";
 import { ApiError } from "../../lib/api";
@@ -117,18 +118,26 @@ export function TopMovers({ asOf, sector }: TopMoversProps) {
       ) : (
         <div className="flex flex-col gap-1 px-2 pb-3 sm:px-3 sm:pb-4">
           <div className="grid grid-cols-[minmax(0,1fr)_5rem] items-center gap-2 px-2 text-caption-1-semibold text-text-tertiary sm:grid-cols-[minmax(0,1fr)_6rem_5rem] sm:gap-3">
-            <span className="min-w-0 flex-1">
-              {t("markets.movers.columns.security")}
-            </span>
+            <MarketTerm
+              term="security"
+              label={t("markets.movers.columns.security")}
+              className="min-w-0 flex-1"
+            />
             <span className="hidden text-right sm:block">
-              {t("markets.movers.columns.close")}
+              <MarketTerm
+                term="close"
+                label={t("markets.movers.columns.close")}
+              />
             </span>
             <span className="text-right">
-              {t(
-                list === "most_active"
-                  ? "markets.movers.columns.volume"
-                  : "markets.movers.columns.change",
-              )}
+              <MarketTerm
+                term={list === "most_active" ? "volume" : "change"}
+                label={t(
+                  list === "most_active"
+                    ? "markets.movers.columns.volume"
+                    : "markets.movers.columns.change",
+                )}
+              />
             </span>
           </div>
 

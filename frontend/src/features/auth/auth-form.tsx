@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { TradeIqLogo } from '../../components/foundations/brand/tradeiq-logo';
 import { AppBackdrop } from '../../components/layout/AppBackdrop';
 import { ThemeModeControl } from '../../theme/ThemeModeControl';
+import { cx } from '../../utils/cx';
 import {
   RiBarChartBoxLine,
   RiHistoryLine,
@@ -25,11 +26,13 @@ export function AuthCard({
   subtitle,
   children,
   footer,
+  cardClassName,
 }: {
   title: string;
   subtitle: string;
   children: ReactNode;
   footer: ReactNode;
+  cardClassName?: string;
 }) {
   const { t } = useTranslation();
 
@@ -80,7 +83,12 @@ export function AuthCard({
           </ul>
         </section>
 
-        <div className="flex w-full max-w-[400px] flex-col justify-self-center rounded-3xl border border-border-button-default bg-background-primary-default p-6 shadow-lg sm:p-8">
+        <div
+          className={cx(
+            'flex w-full max-w-[400px] flex-col justify-self-center rounded-3xl border border-border-button-default bg-background-primary-default p-6 shadow-lg sm:p-8',
+            cardClassName,
+          )}
+        >
         <Link
           to="/"
           aria-label={t('app.name')}

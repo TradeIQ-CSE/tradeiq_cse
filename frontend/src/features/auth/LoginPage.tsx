@@ -74,6 +74,7 @@ export function LoginPage() {
     <AuthCard
       title={t('auth.login.title')}
       subtitle={t('auth.login.subtitle')}
+      cardClassName="lg:min-h-[512px] lg:justify-center"
       footer={
         <>
           {t('auth.login.noAccount')}{' '}
