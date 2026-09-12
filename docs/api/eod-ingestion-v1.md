@@ -20,6 +20,9 @@ callers use HTTPS.
 | `GET` | `/internal/v1/ingestions/eod/latest` | Latest successful delivery receipt |
 | `GET` | `/internal/v1/ingestions/eod/{batch_id}` | Receipt lookup after a retry or timeout |
 
+Index values have their own route, described in
+[index-ingestion-v1.md](./index-ingestion-v1.md).
+
 The POST body is limited to 2 MiB and 2,000 prices. `batch_id`,
 `raw_payload_hash`, and `market_digest` are lowercase SHA-256 hex strings.
 Prices are non-negative decimal strings with at most four decimal places.

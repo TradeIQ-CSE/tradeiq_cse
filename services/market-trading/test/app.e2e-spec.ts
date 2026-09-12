@@ -718,4 +718,124 @@ describe('HealthModule (e2e)', () => {
       );
     });
   });
+
+  // docs/api/index-ingestion-v1.md, after the seeded closes (last 2025-01-10).
+  describe('/internal/v1/ingestions/indices', () => {
+    const [day, lateDay, closedDay] = [
+      '2025-02-03',
+      '2025-02-04',
+      '2025-02-05',
+    ];
+    const send = (
+      tradeDate: string,
+      values: { code: string; close: string }[],
+      token = process.env.MARKET_INGESTION_TOKEN,
+    ) =>
+      request(app.getHttpServer())
+        .post('/internal/v1/ingestions/indices')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          trade_date: tradeDate,
+          calendar: { is_trading_day: true, source: 'e2e fixture' },
+          values,
+        });
+    const closes = async (code: string, date: string) =>
+      (
+        await request(app.getHttpServer())
+          .get(`/indices/${code}/values?from=${date}&to=${date}`)
+          .expect(200)
+      ).body.data.values;
+
+    beforeAll(async () => {
+      await app.get(DataSource).query(
+        `INSERT INTO market_data.trading_calendar (trade_date, is_trading_day, note)
+         VALUES ($1::date, false, 'e2e closed day')
+         ON CONFLICT (trade_date) DO UPDATE SET is_trading_day = false`,
+        [closedDay],
+      );
+    });
+
+    afterAll(async () => {
+      const db = app.get(DataSource);
+      const days = [day, lateDay, closedDay];
+      await db.query(
+        `DELETE FROM market_data.index_values WHERE trade_date = ANY($1::date[])`,
+        [days],
+      );
+      await db.query(
+        `DELETE FROM market_data.trading_calendar WHERE trade_date = ANY($1::date[])`,
+        [days],
+      );
+    });
+
+    it('requires the machine bearer token', async () => {
+      await send(day, [{ code: 'ASPI', close: '1' }], 'wrong').expect(401);
+    });
+
+    it('stores a day once and serves it through /indices', async () => {
+      const first = await send(day, [
+        { code: 'ASPI', close: '15800.5' },
+        { code: 'SL20', close: '4750.12' },
+      ]).expect(201);
+      expect(first.body.data).toEqual({
+        trade_date: day,
+        stored: ['ASPI', 'SL20'],
+        unchanged: [],
+      });
+
+      const again = await send(day, [
+        { code: 'ASPI', close: '15800.5000' },
+      ]).expect(201);
+      expect(again.body.data).toEqual({
+        trade_date: day,
+        stored: [],
+        unchanged: ['ASPI'],
+      });
+
+      const indices = await request(app.getHttpServer())
+        .get('/indices')
+        .expect(200);
+      expect(indices.body.data[0].latest).toEqual({
+        date: day,
+        close: 15800.5,
+        previous_date: '2025-01-10',
+        change: 63.59,
+        change_pct: 0.4,
+      });
+    });
+
+    it('takes an index left out earlier and refuses a changed close', async () => {
+      await send(lateDay, [{ code: 'ASPI', close: '15900' }]).expect(201);
+
+      await send(lateDay, [
+        { code: 'ASPI', close: '15901' },
+        { code: 'SL20', close: '4760' },
+      ]).expect(409);
+      expect(await closes('SL20', lateDay)).toEqual([]);
+
+      const late = await send(lateDay, [
+        { code: 'ASPI', close: '15900' },
+        { code: 'SL20', close: '4760' },
+      ]).expect(201);
+      expect(late.body.data.stored).toEqual(['SL20']);
+      expect(await closes('ASPI', lateDay)).toEqual([
+        { date: lateDay, close: 15900 },
+      ]);
+    });
+
+    it('refuses a day the calendar records as closed', async () => {
+      await send(closedDay, [{ code: 'ASPI', close: '15900' }]).expect(409);
+      expect(await closes('ASPI', closedDay)).toEqual([]);
+    });
+
+    it.each([
+      ['an unknown code', { code: 'MPI', close: '1' }, 'values.0.code'],
+      ['a zero close', { code: 'ASPI', close: '0.00' }, 'values.0.close'],
+    ])('refuses %s', async (_, value, field) => {
+      const response = await send(lateDay, [value]).expect(400);
+      expect(errorWithoutTrace(response.body).fields).toEqual([
+        expect.objectContaining({ field }),
+      ]);
+    });
+  });
 });
