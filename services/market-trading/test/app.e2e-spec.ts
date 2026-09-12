@@ -354,6 +354,42 @@ describe('HealthModule (e2e)', () => {
       });
     });
 
+    it('still lists an index with no previous value', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/indices?as_of=2025-01-02')
+        .expect(200);
+
+      expect(response.body.data).toEqual([
+        expect.objectContaining({
+          code: 'ASPI',
+          latest: expect.objectContaining({
+            date: '2025-01-02',
+            previous_date: null,
+            change: null,
+            change_pct: null,
+          }),
+        }),
+        expect.objectContaining({
+          code: 'SL20',
+          latest: expect.objectContaining({
+            date: '2025-01-02',
+            previous_date: null,
+          }),
+        }),
+      ]);
+    });
+
+    it('still lists an index with no value on or before as_of', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/indices?as_of=2024-12-31')
+        .expect(200);
+
+      expect(response.body.data).toEqual([
+        { code: 'ASPI', name: 'All Share Price Index', latest: null },
+        { code: 'SL20', name: 'S&P Sri Lanka 20', latest: null },
+      ]);
+    });
+
     it('returns an inclusive ascending series for a case-insensitive code', async () => {
       const response = await request(app.getHttpServer())
         .get('/indices/sl20/values?from=2025-01-02&to=2025-01-03')

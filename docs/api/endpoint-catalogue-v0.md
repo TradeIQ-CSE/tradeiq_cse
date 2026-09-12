@@ -90,6 +90,9 @@ trading day in `trading_calendar` that has price data. Requests made on weekends
 holidays, or before the day's ingestion completes simply return the latest
 completed trading day — this is normal operation, not an error.
 
+Market indices are the exception: each index is valued at its own latest date,
+which can differ from the price `as_of` (see §9).
+
 ### 2.5 Rate limiting
 
 Requests are rate-limited per client IP inside the service. Over-limit requests
