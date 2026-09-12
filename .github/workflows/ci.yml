@@ -205,12 +205,22 @@ jobs:
           version: "latest"
           enable-cache: true
 
-      - name: Seed twice with the bundled sample fixture
+      # These empty the market tables before and after each test, so they run
+      # before the sample is imported for the steps below.
+      - name: Release importer tests against the database
         working-directory: pipeline/data-ingestion
+        env:
+          DATA_INGESTION_TEST_DATABASE_URL: ${{ env.DATA_INGESTION_MARKET_DATA_DATABASE_URL }}
+          DATA_INGESTION_REQUIRE_DB_TESTS: "1"
         run: |
           uv sync --all-groups
-          uv run python -m data_ingestion.seed
-          uv run python -m data_ingestion.seed
+          uv run pytest tests/test_release_import_db.py
+
+      - name: Import the bundled sample twice
+        working-directory: pipeline/data-ingestion
+        run: |
+          uv run python -m data_ingestion.release_import
+          uv run python -m data_ingestion.release_import
 
       - name: Assert seed data present and identical across runs
         run: |
