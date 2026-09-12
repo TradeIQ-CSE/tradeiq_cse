@@ -18,6 +18,12 @@ export class IndexIngestionService {
     const date = body.trade_date;
     const codes = body.values.map((value) => value.code);
     return this.dataSource.transaction(async (manager) => {
+      // Requests for the same day take turns, so a concurrent duplicate gets
+      // the unchanged or 409 answer rather than a key violation.
+      await manager.query(
+        `SELECT pg_advisory_xact_lock(hashtext('index_ingestion:' || $1))`,
+        [date],
+      );
       const known: { index_code: string }[] = await manager.query(
         `SELECT index_code FROM market_data.indices
          WHERE index_code = ANY($1::text[])`,
