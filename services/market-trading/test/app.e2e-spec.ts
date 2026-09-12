@@ -109,15 +109,15 @@ describe('HealthModule (e2e)', () => {
     ]);
   });
 
-  describe('/securities/{symbol} market history reads', () => {
-    const errorWithoutTrace = (body: {
-      error: Record<string, unknown>;
-    }): Record<string, unknown> => {
-      const { trace_id, ...error } = body.error;
-      expect(trace_id).toEqual(expect.any(String));
-      return error;
-    };
+  const errorWithoutTrace = (body: {
+    error: Record<string, unknown>;
+  }): Record<string, unknown> => {
+    const { trace_id, ...error } = body.error;
+    expect(trace_id).toEqual(expect.any(String));
+    return error;
+  };
 
+  describe('/securities/{symbol} market history reads', () => {
     it('returns canonical detail from a lowercase symbol', async () => {
       const response = await request(app.getHttpServer())
         .get('/securities/jkh.n0000')
@@ -299,6 +299,121 @@ describe('HealthModule (e2e)', () => {
           code: 'VALIDATION_FAILED',
           message: 'Request validation failed.',
         }),
+      );
+      expect(error.fields).toEqual([expect.objectContaining({ field })]);
+    });
+  });
+
+  // docs/api/endpoint-catalogue-v0.md §§9–10, against the seeded ASPI and
+  // S&P SL20 closes for 2025-01-02 to 2025-01-10.
+  describe('/indices reads', () => {
+    it('lists each index with its latest close and change', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/indices')
+        .expect(200);
+
+      expect(response.body).toEqual({
+        data: [
+          {
+            code: 'ASPI',
+            name: 'All Share Price Index',
+            latest: {
+              date: '2025-01-10',
+              close: 15736.91,
+              previous_date: '2025-01-09',
+              change: -87.4,
+              change_pct: -0.55,
+            },
+          },
+          {
+            code: 'SL20',
+            name: 'S&P Sri Lanka 20',
+            latest: {
+              date: '2025-01-10',
+              close: 4734.44,
+              previous_date: '2025-01-09',
+              change: -27.87,
+              change_pct: -0.59,
+            },
+          },
+        ],
+      });
+    });
+
+    it('settles an as_of on a weekend to the latest close before it', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/indices?as_of=2025-01-05')
+        .expect(200);
+
+      expect(response.body.data[0].latest).toEqual({
+        date: '2025-01-03',
+        close: 15845.06,
+        previous_date: '2025-01-02',
+        change: -84.71,
+        change_pct: -0.53,
+      });
+    });
+
+    it('returns an inclusive ascending series for a case-insensitive code', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/indices/sl20/values?from=2025-01-02&to=2025-01-03')
+        .expect(200);
+
+      expect(response.body).toEqual({
+        data: {
+          code: 'SL20',
+          name: 'S&P Sri Lanka 20',
+          from: '2025-01-02',
+          to: '2025-01-03',
+          values: [
+            { date: '2025-01-02', close: 4732.06 },
+            { date: '2025-01-03', close: 4732.58 },
+          ],
+        },
+      });
+    });
+
+    it('defaults to the year ending at the latest index date', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/indices/ASPI/values')
+        .expect(200);
+
+      expect(response.body.data).toEqual(
+        expect.objectContaining({ from: '2024-01-10', to: '2025-01-10' }),
+      );
+      expect(response.body.data.values).toHaveLength(7);
+    });
+
+    it('returns an empty series for a range with no data', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/indices/ASPI/values?from=2024-01-01&to=2024-01-31')
+        .expect(200);
+
+      expect(response.body.data.values).toEqual([]);
+    });
+
+    it('matches the whole code, never a prefix', async () => {
+      for (const path of ['/indices/NOPE/values', '/indices/SL/values']) {
+        const response = await request(app.getHttpServer())
+          .get(path)
+          .expect(404);
+        expect(errorWithoutTrace(response.body)).toEqual({
+          code: 'INDEX_NOT_FOUND',
+          message: 'Index not found.',
+        });
+      }
+    });
+
+    it.each([
+      ['/indices?as_of=2025-02-30', 'as_of'],
+      ['/indices/ASPI/values?from=2025-01-10&to=2025-01-01', 'from'],
+      [`/indices/${'A'.repeat(21)}/values`, 'code'],
+    ])('returns the validation envelope for %s', async (path, field) => {
+      const response = await request(app.getHttpServer()).get(path).expect(400);
+      const error = errorWithoutTrace(response.body);
+
+      expect(error).toEqual(
+        expect.objectContaining({ code: 'VALIDATION_FAILED' }),
       );
       expect(error.fields).toEqual([expect.objectContaining({ field })]);
     });

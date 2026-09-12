@@ -8,6 +8,7 @@ import databaseConfig from './config/database.config';
 import ingestionConfig from './config/ingestion.config';
 import { validate } from './config/env.validation';
 import { HealthModule } from './health/health.module';
+import { IndicesModule } from './indices/indices.module';
 import { MarketOverviewModule } from './market-overview/market-overview.module';
 import { OrdersModule } from './orders/orders.module';
 import { PortfoliosModule } from './portfolios/portfolios.module';
@@ -43,6 +44,7 @@ import { EodIngestionModule } from './eod-ingestion/eod-ingestion.module';
       }),
     }),
     HealthModule,
+    IndicesModule,
     MarketOverviewModule,
     OrdersModule,
     PaperTradingQuotesModule,
