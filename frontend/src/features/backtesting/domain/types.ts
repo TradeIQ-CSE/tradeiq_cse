@@ -134,8 +134,73 @@ export interface CreateBacktestRunResponse {
 export interface BacktestStatusResponse {
   id: string;
   status: 'queued' | 'running' | 'completed' | 'failed';
+  symbol?: string;
+  startDate?: string;
+  endDate?: string;
+  startingCapital?: number;
+  ruleConfig?: unknown;
+  executionAssumptions?: unknown;
   createdAt?: string;
   startedAt?: string;
   completedAt?: string;
   failureReason?: string;
 }
+
+export interface FeeBreakdown {
+  brokerage?: number;
+  cse?: number;
+  cds?: number;
+  secCess?: number;
+  stl?: number;
+  total: number;
+}
+
+export interface TradeLedgerEntry {
+  id: number | string;
+  date: string;
+  type: 'BUY' | 'SELL';
+  executionPrice: number;
+  quantity: number;
+  grossValue?: number;
+  fees: number | FeeBreakdown;
+  netCashFlow?: number;
+  reason?: string;
+  realizedPnl?: number;
+}
+
+export interface EquityCurvePoint {
+  date: string;
+  cash?: number;
+  positionQuantity?: number;
+  positionMarketValue?: number;
+  totalEquity: number;
+}
+
+export interface BacktestResultResponse {
+  initialCapital: number;
+  finalCash: number;
+  finalEquity: number;
+  totalReturnPct?: number;
+  maxDrawdownPct?: number;
+  volatilityPct?: number;
+  tradeCount?: number;
+  winRatePct?: number;
+  trades: TradeLedgerEntry[];
+  equityCurve: EquityCurvePoint[];
+}
+
+export type BacktestRunDetails = BacktestStatusResponse;
+
+export type BacktestSummaryMetrics = Pick<
+  BacktestResultResponse,
+  | 'initialCapital'
+  | 'finalCash'
+  | 'finalEquity'
+  | 'totalReturnPct'
+  | 'maxDrawdownPct'
+  | 'volatilityPct'
+  | 'tradeCount'
+  | 'winRatePct'
+>;
+
+
