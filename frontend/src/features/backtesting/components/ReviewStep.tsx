@@ -1,9 +1,56 @@
-import React from 'react';
-import { useBacktestWizard } from '../hooks/useBacktestWizard';
-import { V1_BUY_RULES, V1_SELL_RULES } from '../domain/v1Rules';
-import { AVAILABLE_METRICS } from '../domain/defaults';
+import { RiPlayCircleLine } from "@remixicon/react";
+import { Button } from "@/components/base/buttons/button";
+import { Chip } from "@/components/base/badges/chip";
+import { AppNotice } from "@/components/application/layout/application-layout";
+import { useBacktestWizard } from "../hooks/useBacktestWizard";
+import { V1_BUY_RULES, V1_SELL_RULES } from "../domain/v1Rules";
+import { AVAILABLE_METRICS } from "../domain/defaults";
+import { validateBacktestConfig } from "../domain/validation";
+import {
+  BacktestStepHeader,
+  ReviewRow,
+  ReviewSection,
+} from "./BacktestStepLayout";
 
-export const ReviewStep: React.FC = () => {
+function entryDescription(type: string, value?: number) {
+  if (type === "price_falls_pct_from_period_start") {
+    return `Buy after a ${value ?? 5}% fall from the period reference price`;
+  }
+  if (type === "price_falls_to") {
+    return `Buy at or below LKR ${(value ?? 0).toFixed(2)}`;
+  }
+  if (type === "period_start") {
+    return "Buy on the first available trading day at the opening price";
+  }
+  return V1_BUY_RULES.find((rule) => rule.type === type)?.label || type;
+}
+
+function exitDescription(type: string, value?: number) {
+  if (type === "take_profit_pct") {
+    return `Take profit after a ${value ?? 10}% gain from entry`;
+  }
+  if (type === "stop_loss_pct") {
+    return `Stop loss after a ${value ?? 5}% fall from entry`;
+  }
+  if (type === "target_price") {
+    return `Sell at or above LKR ${(value ?? 0).toFixed(2)}`;
+  }
+  if (type === "end_of_period") {
+    return "Close an open position on the final available trading day";
+  }
+  return V1_SELL_RULES.find((rule) => rule.type === type)?.label || type;
+}
+
+function sizingDescription(type: string, value?: number) {
+  if (type === "percentage") return `${value ?? 50}% of portfolio equity`;
+  if (type === "absolute") {
+    return `LKR ${(value ?? 0).toLocaleString("en-LK")} per entry`;
+  }
+  if (type === "fixed_quantity") return `${value ?? 0} whole shares per entry`;
+  return "All available simulated cash";
+}
+
+export function ReviewStep() {
   const {
     config,
     goToStep,
@@ -12,310 +59,176 @@ export const ReviewStep: React.FC = () => {
     submitError,
     submitTraceId,
     submitFieldErrors,
-    validationErrors,
     validateAllSteps,
   } = useBacktestWizard();
-
-  // Validate all steps to ensure readiness
-  const isValid = validationErrors.length === 0;
-
-  // Format entry rule human readable
-  const buyMeta = V1_BUY_RULES.find((r) => r.type === config.rules.buy.type);
-  let entryText = buyMeta?.label || config.rules.buy.type;
-  if (config.rules.buy.type === 'price_falls_pct_from_period_start') {
-    entryText = `Price falls by ${config.rules.buy.value ?? 5}% from period reference price`;
-  } else if (config.rules.buy.type === 'price_falls_to') {
-    entryText = `Price falls to or below Rs. ${(config.rules.buy.value ?? 0).toFixed(2)}`;
-  } else if (config.rules.buy.type === 'period_start') {
-    entryText = 'Execute buy order on first day of period at market open';
-  }
-
-  // Format exit rules human readable
-  const exitRulesList = config.rules.sells.map((sell) => {
-    const meta = V1_SELL_RULES.find((r) => r.type === sell.type);
-    if (sell.type === 'take_profit_pct') {
-      return `Take profit target: +${sell.value ?? 10}% gain from entry price`;
-    }
-    if (sell.type === 'stop_loss_pct') {
-      return `Stop loss limit: -${sell.value ?? 5}% loss from entry price`;
-    }
-    if (sell.type === 'target_price') {
-      return `Target exit price: Rs. ${(sell.value ?? 0).toFixed(2)}`;
-    }
-    if (sell.type === 'end_of_period') {
-      return 'End of period fallback: Close open position on the final simulation session';
-    }
-    return meta?.label || sell.type;
-  });
-
-  // Total fees rate
+  const reviewValidation = validateBacktestConfig(config);
+  const isValid = reviewValidation.isValid;
   const totalFeesPct = (
-    (config.execution.fees.brokerageRate +
-      config.execution.fees.cseRate +
-      config.execution.fees.cdsRate +
-      config.execution.fees.secCessRate +
-      config.execution.fees.stlRate) *
+    Object.values(config.execution.fees).reduce((sum, rate) => sum + rate, 0) *
     100
   ).toFixed(3);
+  const metricNames = config.metrics.selected.map(
+    (id) => AVAILABLE_METRICS.find((metric) => metric.id === id)?.name || id,
+  );
 
-  // Sizing description
-  let sizingDesc = '100% full capital allocation';
-  if (config.execution.positionSizing.type === 'percentage') {
-    sizingDesc = `${config.execution.positionSizing.value ?? 50}% of portfolio equity per trade`;
-  } else if (config.execution.positionSizing.type === 'absolute') {
-    sizingDesc = `Rs. ${(config.execution.positionSizing.value ?? 0).toLocaleString()} fixed cash per trade`;
-  } else if (config.execution.positionSizing.type === 'fixed_quantity') {
-    sizingDesc = `${config.execution.positionSizing.value ?? 0} whole shares per trade`;
-  }
-
-  // Selected metrics names
-  const selectedMetricNames = config.metrics.selected
-    .map((id) => AVAILABLE_METRICS.find((m) => m.id === id)?.name || id)
-    .join(', ');
-
-  const handleRunClick = async () => {
-    const ready = validateAllSteps();
-    if (!ready) return;
+  const runBacktest = async () => {
+    if (!validateAllSteps()) return;
     await submitBacktest();
   };
 
   return (
-    <div className="review-step">
-      <div className="step-header">
-        <h2 className="step-header__title">7. Review Simulation Assumptions</h2>
-        <p className="step-header__desc">
-          Verify all model parameters before initiating the backtest simulation against the Colombo Stock Exchange dataset.
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <BacktestStepHeader
+        step={7}
+        title="Review simulation assumptions"
+        description="Check the complete rule set before sending it to the historical simulation engine. You can return to any section without losing the draft."
+      />
 
-      {/* Validation Readiness Banner */}
       {isValid ? (
-        <div className="info-banner info-banner--success" style={{ marginBottom: '20px' }}>
-          <span>✓</span>
-          <div>
-            <strong style={{ color: 'var(--positive)' }}>Everything looks valid.</strong>
-            <span style={{ display: 'block', fontSize: '12px' }}>
-              Your strategy rules, historical date window, and execution parameters meet all client-side and backend contract constraints.
-            </span>
-          </div>
-        </div>
+        <AppNotice tone="success" title="Everything looks valid.">
+          The current draft meets the client-side constraints and is ready to
+          submit to the backtest API.
+        </AppNotice>
       ) : (
-        <div className="info-banner info-banner--warning" style={{ marginBottom: '20px' }}>
-          <span>⚠️</span>
-          <div>
-            <strong style={{ color: '#ff9496' }}>Configuration Requires Attention</strong>
-            <span style={{ display: 'block', fontSize: '12px' }}>
-              Please resolve the {validationErrors.length} highlighted validation error(s) before running the backtest.
-            </span>
-          </div>
-        </div>
+        <AppNotice tone="error" title="Configuration requires attention">
+          Resolve the {reviewValidation.errors.length} highlighted configuration
+          {reviewValidation.errors.length === 1 ? " issue" : " issues"} before
+          running the backtest.
+        </AppNotice>
       )}
 
-      {/* API Submission Error Alert */}
       {submitError && (
-        <div className="info-banner info-banner--warning" style={{ marginBottom: '20px', borderLeft: '4px solid var(--negative)' }}>
-          <span style={{ fontSize: '18px' }}>❌</span>
-          <div>
-            <strong style={{ color: 'var(--negative)' }}>Submission Failed</strong>
-            <div style={{ fontSize: '13px', marginTop: '2px' }}>{submitError}</div>
+        <AppNotice tone="error" title="Submission Failed">
+          <div className="flex flex-col gap-2">
+            <p>{submitError}</p>
             {submitFieldErrors && submitFieldErrors.length > 0 && (
-              <ul style={{ margin: '6px 0 0', paddingLeft: '16px', fontSize: '12px' }}>
-                {submitFieldErrors.map((f, i) => (
-                  <li key={i}>
-                    <strong>{f.field}</strong>: {f.reason}
+              <ul className="list-disc pl-5">
+                {submitFieldErrors.map((field, index) => (
+                  <li key={`${field.field}-${index}`}>
+                    <strong>{field.field}</strong>: {field.reason}
                   </li>
                 ))}
               </ul>
             )}
             {submitTraceId && (
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
+              <p className="text-body-2-regular">
                 Trace ID: <code>{submitTraceId}</code>
-              </div>
+              </p>
             )}
-            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>
-              Your parameters have been retained. You can modify any field and retry.
-            </div>
+            <p>Your parameters have been retained. You can edit and retry.</p>
           </div>
-        </div>
+        </AppNotice>
       )}
 
-      {/* Human-Readable Assumption Blocks */}
+      <div className="grid gap-3 lg:grid-cols-2">
+        <ReviewSection title="Security" onEdit={() => goToStep("security")}>
+          <ReviewRow
+            label="Ticker"
+            value={<Chip color="blue">{config.security.symbol}</Chip>}
+          />
+          <ReviewRow
+            label="Company"
+            value={config.security.companyName || "CSE listed security"}
+          />
+          <ReviewRow
+            label="Sector"
+            value={config.security.sector || "Not reported"}
+          />
+        </ReviewSection>
 
-      {/* 1. Security */}
-      <div className="review-section">
-        <div className="review-section__title">
-          <span>Security</span>
-          <button type="button" className="review-section__edit-btn" onClick={() => goToStep('security')}>
-            Edit
-          </button>
-        </div>
-        <div className="review-item">
-          <span className="review-item__label">CSE Ticker & Company</span>
-          <span className="review-item__value">
-            <span style={{ background: 'var(--accent-soft)', color: 'var(--accent-text)', padding: '2px 6px', borderRadius: '4px', marginRight: '6px' }}>
-              {config.security.symbol}
-            </span>
-            {config.security.companyName || 'CSE Listed Equity'}
-            {config.security.sector ? ` (${config.security.sector})` : ''}
-          </span>
-        </div>
-      </div>
+        <ReviewSection title="Historical period" onEdit={() => goToStep("period")}>
+          <ReviewRow
+            label="Inclusive date range"
+            value={`${config.period.startDate} to ${config.period.endDate}`}
+          />
+          <ReviewRow label="Data frequency" value="Daily end-of-day bars" />
+        </ReviewSection>
 
-      {/* 2. Period */}
-      <div className="review-section">
-        <div className="review-section__title">
-          <span>Simulation Period</span>
-          <button type="button" className="review-section__edit-btn" onClick={() => goToStep('period')}>
-            Edit
-          </button>
-        </div>
-        <div className="review-item">
-          <span className="review-item__label">Date Window</span>
-          <span className="review-item__value">
-            {config.period.startDate} → {config.period.endDate}
-          </span>
-        </div>
-      </div>
-
-      {/* 3. Strategy Rules */}
-      <div className="review-section">
-        <div className="review-section__title">
-          <span>Strategy Rules (v1 Price DSL)</span>
-          <button type="button" className="review-section__edit-btn" onClick={() => goToStep('rules')}>
-            Edit
-          </button>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>
-              ENTRY RULE (EXACTLY 1)
-            </span>
-            <span style={{ fontSize: '13px', color: 'var(--text-heading)', fontWeight: 500 }}>
-              {entryText}
-            </span>
-          </div>
-
-          <div style={{ borderTop: '1px solid var(--border-faint)', paddingTop: '6px' }}>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
-              EXIT RULES (FIRST TRIGGER WINS)
-            </span>
-            <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {exitRulesList.map((ruleText, idx) => (
-                <li key={idx} style={{ fontSize: '13px', color: 'var(--text-heading)' }}>
-                  {ruleText}
+        <ReviewSection
+          title="Entry and exit rules"
+          onEdit={() => goToStep("rules")}
+        >
+          <ReviewRow
+            label="Entry"
+            value={entryDescription(
+              config.rules.buy.type,
+              config.rules.buy.value,
+            )}
+          />
+          <div className="border-t border-separator-border pt-3">
+            <p className="mb-2 text-body-2-regular text-text-secondary">
+              Exits, first trigger wins
+            </p>
+            <ul className="flex list-disc flex-col gap-1 pl-5 text-body-regular text-text-primary">
+              {config.rules.sells.map((sell) => (
+                <li key={sell.type}>
+                  {exitDescription(sell.type, sell.value)}
                 </li>
               ))}
             </ul>
           </div>
-        </div>
+        </ReviewSection>
+
+        <ReviewSection
+          title="Execution"
+          onEdit={() => goToStep("execution")}
+        >
+          <ReviewRow
+            label="Position size"
+            value={sizingDescription(
+              config.execution.positionSizing.type,
+              config.execution.positionSizing.value,
+            )}
+          />
+          <ReviewRow label="Combined transaction rate" value={`${totalFeesPct}%`} />
+          <ReviewRow label="Share quantities" value="Whole shares, rounded down" />
+          <ReviewRow
+            label="Same-bar priority"
+            value="Stop loss before take profit"
+          />
+        </ReviewSection>
+
+        <ReviewSection title="Capital" onEdit={() => goToStep("portfolio")}>
+          <ReviewRow
+            label="Hypothetical starting cash"
+            value={`LKR ${Number(config.portfolio.startingCapital).toLocaleString(
+              "en-LK",
+            )}`}
+          />
+        </ReviewSection>
+
+        <ReviewSection title="Analysis focus" onEdit={() => goToStep("metrics")}>
+          <div className="flex flex-wrap gap-2">
+            {metricNames.map((name) => (
+              <Chip key={name} color="soft" variant="caption">
+                {name}
+              </Chip>
+            ))}
+          </div>
+        </ReviewSection>
       </div>
 
-      {/* 4. Execution Assumptions */}
-      <div className="review-section">
-        <div className="review-section__title">
-          <span>Execution Assumptions</span>
-          <button type="button" className="review-section__edit-btn" onClick={() => goToStep('execution')}>
-            Edit
-          </button>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div className="review-item">
-            <span className="review-item__label">Position Sizing</span>
-            <span className="review-item__value">{sizingDesc}</span>
-          </div>
-          <div className="review-item">
-            <span className="review-item__label">CSE Statutory Fees</span>
-            <span className="review-item__value">
-              {totalFeesPct}% (Brokerage 0.64%, CSE 0.084%, CDS 0.024%, SEC Cess 0.072%, STL 0.30%)
-            </span>
-          </div>
-          <div className="review-item">
-            <span className="review-item__label">Price Precision</span>
-            <span className="review-item__value">4 decimals (numeric 12,4)</span>
-          </div>
-          <div className="review-item">
-            <span className="review-item__label">Quantity Rounding</span>
-            <span className="review-item__value">Whole shares (floor division)</span>
-          </div>
-          <div className="review-item">
-            <span className="review-item__label">Same-Bar Exit Priority</span>
-            <span className="review-item__value">Stop Loss evaluated before Take Profit</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 5. Portfolio & Capital */}
-      <div className="review-section">
-        <div className="review-section__title">
-          <span>Portfolio & Capital</span>
-          <button type="button" className="review-section__edit-btn" onClick={() => goToStep('portfolio')}>
-            Edit
-          </button>
-        </div>
-        <div className="review-item">
-          <span className="review-item__label">Starting Capital</span>
-          <span className="review-item__value" style={{ color: 'var(--positive)', fontWeight: 700, fontSize: '15px' }}>
-            Rs. {Number(config.portfolio.startingCapital).toLocaleString()}
-          </span>
-        </div>
-      </div>
-
-      {/* 6. Metrics */}
-      <div className="review-section">
-        <div className="review-section__title">
-          <span>Tracked Analytics</span>
-          <button type="button" className="review-section__edit-btn" onClick={() => goToStep('metrics')}>
-            Edit
-          </button>
-        </div>
-        <div className="review-item">
-          <span className="review-item__label">Focused Metrics</span>
-          <span className="review-item__value">{selectedMetricNames || 'All Standard Metrics'}</span>
-        </div>
-      </div>
-
-      {/* Submission CTA Alert Box */}
-      <div
-        style={{
-          marginTop: '28px',
-          padding: '18px 24px',
-          background: 'var(--bg-panel)',
-          border: '1px solid var(--accent-border)',
-          borderRadius: 'var(--radius-card)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          textAlign: 'center',
-          gap: '14px',
-        }}
-      >
-        <div>
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-heading)', margin: '0 0 4px' }}>
-            Ready to Run Backtest?
+      <section className="flex flex-col items-start gap-4 rounded-3xl border border-border-button-active bg-status-blue-background p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex max-w-2xl flex-col gap-1">
+          <h3 className="text-headline-medium text-text-primary">
+            Run this historical simulation
           </h3>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, maxWidth: '520px' }}>
-            Submission will dispatch an asynchronous simulation run on the TradeIQ execution engine. You will be automatically redirected to track progress.
+          <p className="text-body-regular text-text-secondary">
+            TradeIQ will create an asynchronous run, track its status, and
+            display only the results returned by the API. Historical output is
+            not investment advice or a prediction.
           </p>
         </div>
-
-        <button
-          type="button"
+        <Button
           id="run-backtest-btn"
-          className="btn btn--success"
-          style={{ minWidth: '220px', padding: '12px 28px', fontSize: '14px' }}
-          onClick={handleRunClick}
+          leadingIcon={RiPlayCircleLine}
+          onClick={runBacktest}
           disabled={!isValid || isSubmitting}
+          className="w-full shrink-0 sm:w-auto"
         >
-          {isSubmitting ? (
-            <>
-              <span className="spinner" aria-hidden="true" />
-              <span>Submitting Simulation...</span>
-            </>
-          ) : (
-            <span>Run Backtest</span>
-          )}
-        </button>
-      </div>
+          {isSubmitting ? "Submitting simulation" : "Run backtest"}
+        </Button>
+      </section>
     </div>
   );
-};
+}

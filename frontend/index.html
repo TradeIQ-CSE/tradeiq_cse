@@ -3,21 +3,66 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TradeIQ CSE</title>
+    <meta
+      name="description"
+      content="Explore Colombo Stock Exchange prices, test investing ideas on historical data, and practise trading with virtual money in one clear workspace."
+    />
+    <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#111317" media="(prefers-color-scheme: dark)" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="TradeIQ CSE" />
+    <meta property="og:title" content="TradeIQ CSE | Research, test, and practise" />
+    <meta
+      property="og:description"
+      content="Explore CSE prices, test investing ideas on historical data, and practise trades without risking real money."
+    />
+    <meta property="og:image" content="/social/tradeiq-cse-og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="TradeIQ CSE research and practice workspace" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="TradeIQ CSE | Research, test, and practise" />
+    <meta
+      name="twitter:description"
+      content="Explore CSE prices, test investing ideas on historical data, and practise trades without risking real money."
+    />
+    <meta name="twitter:image" content="/social/tradeiq-cse-og.png" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="/media/market-backdrop.jpg" as="image" fetchpriority="high" />
+    <title>TradeIQ CSE | Research, test, and practise</title>
+    <script>
+      // Applied before first paint so the resolved theme (light, dark, or the
+      // OS preference under "system") never flashes the wrong one on load.
+      // Mirrors src/theme/ThemeProvider.tsx's storage key and resolution
+      // logic — keep the two in sync if either changes.
+      (function () {
+        try {
+          var pref = localStorage.getItem("tradeiq:theme-preference");
+          var resolved =
+            pref === "light" || pref === "dark"
+              ? pref
+              : window.matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light";
+          document.documentElement.classList.toggle("dark", resolved === "dark");
+          document.documentElement.style.colorScheme = resolved;
+        } catch (e) {
+          // Storage blocked or unavailable — falls through to the light default below.
+        }
+      })();
+    </script>
     <style>
+      html {
+        color-scheme: light;
+      }
       body {
         margin: 0;
-        background-color: #0a0d14;
-        color: #e2e8f0;
+        background-color: #f8fafc;
+        color: #0f172a;
       }
-      /* Hide scrollbar for Chrome, Safari and Opera */
-      .ant-layout-sider-children::-webkit-scrollbar {
-        display: none;
-      }
-      /* Hide scrollbar for IE, Edge and Firefox */
-      .ant-layout-sider-children {
-        -ms-overflow-style: none;  /* IE and Edge */
-        scrollbar-width: none;  /* Firefox */
+      html.dark body {
+        background-color: #111317;
+        color: #f8fafc;
       }
     </style>
   </head>

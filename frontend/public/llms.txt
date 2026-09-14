@@ -1,0 +1,9 @@
+# TradeIQ CSE
+
+TradeIQ CSE is a learning workspace for exploring delayed Colombo Stock Exchange data, testing rules on historical prices, and practising trades with virtual money.
+
+- [Browse CSE securities](/markets)
+- [How TradeIQ works](/how-it-works)
+- [Sign in](/login)
+
+Market information is end-of-day and may be delayed. Paper trades do not reach an exchange. Backtests are historical simulations, not forecasts or investment advice.

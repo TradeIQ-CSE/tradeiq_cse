@@ -21,6 +21,28 @@ export interface SecurityListItem {
 
 export type SecuritiesSort = 'symbol' | 'company_name';
 
+// endpoint-catalogue-v0.md §6 (GET /market/overview). One ranked row; the
+// same shape backs all three lists.
+export interface MarketRanking {
+  rank: number;
+  symbol: string;
+  company_name: string;
+  close: number;
+  change: number;
+  change_pct: number;
+  volume: number;
+}
+
+export interface MarketOverview {
+  as_of: string;
+  gainers: MarketRanking[];
+  losers: MarketRanking[];
+  most_active: MarketRanking[];
+}
+
+/** The three ranked lists, keyed as they arrive in the overview response. */
+export type RankingList = 'gainers' | 'losers' | 'most_active';
+
 export type ListingStatus = 'listed' | 'suspended' | 'delisted';
 
 export interface SecurityDetail {
@@ -79,4 +101,34 @@ export interface OhlcvResponse {
 export interface OhlcvRange {
   from?: string;
   to?: string;
+}
+
+// endpoint-catalogue-v0.md §9 (GET /indices).
+export interface IndexLatest {
+  date: string;
+  close: number;
+  previous_date: string | null;
+  change: number | null;
+  change_pct: number | null;
+}
+
+export interface Index {
+  code: string;
+  name: string;
+  latest: IndexLatest | null;
+}
+
+// endpoint-catalogue-v0.md §10 (GET /indices/{code}/values). Close-only: no
+// official source publishes an index open, high or low.
+export interface IndexValue {
+  date: string;
+  close: number;
+}
+
+export interface IndexValuesResponse {
+  code: string;
+  name: string;
+  from: string | null;
+  to: string | null;
+  values: IndexValue[];
 }

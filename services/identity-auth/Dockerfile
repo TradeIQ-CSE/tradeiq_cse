@@ -1,6 +1,7 @@
 FROM node:20-slim AS base
 WORKDIR /app
-RUN corepack enable
+RUN corepack enable \
+    && corepack prepare pnpm@9.15.0 --activate
 
 FROM base AS deps
 # argon2 falls back to node-gyp when a prebuilt binary is unavailable.

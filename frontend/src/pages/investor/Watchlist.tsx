@@ -1,63 +1,51 @@
-import React from 'react';
-import { Button, Typography, Space, Card } from 'antd';
-import { PlusOutlined, DeleteOutlined, ShareAltOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import { RiLineChartLine, RiStarLine } from '@remixicon/react';
+import {
+  AppNotice,
+  AppPage,
+  AppPanel,
+  PageIntro,
+  PageState,
+} from '../../components/application/layout/application-layout';
+import { Button } from '../../components/base/buttons/button';
 
-const { Title, Text, Paragraph } = Typography;
+export function Watchlist() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
 
-export const Watchlist: React.FC = () => {
   return (
-    <div style={{ color: '#e2e8f0' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <Title level={2} style={{ color: '#f1f5f9', margin: 0, fontWeight: 600 }}>
-          Watchlist
-        </Title>
-        <Text style={{ color: '#90a1b9', fontSize: '13px' }}>
-          Monitor price movements and key events for your favorite securities.
-        </Text>
-      </div>
+    <AppPage width="reading">
+      <PageIntro
+        eyebrow={t('watchlistPage.eyebrow')}
+        title={t('watchlistPage.title')}
+        description={t('watchlistPage.description')}
+        actions={
+          <Button leadingIcon={RiLineChartLine} onClick={() => navigate('/markets')}>
+            {t('watchlistPage.browse')}
+          </Button>
+        }
+      />
 
-      <Card
-        style={{
-          backgroundColor: '#0b0e13',
-          borderColor: 'rgba(255,255,255,0.04)',
-        }}
-      >
-        <Title level={4} style={{ color: '#e2e8f0', marginTop: 0 }}>
-          Manage Watchlist
-        </Title>
-        <Paragraph style={{ color: '#64748b' }}>
-          Select custom items in the Markets page to add them to your watchlist. Use the actions below to manage lists.
-        </Paragraph>
-        <Space size={12} wrap style={{ width: '100%' }}>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            style={{ backgroundColor: '#722ed1', borderColor: '#722ed1' }}
-            disabled
-          >
-            Create New List
-          </Button>
-          <Button
-            type="dashed"
-            icon={<ShareAltOutlined />}
-            style={{ color: '#e2e8f0', borderColor: 'rgba(255,255,255,0.1)' }}
-            disabled
-          >
-            Share Watchlist
-          </Button>
-          <Button
-            danger
-            type="text"
-            icon={<DeleteOutlined />}
-            style={{ display: 'flex', alignItems: 'center' }}
-            disabled
-          >
-            Clear Selected
-          </Button>
-        </Space>
-      </Card>
-    </div>
+      <AppPanel className="p-0 sm:p-0">
+        <PageState
+          className="min-h-[22rem] border-0 bg-transparent"
+          kind="empty"
+          title={t('watchlistPage.emptyTitle')}
+          description={t('watchlistPage.emptyDescription')}
+          action={
+            <Button leadingIcon={RiStarLine} onClick={() => navigate('/markets')}>
+              {t('watchlistPage.findSecurity')}
+            </Button>
+          }
+        />
+      </AppPanel>
+
+      <AppNotice title={t('watchlistPage.noticeTitle')}>
+        {t('watchlistPage.notice')}
+      </AppNotice>
+    </AppPage>
   );
-};
+}
 
 export default Watchlist;

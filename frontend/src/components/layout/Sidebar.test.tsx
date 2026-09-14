@@ -16,7 +16,8 @@ describe('Sidebar profile', () => {
     });
 
     expect(screen.getByText('Ama Perera')).toBeInTheDocument();
-    expect(screen.getByText(t('auth.signOut'))).toBeInTheDocument();
+    expect(screen.queryByText(t('nav.items.aiInsights'))).not.toBeInTheDocument();
+    expect(screen.queryByText(t('nav.items.reports'))).not.toBeInTheDocument();
   });
 
   it('offers a sign-in link when anonymous', () => {
@@ -26,7 +27,7 @@ describe('Sidebar profile', () => {
     expect(screen.getByText(t('auth.signedOut'))).toBeInTheDocument();
   });
 
-  it('signs out when the profile button is clicked', async () => {
+  it('signs out from the profile menu', async () => {
     const user = userEvent.setup();
     const logout = vi.fn().mockResolvedValue(undefined);
 
@@ -38,7 +39,8 @@ describe('Sidebar profile', () => {
       },
     });
 
-    await user.click(screen.getByRole('button', { name: /Ama Perera/ }));
+    await user.click(screen.getByRole('button', { name: 'Ama Perera' }));
+    await user.click(await screen.findByRole('button', { name: t('auth.signOut') }));
 
     expect(logout).toHaveBeenCalledOnce();
   });

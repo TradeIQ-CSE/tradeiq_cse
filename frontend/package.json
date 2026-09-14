@@ -13,22 +13,26 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@ant-design/icons": "^5.4.0",
+    "@internationalized/date": "^3.12.1",
+    "@remixicon/react": "^4.9.0",
     "@tanstack/react-query": "^5.101.4",
-    "antd": "^5.20.0",
     "i18next": "^26.3.6",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "motion": "^12.42.2",
+    "react": "^19.2.8",
+    "react-aria-components": "^1.21.1",
+    "react-dom": "^19.2.8",
     "react-i18next": "^17.0.11",
     "react-router-dom": "^6.28.0",
-    "recharts": "^2.12.0"
+    "recharts": "^3.10.1",
+    "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4",
     "@testing-library/jest-dom": "^6",
     "@testing-library/react": "^16",
     "@testing-library/user-event": "^14",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
     "@vitejs/plugin-react": "^4.3.3",
@@ -38,6 +42,7 @@
     "eslint-plugin-react-refresh": "^0.4.14",
     "jsdom": "^25",
     "msw": "^2",
+    "tailwindcss": "^4",
     "typescript": "^5.6.3",
     "vite": "^5.4.10",
     "vitest": "^2.1"
