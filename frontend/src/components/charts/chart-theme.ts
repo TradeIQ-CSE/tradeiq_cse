@@ -1,0 +1,50 @@
+/**
+ * The candlestick chart's colours, expressed as BoardUI's own chart tokens.
+ *
+ * These are `var(--color-chart-*)` references rather than resolved hex
+ * strings, exactly as BoardUI's shipped chart cards feed them to Recharts:
+ * SVG presentation attributes participate in the CSS cascade, so a custom
+ * property resolves there and follows the light/dark swap for free. Nothing
+ * here needs to know which theme is active.
+ *
+ * Up/down use their own `--color-chart-*` tokens rather than the
+ * status-lime/rose-text chip tokens: a chip needs its green/red to work as
+ * *text* on a pale fill, while a candle/volume bar needs its green/red to
+ * work as a *fill* against the chart's own background — darker in light
+ * mode, lighter in dark mode, tuned independently of chip legibility.
+ */
+
+export interface ChartPalette {
+  /** Close-price line used when the source cannot form real candle bodies. */
+  price: string;
+  /** Close above open. */
+  up: string;
+  /** Close below open. */
+  down: string;
+  /** Unchanged, or an unknown open. */
+  neutral: string;
+  /** Horizontal grid rules behind the series. */
+  grid: string;
+  /** Axis lines and tick marks. */
+  axis: string;
+  /** Axis tick labels. */
+  tick: string;
+  /** Hover band behind the active candle. */
+  cursor: string;
+}
+
+export const chartPalette: ChartPalette = {
+  price: "var(--color-accent-500)",
+  up: "var(--color-chart-up)",
+  down: "var(--color-chart-down)",
+  // Not --color-chart-neutral: that is slate-800 in dark, invisible against
+  // the card. This colour draws the candle wicks, so it has to read on both.
+  neutral: "var(--color-text-secondary)",
+  // Not --color-chart-track: in dark that is slate-800, the same value as the
+  // card it is drawn on, so the rules disappear. border/button/default is the
+  // one edge token with contrast against both surfaces.
+  grid: "var(--color-border-button-default)",
+  axis: "var(--color-border-button-default)",
+  tick: "var(--color-text-tertiary)",
+  cursor: "var(--color-background-secondary-hover)",
+};

@@ -5,17 +5,39 @@ import {
   positionsFixture,
   summaryFixture,
 } from './fixtures/paper-trading';
+import { marketOverviewFixture } from './fixtures/market-overview';
 import { securitiesFixture } from './fixtures/securities';
 import {
   dailyOhlcvFixture,
   securityDetailFixture,
 } from './fixtures/security-detail';
+import {
+  aspiValuesFixture,
+  indicesFixture,
+  sl20ValuesFixture,
+} from './fixtures/indices';
 
 // Default handlers used by every test unless overridden with `server.use(...)`.
 // Shapes mirror lib/api.ts exactly: a success body is the whole envelope
 // (`{ data, meta }`), a failure body is `{ error: { code, message, trace_id } }`
 // because `getEnvelope` throws `new ApiError(body.error)`.
 export const handlers = [
+  http.get('*/market/overview', () => {
+    return HttpResponse.json({ data: marketOverviewFixture });
+  }),
+
+  // Order matters: the specific /:code/values route must be declared before
+  // the bare /indices list, same reasoning as the portfolios routes below.
+  http.get('*/indices/:code/values', ({ params }) => {
+    const fixture =
+      params.code === 'SL20' ? sl20ValuesFixture : aspiValuesFixture;
+    return HttpResponse.json({ data: fixture });
+  }),
+
+  http.get('*/indices', () => {
+    return HttpResponse.json({ data: indicesFixture });
+  }),
+
   http.get('*/securities/:symbol/ohlcv', () => {
     return HttpResponse.json({ data: dailyOhlcvFixture });
   }),

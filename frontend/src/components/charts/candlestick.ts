@@ -2,11 +2,18 @@
 // component-only module: exporting helpers alongside the component breaks
 // fast refresh, and this logic needs no React to be tested.
 
+import { chartPalette } from './chart-theme';
+
 export interface CandleDatum {
   open: number | null;
   high: number;
   low: number;
   close: number;
+  /**
+   * Used only to choose an up/down colour when the source has no opening
+   * price. Geometry and displayed OHLC values must continue to use `open`.
+   */
+  comparisonClose?: number | null;
 }
 
 export interface ChartDatum extends CandleDatum {
@@ -14,6 +21,20 @@ export interface ChartDatum extends CandleDatum {
   periodEnd?: string | null;
   adjustedClose?: number | null;
   volume: number;
+}
+
+/**
+ * Add a close-to-close comparison without rewriting a missing opening price.
+ * This keeps the API truth available to labels and assistive technology while
+ * giving charts a standard directional colour when OHLC is incomplete.
+ */
+export function withCandleComparisons(
+  data: readonly ChartDatum[],
+): ChartDatum[] {
+  return data.map((point, index) => ({
+    ...point,
+    comparisonClose: data[index - 1]?.close ?? null,
+  }));
 }
 
 /**
@@ -36,11 +57,18 @@ export function candleWick(point: CandleDatum): [number, number] {
   return [bodyHigh - point.low, point.high - bodyHigh];
 }
 
+/**
+ * The candle's colour, chosen from a theme-resolved palette rather than fixed
+ * hexes — the chart has to read on both a light and a dark ground.
+ */
 export function candleColor(point: CandleDatum): string {
-  if (point.open === null) return '#90a1b9';
-  if (point.close > point.open) return '#00d492';
-  if (point.close < point.open) return '#ff6467';
-  return '#90a1b9';
+  const reference = point.open ?? point.comparisonClose;
+  if (reference === null || reference === undefined) {
+    return chartPalette.neutral;
+  }
+  if (point.close > reference) return chartPalette.up;
+  if (point.close < reference) return chartPalette.down;
+  return chartPalette.neutral;
 }
 
 function asUtcDate(day: string): Date {

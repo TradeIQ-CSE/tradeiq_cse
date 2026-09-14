@@ -6,8 +6,37 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { BacktestWizard } from '../components/BacktestWizard';
 import * as api from '../api/backtestApi';
 import { ApiError } from '../../../lib/api';
+import { createDefaultBacktestConfig } from '../domain/defaults';
 
 import { CreateBacktestRunResponse } from '../domain/types';
+
+const sampSecurity = {
+  symbol: 'SAMP.N0000',
+  company_name: 'Sampath Bank PLC',
+  sector: { gics_code: '40101010', name: 'Banks' },
+  shares_outstanding: 1_100_000_000,
+  data_from: '2017-01-02',
+  data_to: '2025-12-31',
+  price: 121.5,
+  change: 1.25,
+  change_pct: 1.04,
+  volume: 250_000,
+  pe_ratio: 7.8,
+};
+
+function seedValidDraft() {
+  const config = createDefaultBacktestConfig();
+  config.security = {
+    symbol: sampSecurity.symbol,
+    companyName: sampSecurity.company_name,
+    sector: sampSecurity.sector.name,
+    sectorGicsCode: sampSecurity.sector.gics_code,
+    dataFrom: '2017-01-02',
+    dataTo: '2025-12-31',
+    price: sampSecurity.price,
+  };
+  sessionStorage.setItem('tradeiq_backtest_draft_v1', JSON.stringify(config));
+}
 
 describe('BacktestWizard Workflow Integration', () => {
   afterEach(() => {
@@ -18,7 +47,7 @@ describe('BacktestWizard Workflow Integration', () => {
     vi.restoreAllMocks();
     sessionStorage.clear();
     // Default mock for universe search
-    vi.spyOn(api, 'getSecuritiesUniverse').mockResolvedValue([]);
+    vi.spyOn(api, 'getSecuritiesUniverse').mockResolvedValue([sampSecurity]);
   });
 
   it('renders step 1 (Security) by default and displays heading', () => {
@@ -30,8 +59,21 @@ describe('BacktestWizard Workflow Integration', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('Configure Backtest Strategy')).toBeTruthy();
-    expect(screen.getByText('1. Select Security')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Test a strategy against the past' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Choose a CSE security' })).toBeTruthy();
+  });
+
+  it('does not present an incomplete direct review as ready to submit', () => {
+    render(
+      <MemoryRouter initialEntries={['/backtests/new/review']}>
+        <Routes>
+          <Route path="/backtests/new/:step" element={<BacktestWizard />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Configuration requires attention')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /run backtest/i })).toBeDisabled();
   });
 
   it('preserves entered values when moving to the next step and then back', async () => {
@@ -43,12 +85,11 @@ describe('BacktestWizard Workflow Integration', () => {
       </MemoryRouter>,
     );
 
-    // Initial security should display default JKH.N0000
-    expect(screen.getAllByText('JKH.N0000').length).toBeGreaterThanOrEqual(1);
-
-    // Select SAMP chip
-    const sampChip = screen.getAllByRole('button', { name: /SAMP · Sampath/i })[0];
-    fireEvent.click(sampChip);
+    // Select SAMP from the API-backed universe.
+    const sampResult = await screen.findByRole('button', {
+      name: /SAMP\.N0000.*Sampath Bank PLC/i,
+    });
+    fireEvent.click(sampResult);
 
     // Verify SAMP.N0000 is now selected
     expect(screen.getAllByText('SAMP.N0000').length).toBeGreaterThanOrEqual(1);
@@ -59,39 +100,39 @@ describe('BacktestWizard Workflow Integration', () => {
 
     // Now on Period step
     await waitFor(() => {
-      expect(screen.getByText('2. Simulation Period')).toBeTruthy();
+      expect(screen.getByRole('heading', { name: 'Choose the historical period' })).toBeTruthy();
     });
 
-    // Change start date
-    const startInput = screen.getByLabelText(/start date/i);
-    fireEvent.change(startInput, { target: { value: '2023-05-15' } });
-    expect(screen.getByDisplayValue('2023-05-15')).toBeTruthy();
+    // Change the range using the BoardUI preset control.
+    fireEvent.click(screen.getByRole('button', { name: '1 year' }));
+    expect(screen.getByText('Selected: 2025-01-01 to 2025-12-31')).toBeTruthy();
 
     // Advance to Rules step
     fireEvent.click(screen.getByRole('button', { name: /advance to next step/i }));
     await waitFor(() => {
-      expect(screen.getByText('3. Configure Strategy Rules (v1 Price DSL)')).toBeTruthy();
+      expect(screen.getByRole('heading', { name: 'Define entry and exit rules' })).toBeTruthy();
     });
 
     // Click Back
     const backBtn = screen.getByRole('button', { name: /navigate to previous step/i });
     fireEvent.click(backBtn);
 
-    // Returned to Period step and preserved 2023-05-15
+    // Returned to Period step and preserved the selected range.
     await waitFor(() => {
-      expect(screen.getByText('2. Simulation Period')).toBeTruthy();
-      expect(screen.getByDisplayValue('2023-05-15')).toBeTruthy();
+      expect(screen.getByRole('heading', { name: 'Choose the historical period' })).toBeTruthy();
+      expect(screen.getByText('Selected: 2025-01-01 to 2025-12-31')).toBeTruthy();
     });
 
     // Click Back again to return to Security step
     fireEvent.click(screen.getByRole('button', { name: /navigate to previous step/i }));
     await waitFor(() => {
-      expect(screen.getByText('1. Select Security')).toBeTruthy();
+      expect(screen.getByRole('heading', { name: 'Choose a CSE security' })).toBeTruthy();
       expect(screen.getAllByText('SAMP.N0000').length).toBeGreaterThanOrEqual(1);
     });
   });
 
   it('submits valid configuration to API and redirects with returned runId', async () => {
+    seedValidDraft();
     const submitSpy = vi.spyOn(api, 'submitBacktestRun').mockResolvedValue({
       id: 'mock-uuid-12345',
       status: 'queued',
@@ -112,7 +153,7 @@ describe('BacktestWizard Workflow Integration', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('7. Review Simulation Assumptions')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Review simulation assumptions' })).toBeTruthy();
     expect(screen.getByText('Everything looks valid.')).toBeTruthy();
 
     // Click Run Backtest button
@@ -139,6 +180,7 @@ describe('BacktestWizard Workflow Integration', () => {
   });
 
   it('prevents duplicate submissions when Run Backtest is clicked repeatedly', async () => {
+    seedValidDraft();
     let resolveSubmit: (val: CreateBacktestRunResponse) => void;
     const submitPromise = new Promise<CreateBacktestRunResponse>((resolve) => {
       resolveSubmit = resolve;
@@ -173,6 +215,7 @@ describe('BacktestWizard Workflow Integration', () => {
   });
 
   it('surfaces structured API validation error envelope and preserves configuration on failure', async () => {
+    seedValidDraft();
     vi.spyOn(api, 'submitBacktestRun').mockRejectedValue(
       new ApiError({
         code: 'VALIDATION_FAILED',

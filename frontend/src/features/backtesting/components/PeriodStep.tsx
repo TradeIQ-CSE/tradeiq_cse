@@ -1,135 +1,162 @@
-import React from 'react';
-import { useBacktestWizard } from '../hooks/useBacktestWizard';
-import { CSE_DATASET_MIN_DATE, CSE_DATASET_MAX_DATE } from '../domain/defaults';
+import { parseDate, type CalendarDate } from "@internationalized/date";
+import { RiCalendarCheckLine } from "@remixicon/react";
+import { Button } from "@/components/base/buttons/button";
+import {
+  DateRangePicker,
+  type DateRangeValue,
+} from "@/components/base/date-picker/date-range-picker";
+import { AppNotice } from "@/components/application/layout/application-layout";
+import { useBacktestWizard } from "../hooks/useBacktestWizard";
+import {
+  CSE_DATASET_MAX_DATE,
+  CSE_DATASET_MIN_DATE,
+} from "../domain/defaults";
+import {
+  BacktestFieldError,
+  BacktestSectionHeader,
+  BacktestStepHeader,
+} from "./BacktestStepLayout";
 
-const PERIOD_PRESETS = [
-  { label: '1 Year (2024)', start: '2024-01-01', end: '2024-12-31' },
-  { label: '2 Years (2023–2024)', start: '2023-01-01', end: '2024-12-31' },
-  { label: '3 Years (2022–2024)', start: '2022-01-01', end: '2024-12-31' },
-  { label: '5 Years (2020–2024)', start: '2020-01-01', end: '2024-12-31' },
-  { label: 'Max Validated (2017–2025)', start: '2017-01-02', end: '2025-12-31' },
-];
+function laterDate(left: CalendarDate, right: CalendarDate) {
+  return left.compare(right) > 0 ? left : right;
+}
 
-export const PeriodStep: React.FC = () => {
+function parseDateOr(value: string | null | undefined, fallback: CalendarDate) {
+  if (!value) return fallback;
+  try {
+    return parseDate(value);
+  } catch {
+    return fallback;
+  }
+}
+
+function buildPresets(minimum: CalendarDate, maximum: CalendarDate) {
+  return [1, 2, 5].map((years) => ({
+    label: `${years} ${years === 1 ? "year" : "years"}`,
+    value: {
+      start: laterDate(
+        minimum,
+        maximum.subtract({ years }).add({ days: 1 }),
+      ),
+      end: maximum,
+    },
+  }));
+}
+
+export function PeriodStep() {
   const { config, updateConfig, getStepErrors } = useBacktestWizard();
-  const errors = getStepErrors('period');
+  const errors = getStepErrors("period");
+  const startError = errors.find((error) => error.field === "startDate");
+  const endError = errors.find((error) => error.field === "endDate");
 
-  const startError = errors.find((e) => e.field === 'startDate');
-  const endError = errors.find((e) => e.field === 'endDate');
-
-  const { startDate, endDate } = config.period || { startDate: '', endDate: '' };
-
-  const minAllowedDate = config.security?.dataFrom || CSE_DATASET_MIN_DATE;
-  const maxAllowedDate = config.security?.dataTo || CSE_DATASET_MAX_DATE;
-
-  const handleStartDateChange = (val: string) => {
-    updateConfig((prev) => ({
-      ...prev,
-      period: {
-        ...prev.period,
-        startDate: val,
-      },
-    }));
+  const datasetMinimum = parseDate(CSE_DATASET_MIN_DATE);
+  const datasetMaximum = parseDate(CSE_DATASET_MAX_DATE);
+  const reportedMinimum = parseDateOr(
+    config.security.dataFrom,
+    datasetMinimum,
+  );
+  const reportedMaximum = parseDateOr(
+    config.security.dataTo,
+    datasetMaximum,
+  );
+  const hasValidCoverage = reportedMinimum.compare(reportedMaximum) <= 0;
+  const minimum = hasValidCoverage ? reportedMinimum : datasetMinimum;
+  const maximum = hasValidCoverage ? reportedMaximum : datasetMaximum;
+  const value: DateRangeValue = {
+    start: parseDateOr(config.period.startDate, minimum),
+    end: parseDateOr(config.period.endDate, maximum),
   };
+  const presets = buildPresets(minimum, maximum);
 
-  const handleEndDateChange = (val: string) => {
-    updateConfig((prev) => ({
-      ...prev,
+  const applyRange = (range: DateRangeValue | null) => {
+    if (!range) return;
+    updateConfig((previous) => ({
+      ...previous,
       period: {
-        ...prev.period,
-        endDate: val,
-      },
-    }));
-  };
-
-  const applyPreset = (start: string, end: string) => {
-    updateConfig((prev) => ({
-      ...prev,
-      period: {
-        startDate: start,
-        endDate: end,
+        startDate: range.start.toString(),
+        endDate: range.end.toString(),
       },
     }));
   };
 
   return (
-    <div className="period-step">
-      <div className="step-header">
-        <h2 className="step-header__title">2. Simulation Period</h2>
-        <p className="step-header__desc">
-          Specify the historical date range for evaluating rule performance against CSE market data.
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <BacktestStepHeader
+        step={2}
+        title="Choose the historical period"
+        description="The engine checks each available daily bar inside this inclusive date range. A longer range offers more observations, but it does not make future outcomes more certain."
+      />
 
-      {/* Coverage Guidance Banner */}
-      <div className="info-banner">
-        <span>📅</span>
-        <div>
-          <strong>CSE Seed Dataset Coverage: {CSE_DATASET_MIN_DATE} to {CSE_DATASET_MAX_DATE}</strong>
-          <div style={{ fontSize: '12px', marginTop: '2px' }}>
-            Daily price bars are available within this validated window per ADR 0007. Dates outside this range cannot be simulated.
-          </div>
-        </div>
-      </div>
+      <AppNotice title="Available price coverage">
+        {config.security.symbol
+          ? `${config.security.symbol} currently reports data from ${minimum.toString()} to ${maximum.toString()}.`
+          : `Choose dates within the declared CSE dataset boundary of ${minimum.toString()} to ${maximum.toString()}.`}
+      </AppNotice>
 
-      {/* Date Inputs */}
-      <div className="grid-2">
-        <div className="form-group">
-          <label htmlFor="period-start-date" className="form-label">
-            <span>Start Date</span>
-            <span className="form-label__hint">Min: {minAllowedDate}</span>
-          </label>
-          <input
-            id="period-start-date"
-            type="date"
-            className={`form-input ${startError ? 'form-input--error' : ''}`}
-            value={startDate}
-            min={minAllowedDate}
-            max={maxAllowedDate}
-            onChange={(e) => handleStartDateChange(e.target.value)}
+      <section className="flex flex-col gap-3">
+        <BacktestSectionHeader
+          title="Simulation date range"
+          description="Both dates are included. The calendar prevents dates outside the selected security’s reported coverage."
+        />
+        <div className="flex max-w-xl flex-col gap-2">
+          <DateRangePicker
+            value={value}
+            onChange={applyRange}
+            minValue={minimum}
+            maxValue={maximum}
+            isInvalid={Boolean(startError || endError)}
+            describedBy="backtest-period-help"
+            aria-label="Backtest simulation date range"
+            labels={{ apply: "Apply range" }}
           />
-          {startError && <span className="form-error-text">{startError.message}</span>}
+          <p
+            id="backtest-period-help"
+            className="text-body-2-regular text-text-tertiary"
+          >
+            Selected: {value.start.toString()} to {value.end.toString()}
+          </p>
+          <BacktestFieldError>
+            {startError?.message || endError?.message}
+          </BacktestFieldError>
         </div>
+      </section>
 
-        <div className="form-group">
-          <label htmlFor="period-end-date" className="form-label">
-            <span>End Date</span>
-            <span className="form-label__hint">Max: {maxAllowedDate}</span>
-          </label>
-          <input
-            id="period-end-date"
-            type="date"
-            className={`form-input ${endError ? 'form-input--error' : ''}`}
-            value={endDate}
-            min={minAllowedDate}
-            max={maxAllowedDate}
-            onChange={(e) => handleEndDateChange(e.target.value)}
-          />
-          {endError && <span className="form-error-text">{endError.message}</span>}
-        </div>
-      </div>
-
-      {/* Quick Period Presets */}
-      <div style={{ marginTop: '12px' }}>
-        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>
-          Quick Range Presets
-        </span>
-        <div className="quick-chips">
-          {PERIOD_PRESETS.map((preset) => {
-            const isActive = startDate === preset.start && endDate === preset.end;
+      <section className="flex flex-col gap-3">
+        <BacktestSectionHeader
+          title="Quick ranges"
+          description="Each preset ends on the latest date reported for this security and is clipped to its available coverage."
+        />
+        <div className="flex flex-wrap gap-2">
+          {presets.map((preset) => {
+            const isActive =
+              value.start.compare(preset.value.start) === 0 &&
+              value.end.compare(preset.value.end) === 0;
             return (
-              <button
-                type="button"
+              <Button
                 key={preset.label}
-                className={`chip-btn ${isActive ? 'chip-btn--active' : ''}`}
-                onClick={() => applyPreset(preset.start, preset.end)}
+                variant={isActive ? "primary" : "secondary"}
+                size="small"
+                onClick={() => applyRange(preset.value)}
               >
                 {preset.label}
-              </button>
+              </Button>
             );
           })}
+          <Button
+            variant={
+              value.start.compare(minimum) === 0 &&
+              value.end.compare(maximum) === 0
+                ? "primary"
+                : "secondary"
+            }
+            size="small"
+            leadingIcon={RiCalendarCheckLine}
+            onClick={() => applyRange({ start: minimum, end: maximum })}
+          >
+            Full available range
+          </Button>
         </div>
-      </div>
+      </section>
     </div>
   );
-};
+}

@@ -4,8 +4,14 @@ import { LoginInput, SignupInput } from '../lib/auth-api';
 import { clearSession, onSessionLost, setSession, SessionUser } from '../lib/session';
 import { AuthContext, AuthStatus } from './useAuth';
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<AuthStatus>('restoring');
+interface AuthProviderProps {
+  children: ReactNode;
+  /** Public marketing routes do not need a session request before they can render. */
+  restoreSession?: boolean;
+}
+
+export function AuthProvider({ children, restoreSession = true }: AuthProviderProps) {
+  const [status, setStatus] = useState<AuthStatus>(restoreSession ? 'restoring' : 'anonymous');
   const [user, setUser] = useState<SessionUser | null>(null);
 
   // The restore below is one in-flight request the user can outrun: /login is
@@ -19,7 +25,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // the access token lives in memory only (lib/session.ts). A 401 here is the
   // normal state for a first-time (or logged-out) visitor, not an error.
   useEffect(() => {
+    if (!restoreSession) {
+      // Preserve an established session when an authenticated user visits the
+      // marketing page; only settle an untouched initial restore as anonymous.
+      setStatus((current) => (current === 'restoring' ? 'anonymous' : current));
+      return;
+    }
+
     let cancelled = false;
+    setStatus((current) => (current === 'anonymous' ? 'restoring' : current));
 
     authApi
       .refresh()
@@ -37,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [restoreSession]);
 
   // Dropped to anonymous whenever authFetch's single-flight refresh fails on
   // a guarded call elsewhere in the app (session.ts already cleared the

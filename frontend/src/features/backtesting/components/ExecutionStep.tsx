@@ -1,356 +1,279 @@
-import React, { useState } from 'react';
-import { useBacktestWizard } from '../hooks/useBacktestWizard';
-import { PositionSizingType } from '../domain/types';
-import { DEFAULT_CSE_FEES } from '../domain/defaults';
+import { useState } from "react";
+import { RiRefreshLine, RiSettings3Line } from "@remixicon/react";
+import { Button } from "@/components/base/buttons/button";
+import { Input } from "@/components/base/input/input";
+import { RadioCard } from "@/components/base/radio/radio-card";
+import { RadioGroup } from "@/components/base/radio/radio";
+import { AppNotice } from "@/components/application/layout/application-layout";
+import { cx } from "@/utils/cx";
+import { useBacktestWizard } from "../hooks/useBacktestWizard";
+import type { FeeConfig, PositionSizingType } from "../domain/types";
+import { DEFAULT_CSE_FEES } from "../domain/defaults";
+import {
+  BacktestFieldError,
+  BacktestSectionHeader,
+  BacktestStepHeader,
+  ParameterPanel,
+} from "./BacktestStepLayout";
 
 const SIZING_OPTIONS: Array<{
   type: PositionSizingType;
   label: string;
-  desc: string;
-  hasValue: boolean;
+  description: string;
   valueLabel?: string;
   valueSuffix?: string;
   min?: number;
   max?: number;
+  step?: number;
 }> = [
   {
-    type: 'full_capital',
-    label: '100% Full Capital',
-    desc: 'Invest 100% of all available portfolio cash on each buy signal.',
-    hasValue: false,
+    type: "full_capital",
+    label: "Use available cash",
+    description: "Use all available simulated cash when an entry rule triggers.",
   },
   {
-    type: 'percentage',
-    label: 'Percentage of Portfolio',
-    desc: 'Allocate a fixed percentage of total portfolio equity per position.',
-    hasValue: true,
-    valueLabel: 'Portfolio Share (%)',
-    valueSuffix: '%',
+    type: "percentage",
+    label: "Portfolio percentage",
+    description: "Limit each entry to a fixed percentage of portfolio equity.",
+    valueLabel: "Portfolio share",
+    valueSuffix: "% of portfolio equity",
     min: 1,
     max: 100,
+    step: 1,
   },
   {
-    type: 'absolute',
-    label: 'Fixed Cash Amount',
-    desc: 'Allocate a fixed rupee amount of cash per trade regardless of equity.',
-    hasValue: true,
-    valueLabel: 'Cash Amount (LKR)',
-    valueSuffix: 'LKR',
+    type: "absolute",
+    label: "Fixed cash amount",
+    description: "Use the same simulated cash amount for each entry.",
+    valueLabel: "Cash amount",
+    valueSuffix: "LKR per entry",
     min: 100,
+    step: 100,
   },
   {
-    type: 'fixed_quantity',
-    label: 'Fixed Share Quantity',
-    desc: 'Purchase an exact fixed number of shares on each trade signal.',
-    hasValue: true,
-    valueLabel: 'Number of Shares',
-    valueSuffix: 'shares',
+    type: "fixed_quantity",
+    label: "Fixed share quantity",
+    description: "Attempt to buy the same whole-share quantity at each entry.",
+    valueLabel: "Number of shares",
+    valueSuffix: "whole shares",
     min: 1,
+    step: 1,
   },
 ];
 
-export const ExecutionStep: React.FC = () => {
+const FEE_FIELDS: Array<{
+  key: keyof FeeConfig;
+  label: string;
+  description: string;
+}> = [
+  {
+    key: "brokerageRate",
+    label: "Brokerage commission",
+    description: "Broker transaction charge",
+  },
+  { key: "cseRate", label: "CSE fee", description: "Exchange fee" },
+  { key: "cdsRate", label: "CDS fee", description: "Depository fee" },
+  { key: "secCessRate", label: "SEC cess", description: "Regulatory cess" },
+  {
+    key: "stlRate",
+    label: "Share transaction levy",
+    description: "Statutory transaction levy",
+  },
+];
+
+export function ExecutionStep() {
   const { config, updateConfig, getStepErrors } = useBacktestWizard();
-  const errors = getStepErrors('execution');
-  const sizingError = errors.find((e) => e.field.startsWith('positionSizing'));
-
+  const sizingError = getStepErrors("execution").find((error) =>
+    error.field.startsWith("positionSizing"),
+  );
   const [isCustomFees, setIsCustomFees] = useState(false);
-
-  const currentSizing = config.execution?.positionSizing || { type: 'full_capital' };
-  const currentFees = config.execution?.fees || DEFAULT_CSE_FEES;
-
+  const currentSizing = config.execution.positionSizing;
+  const currentFees = config.execution.fees;
+  const selectedSizing = SIZING_OPTIONS.find(
+    (option) => option.type === currentSizing.type,
+  );
   const totalFeePct = (
-    (currentFees.brokerageRate +
-      currentFees.cseRate +
-      currentFees.cdsRate +
-      currentFees.secCessRate +
-      currentFees.stlRate) *
-    100
+    Object.values(currentFees).reduce((sum, rate) => sum + rate, 0) * 100
   ).toFixed(3);
 
-  const handleSizingTypeChange = (type: PositionSizingType) => {
-    let defaultValue: number | undefined = undefined;
-    if (type === 'percentage') defaultValue = 50;
-    if (type === 'absolute') defaultValue = 100_000;
-    if (type === 'fixed_quantity') defaultValue = 500;
-
-    updateConfig((prev) => ({
-      ...prev,
+  const selectSizing = (type: PositionSizingType) => {
+    let value: number | undefined;
+    if (type === "percentage") value = 50;
+    if (type === "absolute") value = 100_000;
+    if (type === "fixed_quantity") value = 500;
+    updateConfig((previous) => ({
+      ...previous,
       execution: {
-        ...prev.execution,
+        ...previous.execution,
+        positionSizing: { type, value },
+      },
+    }));
+  };
+
+  const updateSizingValue = (value: string) => {
+    updateConfig((previous) => ({
+      ...previous,
+      execution: {
+        ...previous.execution,
         positionSizing: {
-          type,
-          value: defaultValue,
+          ...previous.execution.positionSizing,
+          value: Number.parseFloat(value),
         },
       },
     }));
   };
 
-  const handleSizingValueChange = (val: number) => {
-    updateConfig((prev) => ({
-      ...prev,
+  const updateFee = (key: keyof FeeConfig, value: string) => {
+    updateConfig((previous) => ({
+      ...previous,
       execution: {
-        ...prev.execution,
-        positionSizing: {
-          ...prev.execution.positionSizing,
-          value: val,
-        },
-      },
-    }));
-  };
-
-  const handleFeeChange = (key: keyof typeof DEFAULT_CSE_FEES, val: number) => {
-    updateConfig((prev) => ({
-      ...prev,
-      execution: {
-        ...prev.execution,
+        ...previous.execution,
         fees: {
-          ...prev.execution.fees,
-          [key]: val / 100, // convert percent to decimal
+          ...previous.execution.fees,
+          [key]: Number.parseFloat(value) / 100,
         },
       },
     }));
   };
 
-  const resetToStandardFees = () => {
+  const resetFees = () => {
     setIsCustomFees(false);
-    updateConfig((prev) => ({
-      ...prev,
+    updateConfig((previous) => ({
+      ...previous,
       execution: {
-        ...prev.execution,
+        ...previous.execution,
         fees: { ...DEFAULT_CSE_FEES },
       },
     }));
   };
 
   return (
-    <div className="execution-step">
-      <div className="step-header">
-        <h2 className="step-header__title">4. Execution Assumptions</h2>
-        <p className="step-header__desc">
-          Configure position sizing, brokerage commissions, transaction levies, and order execution constraints.
-        </p>
-      </div>
+    <div className="flex flex-col gap-7">
+      <BacktestStepHeader
+        step={4}
+        title="Set execution assumptions"
+        description="These controls describe how much simulated capital each entry can use and which transaction charges are deducted. They make historical comparisons more realistic, but they cannot reproduce every market condition."
+      />
 
-      {/* Position Sizing */}
-      <div style={{ marginBottom: '32px' }}>
-        <h3 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-heading)', margin: '0 0 4px' }}>
-          Position Sizing Strategy
-        </h3>
-        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '12px' }}>
-          Determine how many shares to purchase when an entry condition triggers
-        </span>
-
-        {sizingError && <div className="form-error-text" style={{ marginBottom: '10px' }}>{sizingError.message}</div>}
-
-        <div className="grid-2">
-          {SIZING_OPTIONS.map((opt) => {
-            const isSelected = currentSizing.type === opt.type;
-
-            return (
-              <div
-                key={opt.type}
-                className={`option-card ${isSelected ? 'option-card--selected' : ''}`}
-                onClick={() => handleSizingTypeChange(opt.type)}
-                role="radio"
-                aria-checked={isSelected}
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === ' ' || e.key === 'Enter') {
-                    e.preventDefault();
-                    handleSizingTypeChange(opt.type);
-                  }
-                }}
-              >
-                <div className="option-card__header">
-                  <span className="option-card__title">{opt.label}</span>
-                  <input
-                    type="radio"
-                    name="position_sizing"
-                    checked={isSelected}
-                    readOnly
-                    tabIndex={-1}
-                    aria-hidden="true"
-                    style={{ accentColor: 'var(--accent)', pointerEvents: 'none' }}
-                  />
-                </div>
-
-                <p className="option-card__desc">{opt.desc}</p>
-
-                {opt.hasValue && isSelected && (
-                  <div className="option-card__input-wrap" onClick={(e) => e.stopPropagation()}>
-                    <label htmlFor={`sizing-val-${opt.type}`} style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      {opt.valueLabel}:
-                    </label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
-                      <input
-                        id={`sizing-val-${opt.type}`}
-                        type="number"
-                        className="form-input"
-                        style={{ padding: '6px 8px', fontSize: '13px' }}
-                        value={currentSizing.value ?? ''}
-                        min={opt.min}
-                        max={opt.max}
-                        onChange={(e) => handleSizingValueChange(parseFloat(e.target.value))}
-                      />
-                      {opt.valueSuffix && (
-                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                          {opt.valueSuffix}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Transaction Fees */}
-      <div style={{ marginBottom: '28px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-          <div>
-            <h3 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-heading)', margin: 0 }}>
-              Transaction Fees & Levies
-            </h3>
-            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-              Standard Colombo Stock Exchange round-trip statutory fee schedule: <strong>{totalFeePct}%</strong>
-            </span>
-          </div>
-
-          <button
-            type="button"
-            className="chip-btn"
-            onClick={() => {
-              if (isCustomFees) resetToStandardFees();
-              else setIsCustomFees(true);
-            }}
-          >
-            {isCustomFees ? 'Reset to CSE Standard (1.12%)' : 'Customize Fee Rates'}
-          </button>
-        </div>
-
-        <div
-          style={{
-            background: 'var(--bg-panel)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '16px',
-          }}
+      <section className="flex flex-col gap-3">
+        <BacktestSectionHeader
+          title="Position sizing"
+          description="Choose how the engine calculates the maximum size of each simulated buy."
+        />
+        <BacktestFieldError>{sizingError?.message}</BacktestFieldError>
+        <RadioGroup
+          value={currentSizing.type}
+          onChange={(value) => selectSizing(value as PositionSizingType)}
+          aria-label="Position sizing strategy"
+          className="grid gap-3 sm:grid-cols-2"
+          isInvalid={Boolean(sizingError)}
         >
-          <div className="grid-3" style={{ gap: '12px' }}>
-            <div>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Brokerage Commission</span>
-              <strong style={{ fontSize: '14px', color: 'var(--text-heading)' }}>
-                {(currentFees.brokerageRate * 100).toFixed(3)}%
-              </strong>
-              {isCustomFees && (
-                <input
-                  type="number"
-                  step="0.001"
-                  className="form-input"
-                  style={{ marginTop: '4px', padding: '4px 6px', fontSize: '12px' }}
-                  value={(currentFees.brokerageRate * 100).toFixed(3)}
-                  onChange={(e) => handleFeeChange('brokerageRate', parseFloat(e.target.value))}
-                />
-              )}
-            </div>
+          {SIZING_OPTIONS.map((option) => (
+            <RadioCard
+              key={option.type}
+              value={option.type}
+              title={option.label}
+              description={option.description}
+              className={({ isSelected }) =>
+                cx(
+                  "h-full items-start",
+                  isSelected &&
+                    "border-border-button-active bg-status-blue-background",
+                )
+              }
+            />
+          ))}
+        </RadioGroup>
 
-            <div>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>CSE Fee</span>
-              <strong style={{ fontSize: '14px', color: 'var(--text-heading)' }}>
-                {(currentFees.cseRate * 100).toFixed(3)}%
-              </strong>
-              {isCustomFees && (
-                <input
-                  type="number"
-                  step="0.001"
-                  className="form-input"
-                  style={{ marginTop: '4px', padding: '4px 6px', fontSize: '12px' }}
-                  value={(currentFees.cseRate * 100).toFixed(3)}
-                  onChange={(e) => handleFeeChange('cseRate', parseFloat(e.target.value))}
-                />
-              )}
-            </div>
+        {selectedSizing?.valueLabel && (
+          <ParameterPanel>
+            <Input
+              type="number"
+              label={selectedSizing.valueLabel}
+              value={Number.isNaN(currentSizing.value)
+                ? ""
+                : String(currentSizing.value ?? "")}
+              onChange={updateSizingValue}
+              min={selectedSizing.min}
+              max={selectedSizing.max}
+              step={selectedSizing.step}
+              hint={selectedSizing.valueSuffix}
+              fieldClassName="ring-1 ring-inset ring-border-button-default"
+              className="max-w-sm"
+            />
+          </ParameterPanel>
+        )}
+      </section>
 
-            <div>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>CDS Fee</span>
-              <strong style={{ fontSize: '14px', color: 'var(--text-heading)' }}>
-                {(currentFees.cdsRate * 100).toFixed(3)}%
-              </strong>
-              {isCustomFees && (
-                <input
-                  type="number"
-                  step="0.001"
-                  className="form-input"
-                  style={{ marginTop: '4px', padding: '4px 6px', fontSize: '12px' }}
-                  value={(currentFees.cdsRate * 100).toFixed(3)}
-                  onChange={(e) => handleFeeChange('cdsRate', parseFloat(e.target.value))}
-                />
-              )}
-            </div>
+      <section className="flex flex-col gap-3 border-t border-separator-border pt-6">
+        <BacktestSectionHeader
+          title="Transaction charges"
+          description={`The current combined rate is ${totalFeePct}%. Rates are stored as execution assumptions and applied by the backtest engine.`}
+          aside={
+            <Button
+              variant="secondary"
+              size="small"
+              leadingIcon={isCustomFees ? RiRefreshLine : RiSettings3Line}
+              onClick={() =>
+                isCustomFees ? resetFees() : setIsCustomFees(true)
+              }
+            >
+              {isCustomFees ? "Use documented defaults" : "Customize rates"}
+            </Button>
+          }
+        />
 
-            <div>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>SEC Cess</span>
-              <strong style={{ fontSize: '14px', color: 'var(--text-heading)' }}>
-                {(currentFees.secCessRate * 100).toFixed(3)}%
-              </strong>
-              {isCustomFees && (
-                <input
+        <ParameterPanel>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {FEE_FIELDS.map((field) =>
+              isCustomFees ? (
+                <Input
+                  key={field.key}
                   type="number"
-                  step="0.001"
-                  className="form-input"
-                  style={{ marginTop: '4px', padding: '4px 6px', fontSize: '12px' }}
-                  value={(currentFees.secCessRate * 100).toFixed(3)}
-                  onChange={(e) => handleFeeChange('secCessRate', parseFloat(e.target.value))}
+                  label={`${field.label} (%)`}
+                  value={String((currentFees[field.key] * 100).toFixed(3))}
+                  onChange={(value) => updateFee(field.key, value)}
+                  min={0}
+                  step={0.001}
+                  hint={field.description}
+                  fieldClassName="ring-1 ring-inset ring-border-button-default"
                 />
-              )}
-            </div>
-
-            <div>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Share Transaction Levy (STL)</span>
-              <strong style={{ fontSize: '14px', color: 'var(--text-heading)' }}>
-                {(currentFees.stlRate * 100).toFixed(3)}%
-              </strong>
-              {isCustomFees && (
-                <input
-                  type="number"
-                  step="0.001"
-                  className="form-input"
-                  style={{ marginTop: '4px', padding: '4px 6px', fontSize: '12px' }}
-                  value={(currentFees.stlRate * 100).toFixed(3)}
-                  onChange={(e) => handleFeeChange('stlRate', parseFloat(e.target.value))}
-                />
-              )}
-            </div>
-
-            <div>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Total Effective Rate</span>
-              <strong style={{ fontSize: '14px', color: 'var(--accent-text)' }}>
+              ) : (
+                <div key={field.key} className="flex flex-col gap-0.5">
+                  <p className="text-body-2-regular text-text-secondary">
+                    {field.label}
+                  </p>
+                  <p className="text-headline-medium tabular-nums text-text-primary">
+                    {(currentFees[field.key] * 100).toFixed(3)}%
+                  </p>
+                  <p className="text-caption-1-medium text-text-tertiary">
+                    {field.description}
+                  </p>
+                </div>
+              ),
+            )}
+            <div className="flex flex-col gap-0.5 rounded-xl bg-status-blue-background p-3">
+              <p className="text-body-2-regular text-status-blue-text">
+                Combined rate
+              </p>
+              <p className="text-title-3-semibold tabular-nums text-text-primary">
                 {totalFeePct}%
-              </strong>
+              </p>
             </div>
           </div>
-        </div>
-      </div>
+        </ParameterPanel>
+      </section>
 
-      {/* Execution Constraints: Rounding & Precedence */}
-      <div className="grid-2">
-        <div className="review-section" style={{ margin: 0 }}>
-          <div className="review-section__title">Share Rounding Policy</div>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
-            Orders execute in <strong>whole shares only</strong> (fractional shares rounded down via floor division), complying with CSE board trading standards.
-          </p>
-        </div>
-
-        <div className="review-section" style={{ margin: 0 }}>
-          <div className="review-section__title">Exit Precedence Policy</div>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
-            First triggered condition wins. When both Stop Loss and Take Profit trigger on the identical trading day, <strong>Stop Loss takes priority</strong> per backend determinism.
-          </p>
-        </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <AppNotice title="Whole-share rounding">
+          Fractional quantities are rounded down. Unused simulated cash stays
+          in the portfolio.
+        </AppNotice>
+        <AppNotice title="Same-bar exit order">
+          The first triggered rule wins. When stop loss and take profit trigger
+          on the same bar, stop loss is evaluated first.
+        </AppNotice>
       </div>
     </div>
   );
-};
+}

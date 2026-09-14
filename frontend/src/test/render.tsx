@@ -2,13 +2,12 @@ import { ReactElement, ReactNode } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import { Location, MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ConfigProvider } from 'antd';
-import { darkTheme } from '../theme/theme';
+import { ThemeProvider } from '../theme/ThemeProvider';
 import { AuthContext, AuthContextValue, AuthStatus } from '../auth/useAuth';
 import { SessionUser } from '../lib/session';
 
 // Mirrors main.tsx's provider stack (QueryClientProvider -> router ->
-// ConfigProvider, plus AuthProvider's context) with deliberate differences
+// ThemeProvider, plus AuthProvider's context) with deliberate differences
 // from production:
 //  - a fresh QueryClient per render with retry disabled, so error-path tests
 //    don't wait out main.tsx's `retry: 1`.
@@ -87,9 +86,11 @@ export function renderWithProviders(
     return (
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={initialEntries}>
-          <AuthContext.Provider value={authValue}>
-            <ConfigProvider theme={darkTheme}>{children}</ConfigProvider>
-          </AuthContext.Provider>
+          <ThemeProvider>
+            <AuthContext.Provider value={authValue}>
+              {children}
+            </AuthContext.Provider>
+          </ThemeProvider>
         </MemoryRouter>
       </QueryClientProvider>
     );

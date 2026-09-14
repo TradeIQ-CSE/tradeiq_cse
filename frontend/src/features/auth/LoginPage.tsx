@@ -1,16 +1,15 @@
-import { useState } from 'react';
-import { Alert, Button, Form, Input } from 'antd';
+import { FormEvent, useState } from 'react';
 import { Link, Location, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/useAuth';
 import { ApiError } from '../../lib/api';
-import { AuthCard } from './auth-form';
+import { Button } from '../../components/base/buttons/button';
+import { Input } from '../../components/base/input/input';
+import { AuthCard, AuthFormError, FieldErrors } from './auth-form';
 import { fieldErrors } from './field-errors';
 
-interface LoginFormValues {
-  email: string;
-  password: string;
-}
+const FIELDS = ['email', 'password'] as const;
+type Field = (typeof FIELDS)[number];
 
 interface LocationState {
   // RequireAuth stores the whole Location, so search and hash survive: a user
@@ -23,29 +22,45 @@ export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [form] = Form.useForm<LoginFormValues>();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Partial<Record<Field, string[]>>>({});
 
   // Where the guard bounced the user from, if it did. Anything else lands on
   // /markets, the only screen wired to a live API.
   const from = (location.state as LocationState | null)?.from ?? { pathname: '/markets' };
 
-  async function onFinish(values: LoginFormValues) {
-    setPending(true);
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setFormError(null);
+
+    // Validated here rather than with native `required`, so the wording stays
+    // ours and translated instead of the browser's own English bubble.
+    const missing: Partial<Record<Field, string[]>> = {};
+    if (!email) missing.email = [t('auth.validation.emailRequired')];
+    if (!password) missing.password = [t('auth.validation.passwordRequired')];
+    setMessages(missing);
+    if (Object.keys(missing).length > 0) return;
+
+    setPending(true);
     try {
-      await login(values);
+      await login({ email, password });
       navigate(from, { replace: true });
     } catch (error) {
       if (error instanceof ApiError && error.body.code === 'VALIDATION_FAILED') {
-        const mapped = fieldErrors(error, ['email', 'password'] as const);
-        form.setFields(mapped.fields);
+        const mapped = fieldErrors(error, FIELDS);
+        const byField: Partial<Record<Field, string[]>> = {};
+        for (const field of mapped.fields) byField[field.name] = field.errors;
+        setMessages(byField);
         if (mapped.unmatched.length > 0) setFormError(mapped.unmatched.join(' '));
       } else if (error instanceof ApiError && error.body.code === 'INVALID_CREDENTIALS') {
-        // Deliberately one message for both. The API answers a wrong password
-        // and an unknown account identically, and naming the field would leak
-        // whether an address is registered.
+        // Deliberately one message for both, and deliberately not a field
+        // error. The API answers a wrong password and an unknown account
+        // identically, and marking the email field would leak whether an
+        // address is registered.
         setFormError(t('auth.login.failed'));
       } else {
         setFormError(t('auth.unavailable'));
@@ -59,37 +74,55 @@ export function LoginPage() {
     <AuthCard
       title={t('auth.login.title')}
       subtitle={t('auth.login.subtitle')}
+      cardClassName="lg:min-h-[512px] lg:justify-center"
       footer={
         <>
-          {t('auth.login.noAccount')} <Link to="/signup" state={location.state}>{t('auth.login.createOne')}</Link>
+          {t('auth.login.noAccount')}{' '}
+          <Link className="text-text-primary underline" to="/signup" state={location.state}>
+            {t('auth.login.createOne')}
+          </Link>
         </>
       }
     >
-      {formError && (
-        <Alert type="error" message={formError} showIcon style={{ marginBottom: '16px' }} />
-      )}
+      {formError && <AuthFormError>{formError}</AuthFormError>}
 
-      <Form form={form} layout="vertical" onFinish={onFinish} requiredMark={false}>
-        <Form.Item
-          name="email"
+      <form className="flex flex-col gap-4" onSubmit={onSubmit} noValidate>
+        <Input
           label={t('auth.fields.email')}
-          rules={[{ required: true, message: t('auth.validation.emailRequired') }]}
-        >
-          <Input type="email" autoComplete="email" size="large" />
-        </Form.Item>
+          type="email"
+          autoComplete="email"
+          value={email}
+          onChange={setEmail}
+          isInvalid={Boolean(messages.email?.length)}
+          hint={messages.email?.length ? <FieldErrors messages={messages.email} /> : undefined}
+        />
 
-        <Form.Item
-          name="password"
-          label={t('auth.fields.password')}
-          rules={[{ required: true, message: t('auth.validation.passwordRequired') }]}
-        >
-          <Input.Password autoComplete="current-password" size="large" />
-        </Form.Item>
+        <div className="flex flex-col gap-1">
+          <Input
+            label={t('auth.fields.password')}
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="current-password"
+            value={password}
+            onChange={setPassword}
+            isInvalid={Boolean(messages.password?.length)}
+            hint={
+              messages.password?.length ? <FieldErrors messages={messages.password} /> : undefined
+            }
+          />
+          <button
+            type="button"
+            className="self-end text-body-2-medium text-text-secondary hover:text-text-primary"
+            aria-pressed={showPassword}
+            onClick={() => setShowPassword((shown) => !shown)}
+          >
+            {t(showPassword ? 'auth.fields.hidePassword' : 'auth.fields.showPassword')}
+          </button>
+        </div>
 
-        <Button type="primary" htmlType="submit" size="large" block loading={pending} disabled={pending}>
+        <Button type="submit" className="w-full" disabled={pending}>
           {t('auth.login.submit')}
         </Button>
-      </Form>
+      </form>
     </AuthCard>
   );
 }

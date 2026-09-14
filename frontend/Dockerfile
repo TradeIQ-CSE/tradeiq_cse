@@ -1,6 +1,10 @@
 FROM node:20-slim AS base
 WORKDIR /app
-RUN corepack enable
+# Install the repository-pinned package manager into the shared base layer.
+# Both deps and build inherit this layer, so the build stage never needs a
+# second registry request merely to invoke pnpm.
+RUN corepack enable \
+    && corepack prepare pnpm@9.15.0 --activate
 
 FROM base AS deps
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./

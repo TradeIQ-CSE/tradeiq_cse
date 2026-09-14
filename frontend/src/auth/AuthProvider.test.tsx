@@ -33,6 +33,26 @@ beforeEach(() => {
 });
 
 describe('AuthProvider', () => {
+  it('does not request a session for a public marketing route', async () => {
+    let refreshRequests = 0;
+    server.use(
+      http.post(`${AUTH_ORIGIN}/auth/refresh`, () => {
+        refreshRequests += 1;
+        return HttpResponse.json({ data: sessionBody() });
+      }),
+    );
+
+    render(
+      <AuthProvider restoreSession={false}>
+        <AuthProbe />
+      </AuthProvider>,
+    );
+
+    expect(screen.getByTestId('status')).toHaveTextContent('anonymous');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(refreshRequests).toBe(0);
+  });
+
   it('restores an authenticated session on mount when /auth/refresh succeeds', async () => {
     server.use(
       http.post(`${AUTH_ORIGIN}/auth/refresh`, () => HttpResponse.json({ data: sessionBody() })),

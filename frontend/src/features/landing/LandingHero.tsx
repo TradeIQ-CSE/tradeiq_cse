@@ -1,36 +1,32 @@
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import clockIcon from '../../assets/icons/clock.svg';
-import { LandingHeroMockup } from './LandingHeroMockup';
+import { RiArrowRightLine, RiTimeLine } from '@remixicon/react';
+import { ButtonLink } from '@/components/base/buttons/button';
+import { Chip } from '@/components/base/badges/chip';
+import { LandingBackdrop } from './LandingBackdrop';
+
+const HERO_CONTAINER = 'mx-auto w-full max-w-[96rem] px-4 sm:px-6 lg:px-8';
 
 export function LandingHero() {
   const { t } = useTranslation();
-
   return (
     <section className="landing-hero">
-      <div className="landing-hero__intro">
-        <span className="landing-hero__badge">{t('landing.hero.badge')}</span>
-        <h1 className="landing-hero__heading">
-          <span>{t('landing.hero.headlineLine1')}</span>
-          <span className="landing-hero__heading-accent">{t('landing.hero.headlineLine2')}</span>
-        </h1>
-        <p className="landing-hero__subtitle">{t('landing.hero.subtitle')}</p>
-        <div className="landing-hero__actions">
-          <Link to="/signup" className="landing-hero__cta-primary">
-            {t('landing.hero.getStarted')}
-          </Link>
-          <Link to="/login" className="landing-hero__cta-secondary">
-            {t('landing.hero.signIn')}
-          </Link>
+      <div className={HERO_CONTAINER}>
+        <div className="landing-hero-media relative isolate overflow-hidden rounded-3xl p-4 text-center sm:px-8 sm:py-10 lg:px-12 lg:py-16">
+          <LandingBackdrop />
+          <div className="landing-hero-glass relative mx-auto flex max-w-5xl flex-col items-center rounded-3xl px-5 py-10 sm:px-12 sm:py-20">
+            <Chip variant="caption" color="soft" className="landing-media-chip">{t('landing.hero.badge')}</Chip>
+            <h1 className="landing-display mt-6 max-w-5xl text-display-4-bold text-text-primary sm:text-display-1-bold lg:text-large-title-bold">
+              {t('landing.hero.headlineLine1')}{' '}
+              <span className="block">{t('landing.hero.headlineLine2')}</span>
+            </h1>
+            <p className="landing-lead mt-6 max-w-2xl text-headline-regular text-text-secondary">{t('landing.hero.subtitle')}</p>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <ButtonLink href="/markets" variant="primary">{t('landing.hero.getStarted')}</ButtonLink>
+              <ButtonLink href="/login" variant="secondary" trailingIcon={RiArrowRightLine} className="landing-media-secondary-button">{t('landing.hero.signIn')}</ButtonLink>
+            </div>
+            <p className="mt-6 flex items-center gap-2 text-body-2-medium text-text-secondary"><RiTimeLine className="size-4" aria-hidden />{t('landing.hero.dataNote')}</p>
+          </div>
         </div>
-      </div>
-
-      <div className="landing-hero__mockup-wrap">
-        <p className="landing-hero__note">
-          <img src={clockIcon} alt="" width={11} height={11} />
-          {t('landing.hero.dataNote')}
-        </p>
-        <LandingHeroMockup />
       </div>
     </section>
   );

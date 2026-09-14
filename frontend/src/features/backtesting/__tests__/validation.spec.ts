@@ -1,6 +1,20 @@
 import { describe, it, expect } from 'vitest';
 import { validateBacktestConfig } from '../domain/validation';
-import { createDefaultBacktestConfig } from '../domain/defaults';
+import { createDefaultBacktestConfig as createBlankBacktestConfig } from '../domain/defaults';
+
+function createDefaultBacktestConfig() {
+  const config = createBlankBacktestConfig();
+  config.security = {
+    symbol: 'JKH.N0000',
+    companyName: 'John Keells Holdings PLC',
+    sector: 'Consumer Discretionary',
+    sectorGicsCode: '25',
+    dataFrom: '2017-01-02',
+    dataTo: '2025-12-31',
+    price: 198.5,
+  };
+  return config;
+}
 
 describe('validateBacktestConfig', () => {
   it('should accept the minimum valid configuration', () => {

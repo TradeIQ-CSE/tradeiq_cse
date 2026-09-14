@@ -1,100 +1,107 @@
-import React from 'react';
-import { useBacktestWizard } from '../hooks/useBacktestWizard';
-import { AVAILABLE_METRICS } from '../domain/defaults';
+import { RiCheckDoubleLine } from "@remixicon/react";
+import { Button } from "@/components/base/buttons/button";
+import { CheckboxCard } from "@/components/base/checkbox/checkbox-card";
+import { Chip } from "@/components/base/badges/chip";
+import { AppNotice } from "@/components/application/layout/application-layout";
+import { cx } from "@/utils/cx";
+import { useBacktestWizard } from "../hooks/useBacktestWizard";
+import { AVAILABLE_METRICS } from "../domain/defaults";
+import {
+  BacktestFieldError,
+  BacktestSectionHeader,
+  BacktestStepHeader,
+} from "./BacktestStepLayout";
 
-export const MetricsStep: React.FC = () => {
+export function MetricsStep() {
   const { config, updateConfig, getStepErrors } = useBacktestWizard();
-  const errors = getStepErrors('metrics');
-  const metricsError = errors.find((e) => e.field === 'selected');
+  const metricsError = getStepErrors("metrics").find(
+    (error) => error.field === "selected",
+  );
+  const selectedMetrics = config.metrics.selected;
 
-  const selectedMetrics = config.metrics?.selected || [];
-
-  const handleToggleMetric = (id: string) => {
-    updateConfig((prev) => {
-      const selected = prev.metrics?.selected || [];
-      const exists = selected.includes(id);
-      const next = exists ? selected.filter((m) => m !== id) : [...selected, id];
+  const toggleMetric = (id: string) => {
+    updateConfig((previous) => {
+      const selected = previous.metrics.selected;
       return {
-        ...prev,
+        ...previous,
         metrics: {
-          ...prev.metrics,
-          selected: next,
+          selected: selected.includes(id)
+            ? selected.filter((metric) => metric !== id)
+            : [...selected, id],
         },
       };
     });
   };
 
   const selectAll = () => {
-    updateConfig((prev) => ({
-      ...prev,
-      metrics: {
-        selected: AVAILABLE_METRICS.map((m) => m.id),
-      },
+    updateConfig((previous) => ({
+      ...previous,
+      metrics: { selected: AVAILABLE_METRICS.map((metric) => metric.id) },
     }));
   };
 
   return (
-    <div className="metrics-step">
-      <div className="step-header">
-        <h2 className="step-header__title">6. Analytics & Performance Metrics</h2>
-        <p className="step-header__desc">
-          Select key risk and return metrics to highlight in the simulation summary and analytics reports.
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <BacktestStepHeader
+        step={6}
+        title="Choose the metrics to focus on"
+        description="These selections help you review which questions matter before submission. They do not change the strategy, trades, or execution rules."
+      />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-          Selected ({selectedMetrics.length} of {AVAILABLE_METRICS.length})
-        </span>
-        <button type="button" className="chip-btn" onClick={selectAll}>
-          Select All Metrics
-        </button>
-      </div>
+      <AppNotice title="Current results contract">
+        Every completed run returns initial capital, final cash, final equity,
+        the trade ledger, and the daily equity curve. TradeIQ only presents
+        additional financial metrics when they are returned by the API rather
+        than recomputing them in the browser.
+      </AppNotice>
 
-      {metricsError && <div className="form-error-text" style={{ marginBottom: '12px' }}>{metricsError.message}</div>}
-
-      <div className="grid-2">
-        {AVAILABLE_METRICS.map((metric) => {
-          const isSelected = selectedMetrics.includes(metric.id);
-
-          return (
-            <div
-              key={metric.id}
-              className={`option-card ${isSelected ? 'option-card--selected' : ''}`}
-              onClick={() => handleToggleMetric(metric.id)}
-              role="checkbox"
-              aria-checked={isSelected}
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === ' ' || e.key === 'Enter') {
-                  e.preventDefault();
-                  handleToggleMetric(metric.id);
-                }
-              }}
-            >
-              <div className="option-card__header">
-                <span className="option-card__title">{metric.name}</span>
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  readOnly
-                  tabIndex={-1}
-                  aria-hidden="true"
-                  style={{ accentColor: 'var(--accent)', pointerEvents: 'none' }}
-                />
-              </div>
-              <p className="option-card__desc">{metric.description}</p>
+      <section className="flex flex-col gap-3">
+        <BacktestSectionHeader
+          title="Analysis focus"
+          description="Select at least one concept to carry into the review step."
+          aside={
+            <div className="flex items-center gap-2">
+              <Chip color="blue">
+                {selectedMetrics.length} of {AVAILABLE_METRICS.length}
+              </Chip>
+              <Button
+                variant="secondary"
+                size="small"
+                leadingIcon={RiCheckDoubleLine}
+                onClick={selectAll}
+              >
+                Select all
+              </Button>
             </div>
-          );
-        })}
-      </div>
-
-      <div className="info-banner" style={{ marginTop: '24px' }}>
-        <span>📊</span>
-        <span>
-          Regardless of the summary metrics selected, the TradeIQ backtest engine will calculate and persist the full trade ledger entries and daily portfolio equity curve.
-        </span>
-      </div>
+          }
+        />
+        <BacktestFieldError>{metricsError?.message}</BacktestFieldError>
+        <div
+          className="grid gap-3 sm:grid-cols-2"
+          role="group"
+          aria-label="Backtest analysis metrics"
+        >
+          {AVAILABLE_METRICS.map((metric) => {
+            const isSelected = selectedMetrics.includes(metric.id);
+            return (
+              <CheckboxCard
+                key={metric.id}
+                isSelected={isSelected}
+                onChange={() => toggleMetric(metric.id)}
+                title={metric.name}
+                description={metric.description}
+                className={({ isSelected: selected }) =>
+                  cx(
+                    "h-full items-start",
+                    selected &&
+                      "border-border-button-active bg-status-blue-background",
+                  )
+                }
+              />
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
-};
+}
