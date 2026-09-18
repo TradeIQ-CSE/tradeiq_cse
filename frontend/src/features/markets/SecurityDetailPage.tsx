@@ -522,6 +522,8 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
                       "securityDetail.chart.values.adjustedClose",
                     ),
                     volume: t("securityDetail.chart.values.volume"),
+                    zoomIn: t("securityDetail.chart.zoomIn"),
+                    zoomOut: t("securityDetail.chart.zoomOut"),
                   }}
                 />
               </div>

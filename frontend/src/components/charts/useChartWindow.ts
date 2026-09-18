@@ -25,14 +25,17 @@ export function useChartWindow(total: number, plotWidth: number) {
   const carriedPixels = useRef(0);
 
   const barWidth = barWidthFor(plotWidth, targetVisible);
-  const visibleCount = visibleCountFor(plotWidth, barWidth, total);
+  // Before the panel has been measured there is no width to divide, so honour
+  // the requested count as-is rather than pinning the window to its default.
+  const visibleCount =
+    plotWidth > 0
+      ? visibleCountFor(plotWidth, barWidth, total)
+      : Math.min(total, targetVisible);
   const startIndex = clampStartIndex(start, visibleCount, total);
   const canScroll = total > visibleCount;
   /** Zooming out stops here, which is what keeps candles above a usable width. */
-  const maxVisible = Math.max(
-    1,
-    Math.floor(Math.max(plotWidth, MIN_BAR_WIDTH) / MIN_BAR_WIDTH),
-  );
+  const maxVisible =
+    plotWidth > 0 ? Math.max(1, Math.floor(plotWidth / MIN_BAR_WIDTH)) : total;
 
   // A new series (symbol, timeframe or range) is a new chart: open it on the
   // most recent bars at the default zoom instead of keeping the old window.
@@ -86,6 +89,11 @@ export function useChartWindow(total: number, plotWidth: number) {
   return {
     barWidth,
     visibleCount,
+    // A zoom that cannot change anything should look unavailable rather than
+    // silently do nothing: in is capped by one bar, out by the whole series
+    // fitting or by the candles reaching their minimum width.
+    canZoomIn: visibleCount > 1,
+    canZoomOut: visibleCount < Math.min(total, maxVisible),
     startIndex,
     canScroll,
     atStart: startIndex === 0,

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import {
   candleBody,
   candleColor,
@@ -275,4 +276,47 @@ describe("CandlestickChart", () => {
       expect(centers[1]).toEqual(centers[0]);
     },
   );
+});
+
+describe("zoom controls", () => {
+  const series = (count: number) =>
+    Array.from({ length: count }, (_, index) =>
+      point({
+        date: `2026-01-${String((index % 28) + 1).padStart(2, "0")}`,
+        close: 100 + (index % 5),
+        volume: 1_000 + index,
+      }),
+    );
+
+  it("shows fewer bars when zooming in and more when zooming out", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<CandlestickChart data={series(60)} />);
+    const frame = container.querySelector<HTMLElement>("[data-chart-mode]")!;
+    const shown = () => Number(frame.dataset.visibleBars);
+
+    const opened = shown();
+    expect(opened).toBe(DEFAULT_VISIBLE_BARS);
+
+    await user.click(screen.getByRole("button", { name: "Show fewer periods" }));
+    expect(shown()).toBeLessThan(opened);
+
+    await user.click(screen.getByRole("button", { name: "Show more periods" }));
+    await user.click(screen.getByRole("button", { name: "Show more periods" }));
+    expect(shown()).toBeGreaterThan(opened);
+  });
+
+  it("disables zooming in once a single bar fills the chart", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<CandlestickChart data={series(60)} />);
+    const frame = container.querySelector<HTMLElement>("[data-chart-mode]")!;
+    const zoomIn = screen.getByRole("button", { name: "Show fewer periods" });
+
+    for (let press = 0; press < 12; press += 1) {
+      if ((zoomIn as HTMLButtonElement).disabled) break;
+      await user.click(zoomIn);
+    }
+
+    expect(Number(frame.dataset.visibleBars)).toBe(1);
+    expect(zoomIn).toBeDisabled();
+  });
 });

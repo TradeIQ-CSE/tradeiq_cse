@@ -42,6 +42,8 @@ interface CandlestickChartLabels {
   close: string;
   adjustedClose: string;
   volume: string;
+  zoomIn: string;
+  zoomOut: string;
 }
 
 const DEFAULT_LABELS: CandlestickChartLabels = {
@@ -52,6 +54,8 @@ const DEFAULT_LABELS: CandlestickChartLabels = {
   close: "Close",
   adjustedClose: "Adjusted close",
   volume: "Volume",
+  zoomIn: "Show fewer periods",
+  zoomOut: "Show more periods",
 };
 
 interface TooltipPayloadItem {
@@ -156,26 +160,32 @@ export function CandlestickChart({
   }, []);
 
   const chartWindow = useChartWindow(plottedData.length, plotWidth);
-  const { barWidth, visibleCount, startIndex, canScroll, panByPixels, zoomBy } =
-    chartWindow;
+  const {
+    barWidth,
+    visibleCount,
+    startIndex,
+    canScroll,
+    canZoomIn,
+    canZoomOut,
+    panByPixels,
+    zoomBy,
+  } = chartWindow;
   const visibleBars = plottedData.slice(startIndex, startIndex + visibleCount);
   const priceDomain = windowDomain(visibleBars, mode);
 
   // Wheel has to be bound here rather than through onWheel: React attaches a
-  // passive listener, which cannot preventDefault, so a pinch would zoom the
-  // whole page and a sideways scroll would navigate back.
+  // passive listener, which cannot preventDefault, so a sideways scroll would
+  // navigate back instead of moving the window.
+  //
+  // Zoom is left to the buttons below. A trackpad pinch arrives as a wheel
+  // event with ctrlKey set, but the browser also acts on it as page zoom and
+  // does not always let the page win, so handling it here zoomed the whole
+  // window as often as the chart.
   useEffect(() => {
     const frame = frameRef.current;
     if (!frame || !canScroll) return;
     const onWheel = (event: WheelEvent) => {
-      // Browsers report a trackpad pinch as a wheel event with ctrlKey set.
-      if (event.ctrlKey || event.metaKey) {
-        event.preventDefault();
-        const rect = frame.getBoundingClientRect();
-        const anchor = (event.clientX - rect.left) / Math.max(rect.width, 1);
-        zoomBy(event.deltaY < 0 ? 1.1 : 1 / 1.1, anchor);
-        return;
-      }
+      if (event.ctrlKey || event.metaKey) return;
       const sideways =
         Math.abs(event.deltaX) > Math.abs(event.deltaY)
           ? event.deltaX
@@ -186,7 +196,7 @@ export function CandlestickChart({
     };
     frame.addEventListener("wheel", onWheel, { passive: false });
     return () => frame.removeEventListener("wheel", onWheel);
-  }, [canScroll, panByPixels, zoomBy]);
+  }, [canScroll, panByPixels]);
 
   const dragOrigin = useRef<number | null>(null);
 
@@ -222,6 +232,12 @@ export function CandlestickChart({
               } else if (event.key === "End") {
                 event.preventDefault();
                 chartWindow.setStartIndex(plottedData.length);
+              } else if (event.key === "+" || event.key === "=") {
+                event.preventDefault();
+                zoomBy(1.4);
+              } else if (event.key === "-") {
+                event.preventDefault();
+                zoomBy(1 / 1.4);
               }
             }
           : undefined
@@ -414,6 +430,39 @@ export function CandlestickChart({
           </BarChart>
         </ResponsiveContainer>
       </div>
+
+      {(canScroll || visibleCount > 1) && (
+        // Zoom lives on buttons rather than a pinch: the browser treats a
+        // trackpad pinch as page zoom and does not reliably yield it to the
+        // page, so the gesture zoomed the window as often as the chart.
+        // Pointer events stop here so pressing a button cannot start a drag.
+        <div
+          className="absolute right-2 top-2 z-10 flex gap-1"
+          onPointerDown={(event) => event.stopPropagation()}
+          onPointerMove={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            aria-label={labels.zoomOut}
+            title={labels.zoomOut}
+            disabled={!canZoomOut}
+            onClick={() => zoomBy(1 / 1.4)}
+            className="flex size-7 items-center justify-center rounded-lg border border-border-button-default bg-background-primary-default text-body-medium text-text-secondary transition-colors hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            &minus;
+          </button>
+          <button
+            type="button"
+            aria-label={labels.zoomIn}
+            title={labels.zoomIn}
+            disabled={!canZoomIn}
+            onClick={() => zoomBy(1.4)}
+            className="flex size-7 items-center justify-center rounded-lg border border-border-button-default bg-background-primary-default text-body-medium text-text-secondary transition-colors hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            +
+          </button>
+        </div>
+      )}
 
       {canScroll && (
         // A thumb sized to the window's share of the series: without it there
