@@ -455,15 +455,31 @@ export class SecuritiesService {
       };
     }
 
+    // Aggregated from the daily rows inside the requested window rather than
+    // read from market_data.price_aggregates, whose rows cover whole calendar
+    // periods: a stored bar can only be returned when the range encloses it
+    // completely, so any window that starts mid-period (or is shorter than one
+    // period) comes back empty. Grouping here clamps each bar to the days the
+    // caller actually asked for, so the first and last period are partial bars
+    // instead of missing ones. `field` is a literal chosen from the validated
+    // timeframe enum, never interpolated request text.
+    const field = timeframe === 'weekly' ? 'week' : 'month';
     const rows: RawAggregateOhlcvRow[] = await this.securities.manager.query(
-      `SELECT period_start, period_end, open, high, low, close, volume
-         FROM market_data.price_aggregates
+      `SELECT
+           min(trade_date) AS period_start,
+           max(trade_date) AS period_end,
+           (array_agg(open ORDER BY trade_date)
+              FILTER (WHERE open IS NOT NULL))[1] AS open,
+           max(high) AS high,
+           min(low) AS low,
+           (array_agg(close ORDER BY trade_date DESC))[1] AS close,
+           sum(volume) AS volume
+         FROM market_data.daily_prices
          WHERE security_id = $1
-           AND period_type = $2
-           AND period_start >= $3::date
-           AND period_end <= $4::date
-         ORDER BY period_start ASC`,
-      [security.security_id, timeframe, from, to],
+           AND trade_date BETWEEN $2::date AND $3::date
+         GROUP BY date_trunc('${field}', trade_date)
+         ORDER BY date_trunc('${field}', trade_date) ASC`,
+      [security.security_id, from, to],
     );
     return {
       data: {

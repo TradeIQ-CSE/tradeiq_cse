@@ -386,7 +386,7 @@ describe('SecuritiesService', () => {
     });
 
     it.each(['weekly', 'monthly'] as const)(
-      'maps %s aggregate bars and requires each period to fit the range',
+      'maps %s aggregate bars, grouping the daily rows inside the range',
       async (timeframe) => {
         mockSecurity();
         managerQuery.mockResolvedValueOnce([
@@ -409,14 +409,17 @@ describe('SecuritiesService', () => {
 
         expect(managerQuery).toHaveBeenNthCalledWith(
           2,
-          expect.stringContaining('AND period_start >= $3::date'),
-          ['security-1', timeframe, '2025-01-01', '2025-01-31'],
+          expect.stringContaining('FROM market_data.daily_prices'),
+          ['security-1', '2025-01-01', '2025-01-31'],
+        );
+        // The stored whole-period rows are deliberately not consulted: they can
+        // only be returned when the range encloses them, which is the bug here.
+        expect(managerQuery.mock.calls[1][0]).not.toContain('price_aggregates');
+        expect(managerQuery.mock.calls[1][0]).toContain(
+          'AND trade_date BETWEEN $2::date AND $3::date',
         );
         expect(managerQuery.mock.calls[1][0]).toContain(
-          'AND period_end <= $4::date',
-        );
-        expect(managerQuery.mock.calls[1][0]).toContain(
-          'ORDER BY period_start ASC',
+          `GROUP BY date_trunc('${timeframe === 'weekly' ? 'week' : 'month'}', trade_date)`,
         );
         expect(result.data.bars).toEqual([
           {

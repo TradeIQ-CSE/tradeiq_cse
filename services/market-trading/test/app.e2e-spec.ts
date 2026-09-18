@@ -183,7 +183,7 @@ describe('HealthModule (e2e)', () => {
       });
     });
 
-    it('returns deterministic weekly aggregates and excludes partial periods', async () => {
+    it('returns deterministic weekly aggregates bounded by traded days', async () => {
       const complete = await request(app.getHttpServer())
         .get(
           '/securities/JKH.N0000/ohlcv' +
@@ -191,9 +191,11 @@ describe('HealthModule (e2e)', () => {
         )
         .expect(200);
 
+      // period_start is the first day that traded in the period, not the
+      // calendar Monday: the week of 2024-12-30 opens on Thursday 2 Jan here.
       expect(complete.body.data.bars).toEqual([
         {
-          period_start: '2024-12-30',
+          period_start: '2025-01-02',
           period_end: '2025-01-03',
           open: 22.48,
           high: 22.69,
@@ -211,14 +213,78 @@ describe('HealthModule (e2e)', () => {
           volume: 5186409,
         },
       ]);
+    });
 
-      const partial = await request(app.getHttpServer())
+    it('clamps the weeks at both ends of the range instead of dropping them', async () => {
+      const response = await request(app.getHttpServer())
         .get(
           '/securities/JKH.N0000/ohlcv' +
-            '?timeframe=weekly&from=2025-01-02&to=2025-01-10',
+            '?timeframe=weekly&from=2025-01-03&to=2025-01-07',
         )
         .expect(200);
-      expect(partial.body.data.bars).toEqual([complete.body.data.bars[1]]);
+
+      // Fri 3 Jan and Mon-Tue 6-7 Jan: neither week fits the range, so both
+      // come back recomputed over the requested days only.
+      expect(response.body.data.bars).toEqual([
+        {
+          period_start: '2025-01-03',
+          period_end: '2025-01-03',
+          open: 22.41,
+          high: 22.69,
+          low: 22.25,
+          close: 22.32,
+          volume: 785056,
+        },
+        {
+          period_start: '2025-01-06',
+          period_end: '2025-01-07',
+          open: 22.43,
+          high: 22.62,
+          low: 21.75,
+          close: 22.42,
+          volume: 2289839,
+        },
+      ]);
+    });
+
+    it('returns a partial bar for a range shorter than one period', async () => {
+      const weekly = await request(app.getHttpServer())
+        .get(
+          '/securities/JKH.N0000/ohlcv' +
+            '?timeframe=weekly&from=2025-01-07&to=2025-01-09',
+        )
+        .expect(200);
+
+      expect(weekly.body.data.bars).toEqual([
+        {
+          period_start: '2025-01-07',
+          period_end: '2025-01-09',
+          open: 22.12,
+          high: 22.75,
+          low: 21.86,
+          close: 22.35,
+          volume: 2675939,
+        },
+      ]);
+
+      const monthly = await request(app.getHttpServer())
+        .get(
+          '/securities/JKH.N0000/ohlcv' +
+            '?timeframe=monthly&from=2025-01-06&to=2025-01-08',
+        )
+        .expect(200);
+
+      expect(monthly.body.data.bars).toEqual([
+        {
+          period_start: '2025-01-06',
+          period_end: '2025-01-08',
+          open: 22.43,
+          high: 22.75,
+          low: 21.75,
+          close: 22.21,
+          volume: 3460824,
+        },
+      ]);
     });
 
     it('returns deterministic monthly aggregates', async () => {
@@ -231,7 +297,7 @@ describe('HealthModule (e2e)', () => {
 
       expect(response.body.data.bars).toEqual([
         {
-          period_start: '2025-01-01',
+          period_start: '2025-01-02',
           period_end: '2025-01-10',
           open: 22.48,
           high: 22.84,

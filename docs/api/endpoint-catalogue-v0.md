@@ -255,6 +255,12 @@ OHLCV bar series for charting.
 
 Validation: `from` must be ≤ `to`; both must be valid calendar dates.
 
+Weekly and monthly bars are clamped to the requested range: a week or month the
+range only partly covers is returned as a bar computed from the days inside the
+range, not omitted. A range shorter than one week or month therefore still
+returns one bar. Every bar aggregates only days within `from`..`to`, so no bar
+extends beyond the requested window.
+
 ### 200 — daily example
 
 `GET /securities/JKH.N0000/ohlcv?timeframe=daily&from=2025-01-01&to=2025-01-03`
@@ -283,8 +289,10 @@ Validation: `from` must be ≤ `to`; both must be valid calendar dates.
 
 ### 200 — weekly/monthly bar shape
 
-Weekly/monthly bars come from `price_aggregates` and use period fields instead of
-`date`; there is no `adjusted_close`:
+Weekly/monthly bars are grouped from the daily rows in the requested range and
+use period fields instead of `date`; there is no `adjusted_close`. `period_start`
+and `period_end` are the first and last day that traded within the bar, so they
+fall inside `from`..`to` and need not be the calendar period's boundaries:
 
 ```json
 {
