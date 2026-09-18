@@ -83,7 +83,10 @@ export function chartDateLabel(point: ChartDatum, locale: string): string {
     timeZone: 'UTC',
   });
   const start = formatter.format(asUtcDate(point.date));
-  return point.periodEnd
+  // A weekly or monthly bar can cover a single traded day, because the API
+  // clamps periods to the requested range and a holiday-shortened week leaves
+  // one session. Repeating the same date either side of a dash reads as a bug.
+  return point.periodEnd && point.periodEnd !== point.date
     ? `${start} – ${formatter.format(asUtcDate(point.periodEnd))}`
     : start;
 }

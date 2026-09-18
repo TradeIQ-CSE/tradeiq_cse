@@ -129,6 +129,15 @@ describe("chartDateLabel", () => {
       ),
     ).toBe("Aug 24, 2026 – Aug 28, 2026");
   });
+
+  it("shows one date for an aggregate period that covers a single day", () => {
+    expect(
+      chartDateLabel(
+        point({ date: "2026-08-24", periodEnd: "2026-08-24" }),
+        "en-US",
+      ),
+    ).toBe("Aug 24, 2026");
+  });
 });
 
 describe("CandlestickChart", () => {
