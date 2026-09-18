@@ -319,4 +319,27 @@ describe("zoom controls", () => {
     expect(Number(frame.dataset.visibleBars)).toBe(1);
     expect(zoomIn).toBeDisabled();
   });
+
+  it("zooms back out after zooming all the way in", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<CandlestickChart data={series(60)} />);
+    const frame = container.querySelector<HTMLElement>("[data-chart-mode]")!;
+    const shown = () => Number(frame.dataset.visibleBars);
+    const zoomIn = screen.getByRole("button", { name: "Show fewer periods" });
+    const zoomOut = screen.getByRole("button", { name: "Show more periods" });
+
+    for (let press = 0; press < 12; press += 1) {
+      if ((zoomIn as HTMLButtonElement).disabled) break;
+      await user.click(zoomIn);
+    }
+    const fullyIn = shown();
+
+    // Rounding used to trap the count here, leaving the button enabled and
+    // every press inert.
+    expect(zoomOut).toBeEnabled();
+    await user.click(zoomOut);
+    expect(shown()).toBeGreaterThan(fullyIn);
+    await user.click(zoomOut);
+    expect(shown()).toBeGreaterThan(fullyIn + 1);
+  });
 });

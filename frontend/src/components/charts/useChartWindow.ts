@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DEFAULT_VISIBLE_BARS,
+  MAX_BAR_WIDTH,
   MIN_BAR_WIDTH,
   barWidthFor,
   clampStartIndex,
@@ -36,6 +37,14 @@ export function useChartWindow(total: number, plotWidth: number) {
   /** Zooming out stops here, which is what keeps candles above a usable width. */
   const maxVisible =
     plotWidth > 0 ? Math.max(1, Math.floor(plotWidth / MIN_BAR_WIDTH)) : total;
+  /**
+   * Zooming in stops here. Asking for fewer bars than this would need candles
+   * wider than the maximum, so the extra width is refused and the count stops
+   * falling — leaving the requested count below the count actually drawn, from
+   * where a zoom out could not climb back.
+   */
+  const minVisible =
+    plotWidth > 0 ? Math.max(1, Math.ceil(plotWidth / MAX_BAR_WIDTH)) : 1;
 
   // A new series (symbol, timeframe or range) is a new chart: open it on the
   // most recent bars at the default zoom instead of keeping the old window.
@@ -68,11 +77,16 @@ export function useChartWindow(total: number, plotWidth: number) {
    */
   const zoomBy = useCallback(
     (factor: number, anchorRatio = 0.5) => {
-      const next = Math.min(
-        maxVisible,
-        Math.max(1, Math.round(targetVisible / factor)),
-      );
-      if (next === visibleCount) return;
+      // Rounding alone stalls at small counts: one bar times 1.4 rounds back
+      // to one, so every press after a full zoom in did nothing. Each press
+      // moves by at least one bar.
+      const rounded = Math.round(targetVisible / factor);
+      const stepped =
+        factor > 1
+          ? Math.min(rounded, targetVisible - 1)
+          : Math.max(rounded, targetVisible + 1);
+      const next = Math.min(maxVisible, Math.max(minVisible, stepped));
+      if (next === targetVisible) return;
       setTargetVisible(next);
       const anchorBar = Math.round(visibleCount * anchorRatio);
       setStart(
@@ -83,7 +97,7 @@ export function useChartWindow(total: number, plotWidth: number) {
         ),
       );
     },
-    [maxVisible, startIndex, targetVisible, total, visibleCount],
+    [maxVisible, minVisible, startIndex, targetVisible, total, visibleCount],
   );
 
   return {
@@ -92,7 +106,7 @@ export function useChartWindow(total: number, plotWidth: number) {
     // A zoom that cannot change anything should look unavailable rather than
     // silently do nothing: in is capped by one bar, out by the whole series
     // fitting or by the candles reaching their minimum width.
-    canZoomIn: visibleCount > 1,
+    canZoomIn: visibleCount > minVisible,
     canZoomOut: visibleCount < Math.min(total, maxVisible),
     startIndex,
     canScroll,
