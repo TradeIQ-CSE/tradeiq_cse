@@ -350,6 +350,10 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
                 isInvalid={rangeHasError}
                 describedBy={rangeHasError ? RANGE_ERROR_ID : undefined}
                 placeholder={t("securityDetail.range.placeholder")}
+                // The chart pans and zooms, so the bars on screen drift away
+                // from the committed range; the loaded range is stated above
+                // the chart instead.
+                showsSelectedRange={false}
                 labels={{
                   startDate: t("securityDetail.range.from"),
                   endDate: t("securityDetail.range.to"),

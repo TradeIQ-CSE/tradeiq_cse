@@ -103,7 +103,22 @@ describe("SecurityDetailPage", () => {
     const rangeTrigger = screen.getByRole("button", {
       name: t("securityDetail.range.label"),
     });
-    await waitFor(() => expect(rangeTrigger).toHaveTextContent("Sep 2, 2025"));
+    // The trigger offers to open the picker rather than naming the range: the
+    // chart pans and zooms, so dates on the button would soon disagree with
+    // the bars on screen. The loaded range is stated above the chart instead.
+    await waitFor(() =>
+      expect(rangeTrigger).toHaveTextContent(
+        t("securityDetail.range.placeholder"),
+      ),
+    );
+    expect(
+      screen.getByText(
+        t("securityDetail.chart.range", {
+          from: "Sep 2, 2025",
+          to: "Sep 2, 2026",
+        }),
+      ),
+    ).toBeInTheDocument();
     const { from, to } = await openDateRange(user);
     expect(from).toHaveValue(chipDate(dailyOhlcvFixture.from!));
     expect(to).toHaveValue(chipDate(dailyOhlcvFixture.to!));

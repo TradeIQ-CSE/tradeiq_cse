@@ -91,6 +91,13 @@ export interface DateRangePickerProps {
   "aria-label"?: string;
   /** Trigger text shown when no range is committed yet. Default "Select date range". */
   placeholder?: string;
+  /**
+   * Whether the trigger echoes the committed range. Turn it off where what is
+   * on screen can move away from that range on its own — a chart that pans or
+   * zooms, say — because a trigger showing dates the view no longer matches is
+   * worse than one that just offers to open the picker.
+   */
+  showsSelectedRange?: boolean;
   labels?: Partial<DateRangePickerLabels>;
 }
 
@@ -339,6 +346,7 @@ export function DateRangePicker({
   className,
   "aria-label": ariaLabel = "Date range",
   placeholder = "Select date range",
+  showsSelectedRange = true,
   labels: labelOverrides,
 }: DateRangePickerProps) {
   const labels = useMemo(
@@ -406,7 +414,7 @@ export function DateRangePicker({
           aria-hidden
         />
         <span className="flex items-center justify-center whitespace-nowrap px-1 text-body-medium text-text-primary">
-          {committedValue
+          {committedValue && showsSelectedRange
             ? `${formatTriggerDate(committedValue.start)} - ${formatTriggerDate(committedValue.end)}`
             : placeholder}
         </span>

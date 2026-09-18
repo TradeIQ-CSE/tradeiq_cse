@@ -356,7 +356,7 @@
     },
     "range": {
       "label": "Historical date range",
-      "placeholder": "Select a historical range",
+      "placeholder": "Select date range",
       "from": "From",
       "to": "To",
       "selectedDays_one": "{{count}} day selected",
