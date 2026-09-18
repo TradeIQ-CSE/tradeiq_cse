@@ -8,6 +8,7 @@ import {
   ChartDatum,
   chartDateLabel,
   withCandleComparisons,
+  DEFAULT_VISIBLE_BARS,
 } from "./candlestick";
 import { chartPalette } from "./chart-theme";
 import { CandlestickChart } from "./CandlestickChart";
@@ -266,8 +267,11 @@ describe("CandlestickChart", () => {
         }),
       );
 
-      expect(centers[0]).toHaveLength(count);
-      expect(centers[1]).toHaveLength(count);
+      // The chart draws a window rather than the whole series. jsdom reports
+      // no element width, so the window falls back to its default size.
+      const drawn = Math.min(count, DEFAULT_VISIBLE_BARS);
+      expect(centers[0]).toHaveLength(drawn);
+      expect(centers[1]).toHaveLength(drawn);
       expect(centers[1]).toEqual(centers[0]);
     },
   );

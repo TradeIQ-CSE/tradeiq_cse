@@ -12,6 +12,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   candleBody,
   candleColor,
@@ -19,9 +20,11 @@ import {
   ChartDatum,
   chartDateLabel,
   chartTickLabel,
+  windowDomain,
   withCandleComparisons,
 } from "./candlestick";
 import { chartPalette } from "./chart-theme";
+import { useChartWindow } from "./useChartWindow";
 
 interface CandlestickChartProps {
   data: readonly ChartDatum[];
@@ -136,24 +139,117 @@ export function CandlestickChart({
   const showsAdjustedClose = data.some(
     (point) => point.adjustedClose !== undefined,
   );
-  const prices =
-    mode === "close"
-      ? data.map((point) => point.close)
-      : data.flatMap((point) => [point.low, point.high]);
-  const minimumPrice = prices.length > 0 ? Math.min(...prices) : 0;
-  const maximumPrice = prices.length > 0 ? Math.max(...prices) : 1;
-  const padding = Math.max((maximumPrice - minimumPrice) * 0.05, 1);
-  const priceDomain: [number, number] = [
-    minimumPrice - padding,
-    maximumPrice + padding,
-  ];
+  const frameRef = useRef<HTMLDivElement | null>(null);
+  const [plotWidth, setPlotWidth] = useState(0);
+
+  // The window is measured in bars, so it needs the pixel width the bars are
+  // drawn across: the panel minus the price axis recharts reserves.
+  useLayoutEffect(() => {
+    const frame = frameRef.current;
+    if (!frame) return;
+    const measure = () =>
+      setPlotWidth(Math.max(0, frame.clientWidth - VALUE_AXIS_WIDTH));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(frame);
+    return () => observer.disconnect();
+  }, []);
+
+  const chartWindow = useChartWindow(plottedData.length, plotWidth);
+  const { barWidth, visibleCount, startIndex, canScroll, panByPixels, zoomBy } =
+    chartWindow;
+  const visibleBars = plottedData.slice(startIndex, startIndex + visibleCount);
+  const priceDomain = windowDomain(visibleBars, mode);
+
+  // Wheel has to be bound here rather than through onWheel: React attaches a
+  // passive listener, which cannot preventDefault, so a pinch would zoom the
+  // whole page and a sideways scroll would navigate back.
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame || !canScroll) return;
+    const onWheel = (event: WheelEvent) => {
+      // Browsers report a trackpad pinch as a wheel event with ctrlKey set.
+      if (event.ctrlKey || event.metaKey) {
+        event.preventDefault();
+        const rect = frame.getBoundingClientRect();
+        const anchor = (event.clientX - rect.left) / Math.max(rect.width, 1);
+        zoomBy(event.deltaY < 0 ? 1.1 : 1 / 1.1, anchor);
+        return;
+      }
+      const sideways =
+        Math.abs(event.deltaX) > Math.abs(event.deltaY)
+          ? event.deltaX
+          : event.deltaY;
+      if (sideways === 0) return;
+      event.preventDefault();
+      panByPixels(sideways);
+    };
+    frame.addEventListener("wheel", onWheel, { passive: false });
+    return () => frame.removeEventListener("wheel", onWheel);
+  }, [canScroll, panByPixels, zoomBy]);
+
+  const dragOrigin = useRef<number | null>(null);
 
   return (
     <div
-      className="relative h-[320px] w-full min-w-0 max-w-full overflow-hidden sm:h-[360px]"
+      ref={frameRef}
+      className={`relative h-[332px] w-full min-w-0 max-w-full overflow-hidden sm:h-[372px] ${
+        canScroll ? "cursor-ew-resize touch-pan-y" : ""
+      }`}
       role="group"
       aria-label={accessibleLabel}
       data-chart-mode={mode}
+      data-visible-bars={visibleCount}
+      data-bar-width={barWidth}
+      data-start-index={startIndex}
+      tabIndex={canScroll ? 0 : undefined}
+      onKeyDown={
+        canScroll
+          ? (event) => {
+              const step =
+                event.key === "PageDown" || event.key === "PageUp"
+                  ? visibleCount
+                  : 1;
+              if (event.key === "ArrowRight" || event.key === "PageDown") {
+                event.preventDefault();
+                chartWindow.panByBars(step);
+              } else if (event.key === "ArrowLeft" || event.key === "PageUp") {
+                event.preventDefault();
+                chartWindow.panByBars(-step);
+              } else if (event.key === "Home") {
+                event.preventDefault();
+                chartWindow.setStartIndex(0);
+              } else if (event.key === "End") {
+                event.preventDefault();
+                chartWindow.setStartIndex(plottedData.length);
+              }
+            }
+          : undefined
+      }
+      onPointerDown={
+        canScroll
+          ? (event) => {
+              dragOrigin.current = event.clientX;
+              event.currentTarget.setPointerCapture(event.pointerId);
+            }
+          : undefined
+      }
+      onPointerMove={
+        canScroll
+          ? (event) => {
+              if (dragOrigin.current === null) return;
+              // Drag right to walk back in time, as on any trading chart.
+              panByPixels(dragOrigin.current - event.clientX);
+              dragOrigin.current = event.clientX;
+            }
+          : undefined
+      }
+      onPointerUp={() => {
+        dragOrigin.current = null;
+      }}
+      onPointerCancel={() => {
+        dragOrigin.current = null;
+      }}
     >
       <div
         className="h-[230px] w-full min-w-0 max-w-full sm:h-[265px]"
@@ -162,7 +258,7 @@ export function CandlestickChart({
         <ResponsiveContainer width="100%" height="100%">
           {mode === "close" ? (
             <LineChart
-              data={plottedData}
+              data={visibleBars}
               margin={{ top: 10, right: 8, left: 0, bottom: 0 }}
             >
               <CartesianGrid
@@ -212,7 +308,7 @@ export function CandlestickChart({
             </LineChart>
           ) : (
             <BarChart
-              data={plottedData}
+              data={visibleBars}
               margin={{ top: 10, right: 8, left: 0, bottom: 0 }}
             >
               <CartesianGrid
@@ -251,7 +347,7 @@ export function CandlestickChart({
                 maxBarSize={12}
                 minPointSize={2}
               >
-                {plottedData.map((point) => (
+                {visibleBars.map((point) => (
                   <Cell key={point.date} fill={candleColor(point)} />
                 ))}
                 <ErrorBar
@@ -275,7 +371,7 @@ export function CandlestickChart({
       >
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
-            data={plottedData}
+            data={visibleBars}
             margin={{ top: 0, right: 8, left: 0, bottom: 0 }}
           >
             <CartesianGrid
@@ -305,7 +401,7 @@ export function CandlestickChart({
               axisLine={false}
             />
             <Bar dataKey="volume" isAnimationActive={false} maxBarSize={12}>
-              {plottedData.map((point) => (
+              {visibleBars.map((point) => (
                 <Cell
                   key={`${point.date}-${point.periodEnd ?? ""}-volume`}
                   fill={
@@ -318,6 +414,23 @@ export function CandlestickChart({
           </BarChart>
         </ResponsiveContainer>
       </div>
+
+      {canScroll && (
+        // A thumb sized to the window's share of the series: without it there
+        // is nothing on screen saying the chart holds more than it shows.
+        <div
+          className="mt-1 ml-[55px] mr-2 h-1 rounded-full bg-background-secondary-default"
+          aria-hidden="true"
+        >
+          <div
+            className="h-full rounded-full bg-foreground-icon-tertiary/60"
+            style={{
+              width: `${(visibleCount / plottedData.length) * 100}%`,
+              marginLeft: `${(startIndex / plottedData.length) * 100}%`,
+            }}
+          />
+        </div>
+      )}
 
       <table className="sr-only">
         <caption>{accessibleLabel}</caption>
