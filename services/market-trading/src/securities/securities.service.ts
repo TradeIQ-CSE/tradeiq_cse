@@ -7,7 +7,11 @@ import {
   SecurityNotFoundException,
   ValidationFailedException,
 } from '../common/errors/api-exception';
-import { resolveMarketDate, toIsoDate } from '../common/market-date';
+import {
+  oneCalendarYearBefore,
+  resolveMarketDate,
+  toIsoDate,
+} from '../common/market-date';
 import { ListSecuritiesQueryDto } from './dto/list-securities-query.dto';
 import { OhlcvQueryDto, OhlcvTimeframe } from './dto/ohlcv-query.dto';
 
@@ -154,19 +158,6 @@ interface RawAggregateOhlcvRow {
 function round(value: number, decimals: number): number {
   const factor = 10 ** decimals;
   return Math.round(value * factor) / factor;
-}
-
-function oneCalendarYearBefore(day: string): string {
-  const [year, month, date] = day.split('-').map(Number);
-  const targetYear = year - 1;
-  const candidate = new Date(Date.UTC(targetYear, month - 1, date));
-
-  // JavaScript rolls 2024-02-29 back to 2023-03-01. A calendar-year window
-  // should clamp that one exceptional case to the last day of February.
-  if (candidate.getUTCMonth() !== month - 1) {
-    candidate.setUTCDate(0);
-  }
-  return candidate.toISOString().slice(0, 10);
 }
 
 @Injectable()

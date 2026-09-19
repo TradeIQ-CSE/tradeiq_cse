@@ -2,8 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Security } from '../entities/security.entity';
-import { SecurityNotFoundException } from '../common/errors/api-exception';
-import { resolveMarketDate, toIsoDate } from '../common/market-date';
+import {
+  SecurityNotFoundException,
+  ValidationFailedException,
+} from '../common/errors/api-exception';
+import {
+  oneCalendarYearBefore,
+  resolveMarketDate,
+  toIsoDate,
+} from '../common/market-date';
 import { resolveSettlementDate } from '../common/settlement-date';
 
 export type ListingStatus = 'listed' | 'suspended' | 'delisted';
@@ -29,6 +36,21 @@ export interface Valuations {
   prices: ValuationPrice[];
 }
 
+// docs/api/paper-trading-v1.md §2.5 — the same closes, one entry per session
+// across a window. A symbol with no close on a session is absent from that
+// session's list rather than carried forward or nulled: §3.4 forbids mixing
+// dates across positions, so the caller has to see the gap and decide.
+export interface ValuationSeriesSession {
+  date: string;
+  prices: ValuationPrice[];
+}
+
+export interface ValuationSeries {
+  from: string | null;
+  to: string | null;
+  sessions: ValuationSeriesSession[];
+}
+
 // Raw row shape from the hand-written query below. numeric comes back as a
 // string from the pg driver; `date` comes back as a JS Date.
 interface RawQuoteRow {
@@ -42,6 +64,21 @@ interface RawValuationRow {
   symbol: string;
   close: string | null;
 }
+
+interface RawSeriesPriceRow {
+  trade_date: Date | string;
+  symbol: string;
+  close: string | null;
+}
+
+interface RawSessionRow {
+  trade_date: Date | string;
+}
+
+// A window this wide already covers every paper portfolio (they date from 2026)
+// and more than the charts ask for, while bounding a request that would
+// otherwise be 200 symbols wide and the whole 2017-2025 history long.
+const MAX_SESSIONS = 1000;
 
 // market_data.listing_events is an event log, not a status column
 // (event_type IN ('listed','suspended','resumed','delisted')). Derive the
@@ -203,6 +240,107 @@ export class PaperTradingQuotesService {
           };
         })
         .sort(bySymbol),
+    };
+  }
+
+  // docs/api/paper-trading-v1.md §2.5 — every session in a window, each priced
+  // by the §2.4 rule.
+  //
+  // Exists because a portfolio value chart needs one point per session, and
+  // getValuations answers for a single session: rendering a year would be a
+  // request per trading day. Sessions come from the market rather than from the
+  // requested symbols, so an all-cash portfolio still gets a point on each one.
+  async getValuationSeries(
+    symbols: readonly string[],
+    from?: string,
+    to?: string,
+  ): Promise<ValuationSeries> {
+    const manager = this.securities.manager;
+
+    // Window defaults follow the OHLCV endpoint (securities.service.ts) rather
+    // than the as_of contract: a chart range that runs past the available data
+    // should return the sessions that exist, not a 400.
+    const latestRows: { to: Date | string | null }[] = await manager.query(
+      `SELECT max(trade_date) AS "to" FROM market_data.daily_prices`,
+    );
+    const resolvedTo = to ?? toIsoDate(latestRows[0]?.to ?? null) ?? undefined;
+
+    if (resolvedTo === undefined) {
+      if (from !== undefined) {
+        throw new ValidationFailedException([
+          {
+            field: 'to',
+            reason: 'cannot be defaulted because no market data is available',
+          },
+        ]);
+      }
+      return { from: null, to: null, sessions: [] };
+    }
+
+    const resolvedFrom = from ?? oneCalendarYearBefore(resolvedTo);
+    if (resolvedFrom > resolvedTo) {
+      throw new ValidationFailedException([
+        { field: 'from', reason: 'must be before or equal to to' },
+      ]);
+    }
+
+    const sessionRows: RawSessionRow[] = await manager.query(
+      `SELECT DISTINCT trade_date
+         FROM market_data.daily_prices
+        WHERE trade_date BETWEEN $1::date AND $2::date
+        ORDER BY trade_date ASC`,
+      [resolvedFrom, resolvedTo],
+    );
+
+    // Checked after the session query rather than by counting calendar days:
+    // what costs is the price fan-out below, and only real sessions drive it.
+    if (sessionRows.length > MAX_SESSIONS) {
+      throw new ValidationFailedException([
+        {
+          field: 'from',
+          reason: `must select at most ${MAX_SESSIONS} market sessions`,
+        },
+      ]);
+    }
+
+    // Case-insensitive and deduplicated, as in §2.4: a repeated symbol must not
+    // produce two entries for one position.
+    const requested = [...new Set(symbols.map((s) => s.toUpperCase()))];
+
+    const priceRows: RawSeriesPriceRow[] =
+      requested.length === 0 || sessionRows.length === 0
+        ? []
+        : await manager.query(
+            `
+      SELECT p.trade_date, s.symbol, p.close
+      FROM market_data.daily_prices p
+      JOIN market_data.securities s ON s.security_id = p.security_id
+      WHERE upper(s.symbol) = ANY($1::text[])
+        AND p.trade_date BETWEEN $2::date AND $3::date
+      ORDER BY p.trade_date ASC, s.symbol ASC
+      `,
+            [requested, resolvedFrom, resolvedTo],
+          );
+
+    const byDate = new Map<string, ValuationPrice[]>();
+    for (const row of priceRows) {
+      const date = toIsoDate(row.trade_date);
+      const prices = byDate.get(date) ?? [];
+      prices.push({
+        // Canonical stored symbol, as in §2.3 and §2.4.
+        symbol: row.symbol,
+        close: row.close !== null ? Number(row.close) : null,
+      });
+      byDate.set(date, prices);
+    }
+
+    return {
+      from: resolvedFrom,
+      to: resolvedTo,
+      sessions: sessionRows.map((row) => {
+        const date = toIsoDate(row.trade_date);
+        return { date, prices: byDate.get(date) ?? [] };
+      }),
     };
   }
 }

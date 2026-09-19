@@ -73,3 +73,19 @@ export async function resolveMarketDate(
     availableTo,
   };
 }
+
+// The default OHLCV/series window: one calendar year back from `day`. Shared by
+// the securities OHLCV endpoint and the §2.5 valuation series so both offer the
+// same default range.
+export function oneCalendarYearBefore(day: string): string {
+  const [year, month, date] = day.split('-').map(Number);
+  const targetYear = year - 1;
+  const candidate = new Date(Date.UTC(targetYear, month - 1, date));
+
+  // JavaScript rolls 2024-02-29 back to 2023-03-01. A calendar-year window
+  // should clamp that one exceptional case to the last day of February.
+  if (candidate.getUTCMonth() !== month - 1) {
+    candidate.setUTCDate(0);
+  }
+  return candidate.toISOString().slice(0, 10);
+}
