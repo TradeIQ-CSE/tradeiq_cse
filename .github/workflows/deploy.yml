@@ -1,0 +1,83 @@
+# Builds the deployable images and publishes them to GHCR.
+#
+# It does NOT reach into the server. The VM runs a systemd timer that fetches
+# this repository and pulls these images every few minutes (see
+# deploy/tradeiq-deploy.sh), so nothing here needs an SSH key, and port 22 on
+# the server stays closed to everything except a known address.
+#
+# To move deployments from dev to main later, change the branch in `on.push`
+# below and set IMAGE_TAG=main in /opt/tradeiq/.env.production on the server.
+# Images are tagged with the branch name, so both can exist side by side.
+name: Deploy
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+concurrency:
+  # A newer commit supersedes an in-flight build: publishing an older image
+  # after a newer one would silently roll the site back on the next pull.
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  # The browser-visible API origins. Vite inlines these when the frontend image
+  # is BUILT, so they cannot be changed on the server — an image is tied to the
+  # domain it was built for.
+  PUBLIC_ORIGIN: https://tradeiqcse.tech
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: market-trading
+            dockerfile: services/market-trading/Dockerfile
+          - service: identity-auth
+            dockerfile: services/identity-auth/Dockerfile
+          - service: ml-prediction
+            dockerfile: services/ml-prediction/Dockerfile
+          - service: frontend
+            dockerfile: frontend/Dockerfile
+          # Not a long-running service: the seed job in docker-compose.prod.yml
+          # runs this image on demand to import a price-history release.
+          - service: data-ingestion
+            dockerfile: pipeline/data-ingestion/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      # GHCR package names must be lowercase; the org is not.
+      - name: Resolve image name
+        id: image
+        run: echo "name=${REGISTRY}/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')/${{ matrix.service }}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          # The branch tag is what the server tracks; the SHA tag is what a
+          # rollback pins to, so every deployed commit stays addressable.
+          tags: |
+            ${{ steps.image.outputs.name }}:${{ github.ref_name }}
+            ${{ steps.image.outputs.name }}:${{ github.sha }}
+          build-args: |
+            VITE_MARKET_TRADING_API_URL=${{ env.PUBLIC_ORIGIN }}/api/market
+            VITE_IDENTITY_AUTH_API_URL=${{ env.PUBLIC_ORIGIN }}/api/auth
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}

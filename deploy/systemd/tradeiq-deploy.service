@@ -1,0 +1,20 @@
+# Runs one deploy check. Triggered by tradeiq-deploy.timer, not enabled itself.
+#
+#   sudo cp deploy/systemd/tradeiq-deploy.* /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now tradeiq-deploy.timer
+#
+# Logs: journalctl -u tradeiq-deploy.service -f
+[Unit]
+Description=Pull and apply the latest TradeIQ images
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/opt/tradeiq
+Environment=DEPLOY_BRANCH=dev
+ExecStart=/opt/tradeiq/deploy/tradeiq-deploy.sh
+# A hung pull must not block every later run; the timer fires again regardless.
+TimeoutStartSec=15min

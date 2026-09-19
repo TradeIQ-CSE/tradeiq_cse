@@ -1,0 +1,177 @@
+# The whole production stack. `docker compose up` brings up everything —
+# database, both Nest services, the ML service, the frontend and the nginx that
+# fronts them — so a new server needs no hand-installed software beyond Docker.
+#
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+#
+# Differs from docker-compose.yml in four ways that matter:
+#   1. It pulls pre-built images from GHCR instead of building. A 2 GiB box
+#      cannot build the frontend bundle without being OOM-killed, and CI has
+#      already built and tested exactly this commit.
+#   2. Only nginx publishes ports. Everything else is reachable solely over the
+#      private Compose network, so the database and the internal ingestion route
+#      cannot be hit from the internet even by mistake.
+#   3. No default values. A missing secret fails the stack rather than silently
+#      starting it with the development key that is published in this repository.
+#   4. TLS is part of the stack: certbot issues and renews, nginx serves.
+name: tradeiq-cse
+
+x-restart: &restart
+  restart: unless-stopped
+
+services:
+  db:
+    image: postgres:16-alpine
+    <<: *restart
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.production}
+      # Read by init.prod.sh on first boot to create the per-service users.
+      MARKET_DATA_DB_PASSWORD: ${MARKET_DATA_DB_PASSWORD:?set MARKET_DATA_DB_PASSWORD}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?set AUTH_DB_PASSWORD}
+      ML_DB_PASSWORD: ${ML_DB_PASSWORD:?set ML_DB_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      # init.prod.sh, not init.sql: the development script hardcodes 'changeme'.
+      - ./docker/db/init.prod.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  market-trading:
+    image: ghcr.io/tradeiq-cse/tradeiq_cse/market-trading:${IMAGE_TAG:-dev}
+    <<: *restart
+    environment:
+      NODE_ENV: production
+      MARKET_TRADING_PORT: 3001
+      MARKET_DATA_DATABASE_URL: postgresql://market_data:${MARKET_DATA_DB_PASSWORD:?set MARKET_DATA_DB_PASSWORD}@db:5432/market_data
+      MARKET_TRADING_CORS_ORIGINS: https://tradeiqcse.tech
+      MARKET_INGESTION_TOKEN: ${MARKET_INGESTION_TOKEN:?set MARKET_INGESTION_TOKEN}
+      # Verification only. The private half lives in identity-auth alone.
+      AUTH_JWT_PUBLIC_KEYS: ${AUTH_JWT_PUBLIC_KEYS:?set AUTH_JWT_PUBLIC_KEYS}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://localhost:3001/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  identity-auth:
+    image: ghcr.io/tradeiq-cse/tradeiq_cse/identity-auth:${IMAGE_TAG:-dev}
+    <<: *restart
+    environment:
+      NODE_ENV: production
+      IDENTITY_AUTH_PORT: 3002
+      AUTH_DATABASE_URL: postgresql://auth:${AUTH_DB_PASSWORD:?set AUTH_DB_PASSWORD}@db:5432/auth
+      AUTH_JWT_PRIVATE_KEY: ${AUTH_JWT_PRIVATE_KEY:?set AUTH_JWT_PRIVATE_KEY}
+      AUTH_EMAIL_ENCRYPTION_KEY: ${AUTH_EMAIL_ENCRYPTION_KEY:?set AUTH_EMAIL_ENCRYPTION_KEY}
+      # nginx terminates TLS and forwards X-Forwarded-Proto, so the browser
+      # really is on HTTPS and the refresh cookie must carry Secure.
+      AUTH_REFRESH_COOKIE_SECURE: "true"
+      IDENTITY_AUTH_CORS_ORIGINS: https://tradeiqcse.tech
+    depends_on:
+      db:
+        condition: service_healthy
+
+  ml-prediction-migrate:
+    image: ghcr.io/tradeiq-cse/tradeiq_cse/ml-prediction:${IMAGE_TAG:-dev}
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      ML_DATABASE_URL: postgresql://ml:${ML_DB_PASSWORD:?set ML_DB_PASSWORD}@db:5432/ml
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  ml-prediction:
+    image: ghcr.io/tradeiq-cse/tradeiq_cse/ml-prediction:${IMAGE_TAG:-dev}
+    <<: *restart
+    environment:
+      ML_PREDICTION_PORT: 8001
+      ML_DATABASE_URL: postgresql://ml:${ML_DB_PASSWORD:?set ML_DB_PASSWORD}@db:5432/ml
+    depends_on:
+      ml-prediction-migrate:
+        condition: service_completed_successfully
+
+  frontend:
+    # Vite inlines the API origins at BUILD time, so this image is tied to
+    # https://tradeiqcse.tech. The publish workflow passes them as build args;
+    # setting them here would do nothing.
+    image: ghcr.io/tradeiq-cse/tradeiq_cse/frontend:${IMAGE_TAG:-dev}
+    <<: *restart
+    depends_on:
+      - market-trading
+      - identity-auth
+
+  # Seeds the 2017-2025 price history. Not started by `up`; run on demand:
+  #   docker compose ... run --rm -e CSE_DATASET_ARTIFACT=<url> market-data-seed
+  market-data-seed:
+    image: ghcr.io/tradeiq-cse/tradeiq_cse/data-ingestion:${IMAGE_TAG:-dev}
+    profiles: ["seed"]
+    command: ["python", "-m", "data_ingestion.release_import"]
+    environment:
+      DATA_INGESTION_MARKET_DATA_DATABASE_URL: postgresql://market_data:${MARKET_DATA_DB_PASSWORD:?set MARKET_DATA_DB_PASSWORD}@db:5432/market_data
+      CSE_DATASET_ARTIFACT: ${CSE_DATASET_ARTIFACT:-}
+    depends_on:
+      market-trading:
+        condition: service_healthy
+    restart: "no"
+
+  nginx:
+    image: nginx:1.29-alpine
+    <<: *restart
+    # The only service exposed to the internet.
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: tradeiqcse.tech
+    volumes:
+      # Both candidate configs; the entrypoint picks one based on whether a
+      # certificate exists yet.
+      - ./deploy/nginx/bootstrap.conf:/etc/nginx/available/bootstrap.conf:ro
+      - ./deploy/nginx/tls.conf:/etc/nginx/available/tls.conf:ro
+      - ./deploy/nginx/upstreams.conf:/etc/nginx/upstreams.conf:ro
+      - ./deploy/nginx/common.conf:/etc/nginx/common.conf:ro
+      - ./deploy/nginx/proxy_params:/etc/nginx/proxy_params:ro
+      - ./deploy/nginx/entrypoint.sh:/entrypoint.sh:ro
+      - letsencrypt:/etc/letsencrypt
+      - certbot-webroot:/var/www/certbot
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    depends_on:
+      - frontend
+      - market-trading
+      - identity-auth
+      - ml-prediction
+
+  # Renews the certificate. Issuance is a one-off:
+  #   docker compose ... run --rm certbot certonly --webroot -w /var/www/certbot \
+  #     -d tradeiqcse.tech -d www.tradeiqcse.tech --agree-tos -m <email> --no-eff-email
+  # Let's Encrypt certificates last 90 days; checking twice a day is their
+  # recommendation and a no-op until the last 30.
+  certbot:
+    image: certbot/certbot:latest
+    <<: *restart
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - certbot-webroot:/var/www/certbot
+    entrypoint: >
+      sh -c "trap exit TERM;
+             while :; do
+               certbot renew --webroot -w /var/www/certbot --quiet;
+               sleep 12h & wait $${!};
+             done"
+
+volumes:
+  db-data:
+  letsencrypt:
+  certbot-webroot:

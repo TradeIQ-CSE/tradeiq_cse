@@ -1,0 +1,17 @@
+# Checks for a new build a few minutes after boot and every 5 minutes after.
+#
+# 5 minutes is the deliberate trade-off of pull-based deploys: a merge to dev
+# reaches the site within that window instead of instantly. Shorten it and you
+# pay in GHCR requests for no real benefit; the build itself takes longer.
+[Unit]
+Description=Check for new TradeIQ images
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+# Without this, a reboot during the night runs every missed interval at once.
+Persistent=false
+Unit=tradeiq-deploy.service
+
+[Install]
+WantedBy=timers.target
