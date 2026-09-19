@@ -19,7 +19,7 @@ export function LandingNav() {
           <nav aria-label={t('landing.nav.label')} className="hidden items-center gap-6 lg:flex">
             <Link to="/markets" className="text-body-medium text-text-secondary hover:text-status-blue-text">{t('landing.nav.links.market')}</Link>
             <Link to="/how-it-works" className="text-body-medium text-text-secondary hover:text-status-blue-text">{t('landing.nav.links.workspace')}</Link>
-            <Link to="/backtests/new/security" className="text-body-medium text-text-secondary hover:text-status-blue-text">{t('landing.nav.links.backtesting')}</Link>
+            <Link to="/backtests/new" className="text-body-medium text-text-secondary hover:text-status-blue-text">{t('landing.nav.links.backtesting')}</Link>
           </nav>
           <div className="flex items-center gap-2 lg:justify-self-end">
             <ThemeModeControl compact className="shrink-0" />
@@ -30,7 +30,7 @@ export function LandingNav() {
         <nav aria-label={t('landing.nav.label')} className="mt-3 flex items-center justify-between gap-4 border-t border-separator-border pt-3 lg:hidden">
           <Link to="/markets" className="text-body-2-medium text-text-secondary hover:text-status-blue-text">{t('landing.nav.links.market')}</Link>
           <Link to="/how-it-works" className="text-body-2-medium text-text-secondary hover:text-status-blue-text">{t('landing.nav.links.workspace')}</Link>
-          <Link to="/backtests/new/security" className="text-body-2-medium text-text-secondary hover:text-status-blue-text">{t('landing.nav.links.backtesting')}</Link>
+          <Link to="/backtests/new" className="text-body-2-medium text-text-secondary hover:text-status-blue-text">{t('landing.nav.links.backtesting')}</Link>
         </nav>
       </div>
     </header>

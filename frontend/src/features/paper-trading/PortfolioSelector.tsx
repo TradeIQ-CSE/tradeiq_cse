@@ -4,12 +4,17 @@ import { Button } from "../../components/base/buttons/button";
 import { Select, SelectItem } from "../../components/base/select/select";
 import { PageToolbar } from "../../components/application/layout/application-layout";
 import { Portfolio } from "./types";
+import { TradingDetails } from './TradingDetails';
+import { localeFor } from '@/i18n';
+import { formatMoney } from './format';
 
 interface PortfolioSelectorProps {
   portfolios: Portfolio[];
   selectedId: string | null;
   onSelect: (portfolioId: string) => void;
   onCreateNew: () => void;
+  compact?: boolean;
+  disabled?: boolean;
 }
 
 // Native <select> + <button>, not a styled <div onClick> menu — the paper
@@ -20,8 +25,11 @@ export function PortfolioSelector({
   selectedId,
   onSelect,
   onCreateNew,
+  compact = false,
+  disabled = false,
 }: PortfolioSelectorProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const selected = portfolios.find((portfolio) => portfolio.portfolio_id === selectedId);
 
   return (
     <PageToolbar
@@ -32,7 +40,10 @@ export function PortfolioSelector({
         <span className="text-body-2-medium text-text-secondary">
           {t("portfolio.selector.label")}
         </span>
-        <Select
+        {compact && portfolios.length === 1 ? (
+          <span className="break-words text-body-medium text-text-primary">{selected?.name}</span>
+        ) : <Select
+          isDisabled={disabled}
           aria-label={t("portfolio.selector.label")}
           className="w-full"
           selectedKey={selectedId}
@@ -54,16 +65,24 @@ export function PortfolioSelector({
               </span>
             </SelectItem>
           ))}
-        </Select>
+        </Select>}
+        {compact && selected && (
+          <span className="text-body-2-regular text-text-secondary">
+            {t('paperTrading.workflow.availableCash', { cash: formatMoney(selected.cash_balance, localeFor(i18n.resolvedLanguage ?? i18n.language)) })}
+          </span>
+        )}
       </div>
-      <Button
+      <TradingDetails className="sm:ml-auto" title={t('paperTrading.workflow.manageAccounts')} expanded={!compact} disabled={disabled}>
+        <Button
         className="sm:ml-auto"
         variant="secondary"
         leadingIcon={RiAddLine}
         onClick={onCreateNew}
+        disabled={disabled}
       >
         {t("portfolio.selector.new")}
       </Button>
+      </TradingDetails>
     </PageToolbar>
   );
 }

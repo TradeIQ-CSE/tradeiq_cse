@@ -6,17 +6,22 @@ export function BacktestStepHeader({
   step,
   title,
   description,
+  embedded = false,
+  total = 7,
 }: {
   step: number;
   title: ReactNode;
   description: ReactNode;
+  embedded?: boolean;
+  total?: number;
 }) {
+  if (embedded) return null;
   return (
     <header className="flex flex-col gap-1.5 border-b border-separator-border pb-5">
       <p className="text-caption-1-semibold text-status-blue-text">
-        Step {step} of 7
+        Step {step} of {total}
       </p>
-      <h2 className="text-title-2-medium text-text-primary">{title}</h2>
+      <h2 tabIndex={-1} className="text-title-2-medium text-text-primary outline-none">{title}</h2>
       <p className="max-w-3xl text-body-regular text-text-secondary">
         {description}
       </p>

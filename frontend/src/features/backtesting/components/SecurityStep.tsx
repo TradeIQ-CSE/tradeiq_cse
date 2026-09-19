@@ -20,8 +20,8 @@ import {
   BacktestStepHeader,
 } from "./BacktestStepLayout";
 
-export function SecurityStep() {
-  const { config, updateConfig, getStepErrors } = useBacktestWizard();
+export function SecurityStep({ embedded = false }: { embedded?: boolean }) {
+  const { config, selectSecurity, getStepErrors } = useBacktestWizard();
   const symbolError = getStepErrors("security").find(
     (error) => error.field === "symbol",
   );
@@ -65,40 +65,21 @@ export function SecurityStep() {
   }, [config.security.sector, config.security.sectorGicsCode]);
 
   const handleSelectSecurity = (security: SecurityListItem) => {
-    updateConfig((previous) => {
-      let startDate = previous.period.startDate;
-      let endDate = previous.period.endDate;
-
-      if (security.data_from && startDate < security.data_from) {
-        startDate = security.data_from;
-      }
-      if (security.data_to && endDate > security.data_to) {
-        endDate = security.data_to;
-      }
-      if (startDate > endDate) {
-        startDate = security.data_from ?? previous.period.startDate;
-        endDate = security.data_to ?? previous.period.endDate;
-      }
-
-      return {
-        ...previous,
-        security: {
-          symbol: security.symbol,
-          companyName: security.company_name,
-          sector: security.sector?.name ?? null,
-          sectorGicsCode: security.sector?.gics_code ?? null,
-          price: security.price,
-          dataFrom: security.data_from,
-          dataTo: security.data_to,
-        },
-        period: { startDate, endDate },
-      };
+    selectSecurity({
+      symbol: security.symbol,
+      companyName: security.company_name,
+      sector: security.sector?.name ?? null,
+      sectorGicsCode: security.sector?.gics_code ?? null,
+      price: security.price,
+      dataFrom: security.data_from,
+      dataTo: security.data_to,
     });
   };
 
   return (
     <div className="flex flex-col gap-6">
       <BacktestStepHeader
+        embedded={embedded}
         step={1}
         title="Choose a CSE security"
         description="A backtest applies one set of rules to one listed security. Choose from the API-backed CSE universe and check its available historical coverage before continuing."

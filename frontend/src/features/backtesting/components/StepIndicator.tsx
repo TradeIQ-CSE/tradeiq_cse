@@ -2,6 +2,13 @@ import { RiCheckLine, RiErrorWarningLine } from "@remixicon/react";
 import { useBacktestWizard } from "../hooks/useBacktestWizard";
 import type { StepKey } from "../domain/types";
 import { cx } from "@/utils/cx";
+import { sectionsForPage } from "../domain/workflow";
+
+const SIMPLE_LABELS: Partial<Record<StepKey, string>> = {
+  security: "Company & period",
+  rules: "Your idea",
+  review: "Review & run",
+};
 
 const STEP_LABELS: Record<StepKey, string> = {
   security: "Security",
@@ -14,7 +21,7 @@ const STEP_LABELS: Record<StepKey, string> = {
 };
 
 export function StepIndicator() {
-  const { allSteps, currentStep, stepIndex, goToStep, getStepErrors } =
+  const { allSteps, currentStep, stepIndex, goToStep, getStepErrors, mode, isSubmitting } =
     useBacktestWizard();
 
   return (
@@ -26,15 +33,17 @@ export function StepIndicator() {
         {allSteps.map((step, index) => {
           const isActive = step === currentStep;
           const isComplete = index < stepIndex;
-          const hasError = getStepErrors(step).length > 0;
+          const hasError = sectionsForPage(mode, step).some((section) => getStepErrors(section).length > 0);
+          const label = mode === "simple" ? SIMPLE_LABELS[step] : STEP_LABELS[step];
 
           return (
             <li key={step} className="flex items-center">
               <button
                 type="button"
-                onClick={() => goToStep(step)}
+                disabled={isSubmitting}
+                onClick={() => goToStep(step, false)}
                 aria-current={isActive ? "step" : undefined}
-                aria-label={`Step ${index + 1}: ${STEP_LABELS[step]}${
+                aria-label={`Step ${index + 1}: ${label}${
                   hasError ? ", needs attention" : ""
                 }`}
                 className={cx(
@@ -69,7 +78,7 @@ export function StepIndicator() {
                     index + 1
                   )}
                 </span>
-                <span>{STEP_LABELS[step]}</span>
+                <span>{label}</span>
               </button>
               {index < allSteps.length - 1 && (
                 <span

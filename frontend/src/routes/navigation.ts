@@ -56,7 +56,7 @@ export const NAV_ROUTES: NavRoute[] = [
   {
     key: 'backtesting',
     labelKey: 'nav.items.backtesting',
-    path: '/backtests/new/security',
+    path: '/backtests/new',
     activePrefix: '/backtests',
     icon: RiHistoryLine,
     group: 'research',

@@ -470,7 +470,7 @@ export function StatusStep() {
           Browse markets
         </Button>
         <Button
-          onClick={() => navigate("/backtests/new/security")}
+          onClick={() => navigate("/backtests/new")}
           className="w-full sm:w-auto"
         >
           Configure another backtest

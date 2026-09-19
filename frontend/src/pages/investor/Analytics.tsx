@@ -32,7 +32,7 @@ export function Analytics() {
         title={t('analyticsPage.title')}
         description={t('analyticsPage.description')}
         actions={
-          <Button leadingIcon={RiFlaskLine} onClick={() => navigate('/backtests/new/security')}>
+          <Button leadingIcon={RiFlaskLine} onClick={() => navigate('/backtests/new')}>
             {t('analyticsPage.start')}
           </Button>
         }
@@ -70,7 +70,7 @@ export function Analytics() {
           ))}
         </ol>
 
-        <Button className="self-start" trailingIcon={RiArrowRightLine} onClick={() => navigate('/backtests/new/security')}>
+        <Button className="self-start" trailingIcon={RiArrowRightLine} onClick={() => navigate('/backtests/new')}>
           {t('analyticsPage.openWizard')}
         </Button>
       </AppPanel>

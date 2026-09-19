@@ -23,8 +23,8 @@ describe('mapToBacktestRequest', () => {
 
     expect(dto).toEqual({
       symbol: 'JKH.N0000',
-      startDate: '2024-01-01',
-      endDate: '2024-12-31',
+      startDate: '2025-01-01',
+      endDate: '2025-12-31',
       startingCapital: 1000000,
       rule: {
         buy: {

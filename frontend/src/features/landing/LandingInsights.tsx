@@ -4,7 +4,7 @@ import { LinkButton } from '@/components/base/buttons/link-button';
 import { LANDING_CONTAINER } from './layout';
 
 const CAPABILITIES = [
-  { key: 'charting', icon: RiTestTubeLine, href: '/backtests/new/security' },
+  { key: 'charting', icon: RiTestTubeLine, href: '/backtests/new' },
   { key: 'trading', icon: RiExchangeLine, href: '/paper-trading' },
   { key: 'portfolio', icon: RiPieChartLine, href: '/portfolio' },
 ] as const;

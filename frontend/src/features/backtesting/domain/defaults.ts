@@ -1,4 +1,26 @@
-import { BacktestConfig, FeeConfig } from './types';
+import { BacktestConfig, FeeConfig, PeriodConfig } from './types';
+import { parseDate } from '@internationalized/date';
+
+/** A frontend convenience only: execution still uses the existing API contract. */
+export function defaultBacktestPeriod(dataFrom?: string | null, dataTo?: string | null): PeriodConfig {
+  const parseCoverage = (value: string | null | undefined, fallback: string) => {
+    try {
+      return parseDate(value ?? fallback);
+    } catch {
+      return parseDate(fallback);
+    }
+  };
+  const minimum = parseCoverage(dataFrom, CSE_DATASET_MIN_DATE);
+  const maximum = parseCoverage(dataTo, CSE_DATASET_MAX_DATE);
+  // Invalid coverage must not create an inverted draft. The coverage/error UI
+  // remains responsible for explaining unavailable history.
+  if (minimum.compare(maximum) > 0) return defaultBacktestPeriod();
+  const yearStart = maximum.subtract({ years: 1 }).add({ days: 1 });
+  return {
+    startDate: (yearStart.compare(minimum) < 0 ? minimum : yearStart).toString(),
+    endDate: maximum.toString(),
+  };
+}
 
 /**
  * Standard Sri Lanka Colombo Stock Exchange (CSE) statutory fees:
@@ -55,10 +77,7 @@ export function createDefaultBacktestConfig(): BacktestConfig {
       dataTo: null,
       price: null,
     },
-    period: {
-      startDate: '2024-01-01',
-      endDate: '2024-12-31',
-    },
+    period: defaultBacktestPeriod(),
     rules: {
       buy: {
         type: 'period_start',

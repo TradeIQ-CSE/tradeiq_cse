@@ -11,6 +11,10 @@ import { ErrorCard, StateMessage } from './ui';
 
 interface PortfolioScopeProps {
   children: (portfolioId: string) => ReactNode;
+  creationDefaults?: { name: string; startingCapital: number };
+  mode?: 'simple' | 'advanced';
+  busy?: boolean;
+  onBusyChange?: (busy: boolean) => void;
 }
 
 /**
@@ -20,7 +24,7 @@ interface PortfolioScopeProps {
  * anything specific to the portfolio overview page itself (summary cards,
  * positions, ledger).
  */
-export function PortfolioScope({ children }: PortfolioScopeProps) {
+export function PortfolioScope({ children, creationDefaults, mode = 'advanced', busy, onBusyChange }: PortfolioScopeProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const portfoliosQuery = usePortfolios();
@@ -88,6 +92,8 @@ export function PortfolioScope({ children }: PortfolioScopeProps) {
     <div className="flex flex-col gap-5">
       {portfolios.length > 0 && (
         <PortfolioSelector
+          compact={mode === 'simple'}
+          disabled={busy}
           portfolios={portfolios}
           selectedId={portfolioId}
           onSelect={(id) => {
@@ -109,6 +115,10 @@ export function PortfolioScope({ children }: PortfolioScopeProps) {
             </p>
           )}
           <CreatePortfolioForm
+            simple={mode === 'simple'}
+            onBusyChange={onBusyChange}
+            initialName={creationDefaults?.name}
+            initialCapital={creationDefaults?.startingCapital}
             onCreated={(portfolio) => {
               rejectedIds.current.delete(portfolio.portfolio_id);
               selectPortfolio(portfolio.portfolio_id);

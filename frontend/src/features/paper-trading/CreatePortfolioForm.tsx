@@ -1,4 +1,4 @@
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError } from "../../lib/api";
 import { Button } from "../../components/base/buttons/button";
@@ -7,6 +7,9 @@ import { fieldErrors } from "../auth/field-errors";
 import { Card, CardHeading, ErrorCard } from "./ui";
 import { Portfolio } from "./types";
 import { useCreatePortfolio } from "./usePortfolios";
+import { TradingDetails } from './TradingDetails';
+import { localeFor } from '@/i18n';
+import { formatMoney } from './format';
 
 // docs/api/paper-trading-v1.md §5.1.
 const NAME_MAX_LENGTH = 100;
@@ -18,13 +21,17 @@ type KnownField = (typeof KNOWN_FIELDS)[number];
 
 interface CreatePortfolioFormProps {
   onCreated?: (portfolio: Portfolio) => void;
+  initialName?: string;
+  initialCapital?: number;
+  simple?: boolean;
+  onBusyChange?: (busy: boolean) => void;
 }
 
-export function CreatePortfolioForm({ onCreated }: CreatePortfolioFormProps) {
-  const { t } = useTranslation();
+export function CreatePortfolioForm({ onCreated, initialName = '', initialCapital, simple = false, onBusyChange }: CreatePortfolioFormProps) {
+  const { t, i18n } = useTranslation();
   const mutation = useCreatePortfolio();
-  const [name, setName] = useState("");
-  const [startingCapital, setStartingCapital] = useState("");
+  const [name, setName] = useState(initialName);
+  const [startingCapital, setStartingCapital] = useState(() => initialCapital === undefined ? '' : String(initialCapital));
   const [fieldMessages, setFieldMessages] = useState<
     Partial<Record<KnownField, string[]>>
   >({});
@@ -41,6 +48,20 @@ export function CreatePortfolioForm({ onCreated }: CreatePortfolioFormProps) {
   // is too late to stop two submits fired in the same tick (e.g. a
   // double-click) from both reaching mutateAsync.
   const submitting = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [invalid, setInvalid] = useState(false);
+  useEffect(() => {
+    if (Object.keys(fieldMessages).length === 0) return;
+    const frame = requestAnimationFrame(() => {
+      const field = formRef.current?.querySelector<HTMLInputElement>('input[aria-invalid="true"]');
+      field?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [fieldMessages]);
+  useEffect(() => {
+    onBusyChange?.(mutation.isPending);
+    return () => onBusyChange?.(false);
+  }, [mutation.isPending, onBusyChange]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -93,8 +114,30 @@ export function CreatePortfolioForm({ onCreated }: CreatePortfolioFormProps) {
     <Card className="max-w-xl">
       <CardHeading title={t("portfolio.create.title")} />
 
-      <form className="flex flex-col gap-4 px-4 pb-4" onSubmit={handleSubmit}>
+      <form ref={formRef} className="flex flex-col gap-4 px-4 pb-4" onSubmit={handleSubmit}
+        onInvalidCapture={(event) => {
+          // The invalid field may be hidden. Reveal it before focus instead
+          // of asking native validation to focus an invisible control.
+          if (simple) event.preventDefault();
+          setInvalid(true);
+          const target = event.target as HTMLElement;
+          requestAnimationFrame(() => target.focus());
+        }}>
         {formError && <ErrorCard role="alert">{formError}</ErrorCard>}
+
+        {simple && (
+          <div className="flex flex-col gap-1 rounded-2xl bg-background-secondary-default p-4">
+            <p className="break-words text-body-medium text-text-primary">{name}</p>
+            <p className="text-body-2-regular text-text-secondary">
+              {t('paperTrading.workflow.setupCash', { cash: formatMoney(Number(startingCapital), localeFor(i18n.resolvedLanguage ?? i18n.language)) })}
+            </p>
+            <p className="text-body-2-regular text-text-tertiary">{t('paperTrading.workflow.setupHelp')}</p>
+          </div>
+        )}
+
+        <TradingDetails title={t('paperTrading.workflow.configureAccount')}
+          expanded={!simple || invalid || Object.keys(fieldMessages).length > 0} disabled={mutation.isPending}>
+        <div className="flex flex-col gap-4">
 
         <Input
           label={t("portfolio.create.name")}
@@ -103,8 +146,9 @@ export function CreatePortfolioForm({ onCreated }: CreatePortfolioFormProps) {
           minLength={1}
           maxLength={NAME_MAX_LENGTH}
           isRequired
-          isInvalid={Boolean(fieldMessages.name?.length)}
-          hint={fieldMessages.name?.join(" ")}
+          isDisabled={mutation.isPending}
+          isInvalid={Boolean(fieldMessages.name?.length) || (invalid && (name.length < 1 || name.length > NAME_MAX_LENGTH))}
+          hint={fieldMessages.name?.join(" ") || (invalid && (name.length < 1 || name.length > NAME_MAX_LENGTH) ? t('paperTrading.workflow.nameHint') : undefined)}
           fieldClassName="ring-1 ring-inset ring-border-button-default"
         />
 
@@ -117,13 +161,16 @@ export function CreatePortfolioForm({ onCreated }: CreatePortfolioFormProps) {
           max={MAX_STARTING_CAPITAL}
           step="0.0001"
           isRequired
-          isInvalid={Boolean(fieldMessages.starting_capital?.length)}
+          isDisabled={mutation.isPending}
+          isInvalid={Boolean(fieldMessages.starting_capital?.length) || (invalid && (!startingCapital || !Number.isFinite(Number(startingCapital)) || Number(startingCapital) < MIN_STARTING_CAPITAL || Number(startingCapital) > MAX_STARTING_CAPITAL))}
           hint={
             fieldMessages.starting_capital?.join(" ") ||
             t("portfolio.create.startingCapitalHint")
           }
           fieldClassName="ring-1 ring-inset ring-border-button-default"
         />
+        </div>
+        </TradingDetails>
 
         <Button
           type="submit"
@@ -131,7 +178,7 @@ export function CreatePortfolioForm({ onCreated }: CreatePortfolioFormProps) {
           className="w-full sm:w-auto sm:self-start"
           disabled={mutation.isPending}
         >
-          {t("portfolio.create.submit")}
+          {t(simple ? 'paperTrading.workflow.createAccount' : "portfolio.create.submit")}
         </Button>
       </form>
     </Card>

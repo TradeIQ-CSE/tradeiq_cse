@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { ReactNode } from 'react';
 import { localeFor } from "../../i18n";
 import { formatMoney, formatSignedMoney } from "./format";
 import { OrderEstimate } from "./types";
@@ -11,6 +12,8 @@ import {
   StateMessage,
 } from "./ui";
 import { financialToneClass } from "../../components/application/financial-data";
+import { TradingDetails } from './TradingDetails';
+import { cx } from '@/utils/cx';
 
 interface EstimatePanelProps {
   estimate: OrderEstimate | null;
@@ -25,6 +28,8 @@ interface EstimatePanelProps {
   isStale: boolean;
   /** An i18n key from order-messages.ts, or null when there is no error. */
   errorKey: string | null;
+  simple?: boolean;
+  confirmation?: ReactNode;
 }
 
 /** Rate percentages are display-only figures echoed from the API, not a signed change — no +/- sign, unlike format.ts's formatPercent. */
@@ -39,6 +44,8 @@ export function EstimatePanel({
   isPending,
   isStale,
   errorKey,
+  simple = false,
+  confirmation,
 }: EstimatePanelProps) {
   const { t, i18n } = useTranslation();
   const locale = localeFor(i18n.resolvedLanguage ?? i18n.language);
@@ -69,6 +76,7 @@ export function EstimatePanel({
   }
 
   if (!estimate) {
+    if (simple) return null;
     return (
       <Card className="min-h-80">
         <CardHeading
@@ -100,6 +108,13 @@ export function EstimatePanel({
         </p>
       )}
 
+      {simple && <p className="px-4 pb-4 text-body-medium text-text-primary sm:px-5">
+        {t('paperTrading.workflow.reviewSummary', {
+          side: t(`paperTrading.ticket.sides.${estimate.side}`),
+          quantity: estimate.quantity, symbol: estimate.symbol,
+        })}
+      </p>}
+
       <dl className="grid grid-cols-1 gap-3 px-4 pb-4 sm:grid-cols-2 sm:px-5 sm:pb-5">
         <div className="flex flex-col gap-0.5 rounded-2xl bg-background-secondary-default p-3">
           <dt className="text-body-medium text-text-secondary">
@@ -117,24 +132,30 @@ export function EstimatePanel({
             {estimate.price_as_of}
           </dd>
         </div>
-        <div className="flex flex-col gap-0.5 rounded-2xl bg-background-secondary-default p-3">
+        {!simple && <div className="flex flex-col gap-0.5 rounded-2xl bg-background-secondary-default p-3">
           <dt className="text-body-medium text-text-secondary">
             {t("paperTrading.ticket.estimate.settlementDate")}
           </dt>
           <dd className="text-headline-medium tabular-nums text-text-primary">
             {estimate.settlement_date}
           </dd>
-        </div>
+        </div>}
         <div className="flex flex-col gap-0.5 rounded-2xl bg-background-secondary-default p-3">
           <dt className="text-body-medium text-text-secondary">
-            {t("paperTrading.ticket.estimate.grossConsideration")}
+            {t(simple ? 'paperTrading.workflow.shareValue' : "paperTrading.ticket.estimate.grossConsideration")}
           </dt>
           <dd className="text-headline-medium tabular-nums text-text-primary">
             {formatMoney(estimate.gross_consideration, locale)}
           </dd>
         </div>
+        {simple && <div className="flex flex-col gap-0.5 rounded-2xl bg-background-secondary-default p-3">
+          <dt className="text-body-medium text-text-secondary">{t('paperTrading.workflow.totalCharges')}</dt>
+          <dd className="text-headline-medium tabular-nums text-text-primary">{formatMoney(estimate.fee_total, locale)}</dd>
+        </div>}
       </dl>
 
+      <div className="px-4 pb-4 sm:px-5">
+      <TradingDetails title={t('paperTrading.workflow.chargeBreakdown')} expanded={!simple}>
       <div className="overflow-x-auto border-t border-separator-border">
         <table className="bui-table bui-table-sm">
           <thead>
@@ -166,7 +187,7 @@ export function EstimatePanel({
             ))}
             {/* There is no "rate" for a total, so that cell is simply empty
                 rather than carrying a placeholder figure. */}
-            <tr>
+            {!simple && <tr>
               {/* `.bui-table th` paints the column-header background, which on
                   a row header reads as a stray block mid-table — overridden
                   inline because that rule is more specific than a utility. */}
@@ -181,25 +202,36 @@ export function EstimatePanel({
               <td className="text-right tabular-nums">
                 {formatMoney(estimate.fee_total, locale)}
               </td>
-            </tr>
+            </tr>}
           </tbody>
         </table>
       </div>
+      </TradingDetails>
+      </div>
 
-      <div className="flex items-baseline justify-between gap-3 border-t border-separator-border px-4 py-3">
+      {simple && <div className="px-4 pb-4 sm:px-5">
+        <TradingDetails title={t('paperTrading.workflow.settlementDetails')}>
+          <p className="text-body-2-regular text-text-secondary">
+            {t('paperTrading.workflow.settlementHelp', { date: estimate.settlement_date })}
+          </p>
+        </TradingDetails>
+      </div>}
+
+      <div className="flex flex-col gap-1 border-t border-separator-border px-4 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
         <span className="text-body-medium text-text-secondary">
-          {t("paperTrading.ticket.estimate.cashEffect")}
+          {t(simple ? `paperTrading.workflow.cashEffect.${estimate.side}` : "paperTrading.ticket.estimate.cashEffect")}
         </span>
         <span
-          className={`text-headline-medium tabular-nums ${financialToneClass(estimate.cash_effect)}`}
+          className={cx('text-headline-medium tabular-nums', financialToneClass(estimate.cash_effect))}
         >
           {formatSignedMoney(estimate.cash_effect, locale)}
         </span>
       </div>
 
       <p className="border-t border-separator-border px-4 py-3 text-body-2-regular text-text-tertiary sm:px-5">
-        {t("paperTrading.ticket.estimate.explanation")}
+        {t(simple ? 'paperTrading.workflow.previewWarning' : "paperTrading.ticket.estimate.explanation")}
       </p>
+      {confirmation && <div className="px-4 pb-4 sm:px-5 sm:pb-5">{confirmation}</div>}
     </Card>
   );
 }

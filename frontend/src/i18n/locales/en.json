@@ -855,8 +855,55 @@
       "title": "Place an order",
       "subtitle": "Learn the mechanics of a CSE trade with a quote, fee estimate and recorded outcome before risking real money.",
       "viewOrders": "View order history",
+      "defaultPortfolioName": "Practice portfolio",
       "noticeTitle": "Simulation only",
       "notice": "Paper trades use the latest eligible end-of-day closing price. No real money is used, no order is sent to the CSE and this is not a live market feed."
+    },
+    "workflow": {
+      "label": "Paper trading workflow",
+      "simple": "Simple",
+      "advanced": "Advanced",
+      "simpleHelp": "Choose a company and share count, review the cost, then confirm your practice trade.",
+      "advancedHelp": "The same practice trade with account controls and the full estimate breakdown visible.",
+      "availableCash": "Available virtual cash: {{cash}}",
+      "manageAccounts": "Manage practice accounts",
+      "configureAccount": "Configure practice account",
+      "nameHint": "Choose an account name between 1 and 100 characters.",
+      "createAccount": "Create practice account",
+      "setupCash": "Starting virtual cash: {{cash}}",
+      "setupHelp": "This is simulated money. Create this account to start practising, or configure its name and starting cash first.",
+      "action": "What would you like to do?",
+      "shareCount": "Number of shares",
+      "company": "Company",
+      "choosePrompt": "Choose a company to begin. You will review the cost before confirming.",
+      "tradePrompt": "Choose Buy or Sell and a share count. Review the cost before confirming.",
+      "steps": {
+        "label": "Practice trade steps",
+        "choose": "Choose",
+        "review": "Review",
+        "confirm": "Confirm"
+      },
+      "guidance": {
+        "missingBoth": "Select a company and enter the number of shares to enable Review.",
+        "missingCompany": "Select a company to enable Review.",
+        "missingShares": "Enter a whole number of shares, at least 1, to enable Review.",
+        "readyToReview": "Ready to review. This checks the estimated price and charges without placing a trade.",
+        "reviewing": "Checking the estimated price and charges. No trade has been placed.",
+        "readyToConfirm": "Review the cost, then confirm when you are ready. Editing the trade requires a new review.",
+        "confirming": "Confirming your practice trade. Please wait for the recorded result."
+      },
+      "tradeReview": "Practice trade review",
+      "howTradesWork": "How practice trades work",
+      "reviewTrade": "Review practice trade",
+      "reviewSummary": "{{side}} {{quantity}} shares of {{symbol}}",
+      "shareValue": "Share value before charges",
+      "totalCharges": "Total charges",
+      "chargeBreakdown": "Charge breakdown",
+      "settlementDetails": "Settlement details",
+      "settlementHelp": "The simulated trade completes on {{date}}. No real funds or shares are transferred.",
+      "previewWarning": "This is an estimate, not a guaranteed fill. Confirmation checks the current eligible price, cash and holdings again.",
+      "cashEffect": { "buy": "Virtual cash removed", "sell": "Virtual cash added" },
+      "confirm": { "buy": "Confirm practice buy", "sell": "Confirm practice sell" }
     },
     "ticket": {
       "title": "Order ticket",
@@ -887,7 +934,7 @@
         "waiting": "A clear cost breakdown before you confirm",
         "loading": "Getting an estimate…",
         "empty": "Enter a symbol and quantity, then preview to see an estimate.",
-        "stale": "Order details changed since this estimate. Preview again before confirming.",
+        "stale": "Order details or practice account changed since this estimate. Review again before confirming.",
         "price": "Price",
         "priceAsOf": "Price as of",
         "settlementDate": "Settlement date",
@@ -916,7 +963,7 @@
         "recorded": "This order was recorded and appears in your order history."
       },
       "errors": {
-        "unreachable": "Could not reach the identity-auth API."
+        "unreachable": "Could not get a response from the trading service. Check your connection and try again."
       }
     }
   }

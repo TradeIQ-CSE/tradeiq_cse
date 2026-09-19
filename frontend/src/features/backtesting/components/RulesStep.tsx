@@ -19,7 +19,7 @@ import {
   ParameterPanel,
 } from "./BacktestStepLayout";
 
-export function RulesStep() {
+export function RulesStep({ embedded = false }: { embedded?: boolean }) {
   const { config, updateConfig, getStepErrors } = useBacktestWizard();
   const errors = getStepErrors("rules");
   const buyError = errors.find((error) => error.field.startsWith("buy"));
@@ -102,6 +102,7 @@ export function RulesStep() {
   return (
     <div className="flex flex-col gap-7">
       <BacktestStepHeader
+        embedded={embedded}
         step={3}
         title="Define entry and exit rules"
         description="An entry rule decides when the simulation buys. One or more exit rules decide when it sells; if several trigger on the same bar, the engine uses its fixed precedence rules."

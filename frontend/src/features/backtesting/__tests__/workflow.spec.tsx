@@ -103,7 +103,9 @@ describe('BacktestWizard Workflow Integration', () => {
       expect(screen.getByRole('heading', { name: 'Choose the historical period' })).toBeTruthy();
     });
 
-    // Change the range using the BoardUI preset control.
+    // A fresh draft already follows the selected company's latest coverage.
+    expect(screen.getByText('Selected: 2025-01-01 to 2025-12-31')).toBeTruthy();
+    // The same range remains explicitly configurable using BoardUI presets.
     fireEvent.click(screen.getByRole('button', { name: '1 year' }));
     expect(screen.getByText('Selected: 2025-01-01 to 2025-12-31')).toBeTruthy();
 
