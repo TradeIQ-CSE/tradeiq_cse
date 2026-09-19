@@ -356,7 +356,7 @@
     },
     "range": {
       "label": "Historical date range",
-      "placeholder": "Select a historical range",
+      "placeholder": "Select date range",
       "from": "From",
       "to": "To",
       "selectedDays_one": "{{count}} day selected",
@@ -395,7 +395,9 @@
       "empty": {
         "title": "Data not available",
         "description": "There's no trading data for the selected dates. Try a different range."
-      }
+      },
+      "zoomIn": "Show fewer periods",
+      "zoomOut": "Show more periods"
     },
     "info": {
       "title": "Security information",

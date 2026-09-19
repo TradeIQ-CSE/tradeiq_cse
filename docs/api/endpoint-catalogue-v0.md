@@ -255,6 +255,14 @@ OHLCV bar series for charting.
 
 Validation: `from` must be ≤ `to`; both must be valid calendar dates.
 
+Weekly and monthly bars are clamped to the requested range: a week or month the
+range only partly covers is returned as a bar computed from the days inside the
+range, not omitted. Every calendar period the range touches that has traded days
+yields one bar, so a range shorter than a week or month still returns a bar, and
+a short range straddling a period boundary returns one bar per side. Every bar
+aggregates only days within `from`..`to`, so no bar extends beyond the requested
+window.
+
 ### 200 — daily example
 
 `GET /securities/JKH.N0000/ohlcv?timeframe=daily&from=2025-01-01&to=2025-01-03`
@@ -283,18 +291,20 @@ Validation: `from` must be ≤ `to`; both must be valid calendar dates.
 
 ### 200 — weekly/monthly bar shape
 
-Weekly/monthly bars come from `price_aggregates` and use period fields instead of
-`date`; there is no `adjusted_close`:
+Weekly/monthly bars are grouped from the daily rows in the requested range and
+use period fields instead of `date`; there is no `adjusted_close`. `period_start`
+and `period_end` are the first and last day that traded within the bar, so they
+fall inside `from`..`to` and need not be the calendar period's boundaries:
 
 ```json
 {
-  "period_start": "2025-01-01",
-  "period_end": "2025-01-05",
-  "open": 22.31,
-  "high": 22.75,
-  "low": 22.1,
-  "close": 22.6,
-  "volume": 5123489
+  "period_start": "2025-01-06",
+  "period_end": "2025-01-10",
+  "open": 22.43,
+  "high": 22.84,
+  "low": 21.75,
+  "close": 22.73,
+  "volume": 5186409
 }
 ```
 
@@ -302,7 +312,9 @@ Weekly/monthly bars come from `price_aggregates` and use period fields instead o
 
 - Bars are **ascending** by date/period; only days/periods with data are returned
   (no gap-filling — markets close on weekends/holidays).
-- `open` and `adjusted_close` may be `null` on daily bars; `high`, `low`,
+- `open` may be `null` on any bar, and `adjusted_close` on daily bars, because
+  the source data does not carry an opening price for every session; a weekly or
+  monthly bar reports `null` when no day it covers has one. `high`, `low`,
   `close`, `volume` are always present.
 - A range with no data returns `200` with `"bars": []` (e.g. pre-listing period)
   — not an error.
