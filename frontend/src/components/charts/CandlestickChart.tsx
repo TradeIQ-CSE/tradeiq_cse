@@ -159,12 +159,19 @@ export function CandlestickChart({
     return () => observer.disconnect();
   }, []);
 
-  const chartWindow = useChartWindow(plottedData.length, plotWidth);
+  // Identifies the series by what it covers, so a different range with the
+  // same number of bars still counts as a new chart.
+  const seriesKey = `${plottedData.length}:${data[0]?.date ?? ""}:${
+    data[data.length - 1]?.date ?? ""
+  }`;
+  const chartWindow = useChartWindow(plottedData.length, plotWidth, seriesKey);
   const {
     barWidth,
     visibleCount,
     startIndex,
     canScroll,
+    atStart,
+    atEnd,
     canZoomIn,
     canZoomOut,
     panByPixels,
@@ -186,17 +193,25 @@ export function CandlestickChart({
     if (!frame || !canScroll) return;
     const onWheel = (event: WheelEvent) => {
       if (event.ctrlKey || event.metaKey) return;
+      // Only sideways intent pans: a trackpad swipe across, or shift with a
+      // wheel that has no horizontal axis. Panning on plain vertical scroll
+      // would mean the page could not be scrolled past the chart at all.
       const sideways =
-        Math.abs(event.deltaX) > Math.abs(event.deltaY)
+        event.deltaX !== 0
           ? event.deltaX
-          : event.deltaY;
+          : event.shiftKey
+            ? event.deltaY
+            : 0;
       if (sideways === 0) return;
+      // At either end the window cannot move, so let the gesture through
+      // rather than swallowing it.
+      if ((sideways < 0 && atStart) || (sideways > 0 && atEnd)) return;
       event.preventDefault();
       panByPixels(sideways);
     };
     frame.addEventListener("wheel", onWheel, { passive: false });
     return () => frame.removeEventListener("wheel", onWheel);
-  }, [canScroll, panByPixels]);
+  }, [atEnd, atStart, canScroll, panByPixels]);
 
   const dragOrigin = useRef<number | null>(null);
 

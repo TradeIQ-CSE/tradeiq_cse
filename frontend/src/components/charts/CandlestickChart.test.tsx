@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   candleBody,
@@ -341,5 +347,58 @@ describe("zoom controls", () => {
     expect(shown()).toBeGreaterThan(fullyIn);
     await user.click(zoomOut);
     expect(shown()).toBeGreaterThan(fullyIn + 1);
+  });
+});
+
+describe("window reset and wheel panning", () => {
+  const series = (count: number, startDay: number) =>
+    Array.from({ length: count }, (_, index) =>
+      point({
+        date: `2026-0${startDay}-${String((index % 28) + 1).padStart(2, "0")}`,
+        close: 100 + (index % 5),
+        volume: 1_000 + index,
+      }),
+    );
+
+  it("returns to the default window when the range changes but the bar count does not", async () => {
+    const user = userEvent.setup();
+    const { container, rerender } = render(
+      <CandlestickChart data={series(60, 1)} />,
+    );
+    const frame = () =>
+      container.querySelector<HTMLElement>("[data-chart-mode]")!;
+
+    await user.click(screen.getByRole("button", { name: "Show fewer periods" }));
+    const zoomed = Number(frame().dataset.visibleBars);
+    expect(zoomed).toBeLessThan(DEFAULT_VISIBLE_BARS);
+
+    // Same number of bars, different days: keyed on the count alone this kept
+    // the old zoom and scroll position.
+    rerender(<CandlestickChart data={series(60, 2)} />);
+    expect(Number(frame().dataset.visibleBars)).toBe(DEFAULT_VISIBLE_BARS);
+  });
+
+  it("pans on a sideways wheel and leaves a plain vertical one to the page", () => {
+    const { container } = render(<CandlestickChart data={series(60, 1)} />);
+    const frame = container.querySelector<HTMLElement>("[data-chart-mode]")!;
+    const start = () => Number(frame.dataset.startIndex);
+
+    const opened = start();
+    // fireEvent returns false when the handler called preventDefault.
+    const verticalAllowed = fireEvent.wheel(frame, { deltaY: -400 });
+    expect(start()).toBe(opened);
+    expect(verticalAllowed).toBe(true);
+
+    const sidewaysAllowed = fireEvent.wheel(frame, { deltaX: -400 });
+    expect(start()).toBeLessThan(opened);
+    expect(sidewaysAllowed).toBe(false);
+  });
+
+  it("lets a wheel through once the window reaches the end", () => {
+    const { container } = render(<CandlestickChart data={series(60, 1)} />);
+    const frame = container.querySelector<HTMLElement>("[data-chart-mode]")!;
+
+    // Opens on the newest bars, so it is already at the right-hand end.
+    expect(fireEvent.wheel(frame, { deltaX: 400 })).toBe(true);
   });
 });

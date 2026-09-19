@@ -106,19 +106,23 @@ describe("SecurityDetailPage", () => {
     // The trigger offers to open the picker rather than naming the range: the
     // chart pans and zooms, so dates on the button would soon disagree with
     // the bars on screen. The loaded range is stated above the chart instead.
+    //
+    // Wait on the range text, not on the trigger: the placeholder is there
+    // from the first render, so waiting for it would pass before the query
+    // resolves and prove nothing.
     await waitFor(() =>
-      expect(rangeTrigger).toHaveTextContent(
-        t("securityDetail.range.placeholder"),
-      ),
+      expect(
+        screen.getByText(
+          t("securityDetail.chart.range", {
+            from: "Sep 2, 2025",
+            to: "Sep 2, 2026",
+          }),
+        ),
+      ).toBeInTheDocument(),
     );
-    expect(
-      screen.getByText(
-        t("securityDetail.chart.range", {
-          from: "Sep 2, 2025",
-          to: "Sep 2, 2026",
-        }),
-      ),
-    ).toBeInTheDocument();
+    expect(rangeTrigger).toHaveTextContent(
+      t("securityDetail.range.placeholder"),
+    );
     const { from, to } = await openDateRange(user);
     expect(from).toHaveValue(chipDate(dailyOhlcvFixture.from!));
     expect(to).toHaveValue(chipDate(dailyOhlcvFixture.to!));

@@ -18,7 +18,11 @@ import {
  * width in pixels. The width is derived, so the window is correct on the first
  * paint — before the panel has been measured — and survives a resize.
  */
-export function useChartWindow(total: number, plotWidth: number) {
+export function useChartWindow(
+  total: number,
+  plotWidth: number,
+  seriesKey: string,
+) {
   const [targetVisible, setTargetVisible] = useState(DEFAULT_VISIBLE_BARS);
   const [start, setStart] = useState(Number.MAX_SAFE_INTEGER);
   // Panning is expressed in bars, but a gesture arrives in pixels; the
@@ -46,13 +50,16 @@ export function useChartWindow(total: number, plotWidth: number) {
   const minVisible =
     plotWidth > 0 ? Math.max(1, Math.ceil(plotWidth / MAX_BAR_WIDTH)) : 1;
 
-  // A new series (symbol, timeframe or range) is a new chart: open it on the
-  // most recent bars at the default zoom instead of keeping the old window.
+  // A new series (timeframe or range) is a new chart: open it on the most
+  // recent bars at the default zoom instead of keeping the old window. Keyed
+  // on what the series covers rather than how many bars it holds, because two
+  // different ranges can hold the same count and would otherwise inherit the
+  // previous pan and zoom.
   useEffect(() => {
     setTargetVisible(DEFAULT_VISIBLE_BARS);
     setStart(Number.MAX_SAFE_INTEGER);
     carriedPixels.current = 0;
-  }, [total]);
+  }, [seriesKey]);
 
   const panByBars = useCallback(
     (bars: number) => {
