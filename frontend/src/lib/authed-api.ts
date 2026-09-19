@@ -21,6 +21,8 @@ import { getToken, notifySessionLost, Session, SessionUser, setSession } from '.
 // Exported so auth-api.ts's unguarded calls (login/signup/refresh) target the
 // same origin as every guarded call here, rather than risking drift between
 // two copies (see the file-level comment in auth-api.ts).
+import { apiUrl } from './api-url';
+
 export const IDENTITY_AUTH_API_URL =
   import.meta.env.VITE_IDENTITY_AUTH_API_URL || 'http://localhost:3002';
 
@@ -121,7 +123,7 @@ export async function parseEnvelope<T>(response: Response): Promise<EnvelopeResu
  * never recurse into another refresh.
  */
 export async function refresh(): Promise<SessionBody> {
-  const response = await fetch(new URL('/auth/refresh', IDENTITY_AUTH_API_URL), {
+  const response = await fetch(apiUrl(IDENTITY_AUTH_API_URL, '/auth/refresh'), {
     method: 'POST',
     credentials: 'include',
   });
@@ -180,7 +182,7 @@ export async function authFetch(
   init: RequestInit = {},
   baseUrl: string = IDENTITY_AUTH_API_URL,
 ): Promise<Response> {
-  const url = new URL(path, baseUrl);
+  const url = apiUrl(baseUrl, path);
   const sendCredentials = baseUrl === IDENTITY_AUTH_API_URL;
   const first = await fetch(url, withAuthHeader(init, getToken(), sendCredentials));
 

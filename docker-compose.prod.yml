@@ -152,8 +152,10 @@ services:
       - identity-auth
       - ml-prediction
 
-  # Renews the certificate. Issuance is a one-off:
-  #   docker compose ... run --rm certbot certonly --webroot -w /var/www/certbot \
+  # Renews the certificate. Issuance is a one-off, and needs --entrypoint
+  # because the loop below would otherwise swallow the arguments and hang:
+  #   docker compose ... run --rm --entrypoint certbot certbot certonly \
+  #     --webroot -w /var/www/certbot \
   #     -d tradeiqcse.tech -d www.tradeiqcse.tech --agree-tos -m <email> --no-eff-email
   # Let's Encrypt certificates last 90 days; checking twice a day is their
   # recommendation and a no-op until the last 30.

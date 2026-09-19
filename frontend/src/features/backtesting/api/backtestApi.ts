@@ -8,6 +8,8 @@ import { ApiError, ApiErrorBody } from '../../../lib/api';
 import { authFetch } from '../../../lib/authed-api';
 import { SecurityListItem } from '../../markets/types';
 
+import { apiUrl } from '../../../lib/api-url';
+
 const MARKET_TRADING_API_URL =
   import.meta.env.VITE_MARKET_TRADING_API_URL || 'http://localhost:3001';
 
@@ -119,7 +121,7 @@ export async function getBacktestRunResults(
 export async function getSecuritiesUniverse(
   search?: string,
 ): Promise<SecurityListItem[]> {
-  const url = new URL('/securities', MARKET_TRADING_API_URL);
+  const url = apiUrl(MARKET_TRADING_API_URL, '/securities');
   url.searchParams.set('page_size', '100');
   if (search && search.trim()) {
     url.searchParams.set('search', search.trim());
