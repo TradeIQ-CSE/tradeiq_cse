@@ -1,9 +1,10 @@
 import { RiPlayCircleLine } from "@remixicon/react";
+import type { ReactNode } from "react";
 import { Button } from "@/components/base/buttons/button";
 import { Chip } from "@/components/base/badges/chip";
 import { AppNotice } from "@/components/application/layout/application-layout";
 import { useBacktestWizard } from "../hooks/useBacktestWizard";
-import { V1_BUY_RULES, V1_SELL_RULES } from "../domain/v1Rules";
+import { entryDescription, exitDescription, sizingDescription } from "../domain/descriptions";
 import { AVAILABLE_METRICS } from "../domain/defaults";
 import { validateBacktestConfig } from "../domain/validation";
 import {
@@ -12,45 +13,7 @@ import {
   ReviewSection,
 } from "./BacktestStepLayout";
 
-function entryDescription(type: string, value?: number) {
-  if (type === "price_falls_pct_from_period_start") {
-    return `Buy after a ${value ?? 5}% fall from the period reference price`;
-  }
-  if (type === "price_falls_to") {
-    return `Buy at or below LKR ${(value ?? 0).toFixed(2)}`;
-  }
-  if (type === "period_start") {
-    return "Buy on the first available trading day at the opening price";
-  }
-  return V1_BUY_RULES.find((rule) => rule.type === type)?.label || type;
-}
-
-function exitDescription(type: string, value?: number) {
-  if (type === "take_profit_pct") {
-    return `Take profit after a ${value ?? 10}% gain from entry`;
-  }
-  if (type === "stop_loss_pct") {
-    return `Stop loss after a ${value ?? 5}% fall from entry`;
-  }
-  if (type === "target_price") {
-    return `Sell at or above LKR ${(value ?? 0).toFixed(2)}`;
-  }
-  if (type === "end_of_period") {
-    return "Close an open position on the final available trading day";
-  }
-  return V1_SELL_RULES.find((rule) => rule.type === type)?.label || type;
-}
-
-function sizingDescription(type: string, value?: number) {
-  if (type === "percentage") return `${value ?? 50}% of portfolio equity`;
-  if (type === "absolute") {
-    return `LKR ${(value ?? 0).toLocaleString("en-LK")} per entry`;
-  }
-  if (type === "fixed_quantity") return `${value ?? 0} whole shares per entry`;
-  return "All available simulated cash";
-}
-
-export function ReviewStep() {
+export function ReviewStep({ configuration }: { configuration?: ReactNode }) {
   const {
     config,
     goToStep,
@@ -60,6 +23,8 @@ export function ReviewStep() {
     submitTraceId,
     submitFieldErrors,
     validateAllSteps,
+    stepIndex,
+    totalSteps,
   } = useBacktestWizard();
   const reviewValidation = validateBacktestConfig(config);
   const isValid = reviewValidation.isValid;
@@ -79,7 +44,8 @@ export function ReviewStep() {
   return (
     <div className="flex flex-col gap-6">
       <BacktestStepHeader
-        step={7}
+        step={stepIndex + 1}
+        total={totalSteps}
         title="Review simulation assumptions"
         description="Check the complete rule set before sending it to the historical simulation engine. You can return to any section without losing the draft."
       />
@@ -94,6 +60,16 @@ export function ReviewStep() {
           Resolve the {reviewValidation.errors.length} highlighted configuration
           {reviewValidation.errors.length === 1 ? " issue" : " issues"} before
           running the backtest.
+          <ul className="mt-3 flex list-disc flex-col gap-2 pl-5">
+            {reviewValidation.errors.map((error, index) => (
+              <li key={`${error.step}-${error.field}-${index}`}>
+                {error.message}{" "}
+                <Button variant="ghost" size="xs" disabled={isSubmitting} onClick={() => goToStep(error.step)}>
+                  Open {error.step}
+                </Button>
+              </li>
+            ))}
+          </ul>
         </AppNotice>
       )}
 
@@ -207,6 +183,8 @@ export function ReviewStep() {
           </div>
         </ReviewSection>
       </div>
+
+      {configuration}
 
       <section className="flex flex-col items-start gap-4 rounded-3xl border border-border-button-active bg-status-blue-background p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex max-w-2xl flex-col gap-1">

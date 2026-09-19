@@ -12,7 +12,7 @@ import {
   BacktestStepHeader,
 } from "./BacktestStepLayout";
 
-export function MetricsStep() {
+export function MetricsStep({ embedded = false }: { embedded?: boolean }) {
   const { config, updateConfig, getStepErrors } = useBacktestWizard();
   const metricsError = getStepErrors("metrics").find(
     (error) => error.field === "selected",
@@ -43,6 +43,7 @@ export function MetricsStep() {
   return (
     <div className="flex flex-col gap-6">
       <BacktestStepHeader
+        embedded={embedded}
         step={6}
         title="Choose the metrics to focus on"
         description="These selections help you review which questions matter before submission. They do not change the strategy, trades, or execution rules."

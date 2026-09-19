@@ -1,31 +1,25 @@
-import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import {
   BacktestConfig,
   StepKey,
   ValidationError,
   CreateBacktestRunResponse,
+  SecuritySelection,
 } from '../domain/types';
-import { createDefaultBacktestConfig } from '../domain/defaults';
+import { createFreshBacktestDraft, restoreBacktestDraft, selectDraftSecurity, updateBacktestDraft } from '../domain/draft';
 import { validateBacktestConfig } from '../domain/validation';
 import { mapToBacktestRequest } from '../domain/mapper';
 import { submitBacktestRun } from '../api/backtestApi';
 import { ApiError } from '../../../lib/api';
-
-const WIZARD_STEPS: StepKey[] = [
-  'security',
-  'period',
-  'rules',
-  'execution',
-  'portfolio',
-  'metrics',
-  'review',
-];
+import { ADVANCED_STEPS, SIMPLE_STEPS, simplePageFor, sectionsForPage, workflowLocation, type WorkflowMode } from '../domain/workflow';
 
 const STORAGE_KEY = 'tradeiq_backtest_draft_v1';
 
 export interface BacktestContextValue {
   config: BacktestConfig;
+  mode: WorkflowMode;
+  setMode: (mode: WorkflowMode) => void;
   currentStep: StepKey;
   stepIndex: number;
   totalSteps: number;
@@ -37,7 +31,8 @@ export interface BacktestContextValue {
   submitFieldErrors: Array<{ field: string; reason: string }> | null;
   runId: string | null;
   updateConfig: (patch: Partial<BacktestConfig> | ((prev: BacktestConfig) => BacktestConfig)) => void;
-  goToStep: (step: StepKey) => void;
+  selectSecurity: (security: SecuritySelection) => void;
+  goToStep: (step: StepKey, openSection?: boolean) => void;
   goNext: () => boolean;
   goBack: () => void;
   validateCurrentStep: () => boolean;
@@ -49,19 +44,16 @@ export interface BacktestContextValue {
 
 const BacktestContext = createContext<BacktestContextValue | null>(null);
 
-function loadInitialConfig(): BacktestConfig {
+function loadInitialDraft() {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && parsed.security && parsed.period && parsed.rules) {
-        return parsed;
-      }
+      return restoreBacktestDraft(JSON.parse(raw));
     }
   } catch {
     // Fall back to defaults on parse/storage error
   }
-  return createDefaultBacktestConfig();
+  return createFreshBacktestDraft();
 }
 
 export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -69,9 +61,11 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
   const location = useLocation();
   const params = useParams<{ step?: string; runId?: string }>();
 
-  const [config, setConfig] = useState<BacktestConfig>(loadInitialConfig);
+  const [draft, setDraft] = useState(loadInitialDraft);
+  const config = draft.config;
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const submissionPending = useRef(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitTraceId, setSubmitTraceId] = useState<string | null>(null);
   const [submitFieldErrors, setSubmitFieldErrors] = useState<Array<{ field: string; reason: string }> | null>(null);
@@ -80,31 +74,35 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
   // Sync to session storage whenever config changes to preserve across refresh
   useEffect(() => {
     try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ ...config, periodUsesCoverageDefault: draft.periodUsesCoverageDefault }));
     } catch {
       // Ignore quota/access errors
     }
-  }, [config]);
+  }, [config, draft.periodUsesCoverageDefault]);
 
-  // Determine current step from URL path
+  // Mode is URL-owned so reload and browser history preserve the presentation.
+  // Explicit legacy step URLs without a mode continue to mean Advanced.
+  const mode: WorkflowMode = new URLSearchParams(location.search).get('mode') === 'simple' ? 'simple' : 'advanced';
+  const allSteps = mode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   const currentStep: StepKey = useMemo(() => {
     const segments = location.pathname.split('/').filter(Boolean);
     // Path pattern: /backtests/new/:step
     const last = segments[segments.length - 1] as StepKey;
-    if (WIZARD_STEPS.includes(last)) {
-      return last;
+    if (ADVANCED_STEPS.includes(last)) {
+      return mode === 'simple' ? simplePageFor(last) : last;
     }
     return 'security';
-  }, [location.pathname]);
+  }, [location.pathname, mode]);
 
-  const stepIndex = WIZARD_STEPS.indexOf(currentStep);
+  const stepIndex = allSteps.indexOf(currentStep);
+  const setMode = useCallback((nextMode: WorkflowMode) => {
+    if (submissionPending.current || nextMode === mode) return;
+    navigate(workflowLocation(nextMode, currentStep));
+  }, [navigate, currentStep, mode]);
 
   const updateConfig = useCallback(
     (patch: Partial<BacktestConfig> | ((prev: BacktestConfig) => BacktestConfig)) => {
-      setConfig((prev) => {
-        const next = typeof patch === 'function' ? patch(prev) : { ...prev, ...patch };
-        return next;
-      });
+      setDraft((previous) => updateBacktestDraft(previous, patch));
       // Clear submit errors when modifying inputs
       setSubmitError(null);
       setSubmitFieldErrors(null);
@@ -112,20 +110,26 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
     [],
   );
 
+  const selectSecurity = useCallback((security: SecuritySelection) => {
+    setDraft((previous) => selectDraftSecurity(previous, security));
+    setSubmitError(null);
+    setSubmitFieldErrors(null);
+  }, []);
+
   const getStepErrors = useCallback(
     (step: StepKey) => validationErrors.filter((e) => e.step === step),
     [validationErrors],
   );
 
   const validateCurrentStep = useCallback(() => {
-    const result = validateBacktestConfig(config, currentStep);
+    const sections = sectionsForPage(mode, currentStep);
+    const errors = sections.flatMap((step) => validateBacktestConfig(config, step).errors);
     setValidationErrors((prev) => {
-      // Keep errors from other steps, replace current step errors
-      const otherErrors = prev.filter((e) => e.step !== currentStep);
-      return [...otherErrors, ...result.errors];
+      const otherErrors = prev.filter((e) => !sections.includes(e.step));
+      return [...otherErrors, ...errors];
     });
-    return result.isValid;
-  }, [config, currentStep]);
+    return errors.length === 0;
+  }, [config, currentStep, mode]);
 
   const validateAllSteps = useCallback(() => {
     const result = validateBacktestConfig(config);
@@ -134,39 +138,42 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
   }, [config]);
 
   const goToStep = useCallback(
-    (step: StepKey) => {
-      navigate(`/backtests/new/${step}`);
+    (step: StepKey, openSection = true) => {
+      if (submissionPending.current) return;
+      navigate(workflowLocation(mode, step, openSection));
     },
-    [navigate],
+    [navigate, mode],
   );
 
   const goNext = useCallback(() => {
+    if (submissionPending.current) return false;
     const isStepValid = validateCurrentStep();
     if (!isStepValid) {
       return false;
     }
 
-    if (stepIndex < WIZARD_STEPS.length - 1) {
-      const nextStep = WIZARD_STEPS[stepIndex + 1];
-      navigate(`/backtests/new/${nextStep}`);
+    if (stepIndex < allSteps.length - 1) {
+      const nextStep = allSteps[stepIndex + 1];
+      navigate(workflowLocation(mode, nextStep));
       return true;
     }
     return true;
-  }, [stepIndex, validateCurrentStep, navigate]);
+  }, [stepIndex, validateCurrentStep, navigate, allSteps, mode]);
 
   const goBack = useCallback(() => {
+    if (submissionPending.current) return;
     // Preserve all entered values; do not clear inputs or reset config
     if (stepIndex > 0) {
-      const prevStep = WIZARD_STEPS[stepIndex - 1];
-      navigate(`/backtests/new/${prevStep}`);
+      const prevStep = allSteps[stepIndex - 1];
+      navigate(workflowLocation(mode, prevStep));
     } else {
       navigate('/markets');
     }
-  }, [stepIndex, navigate]);
+  }, [stepIndex, navigate, allSteps, mode]);
 
   const submitBacktest = useCallback(async (): Promise<CreateBacktestRunResponse | null> => {
     // Guard against duplicate submission while request is in progress
-    if (isSubmitting) {
+    if (submissionPending.current) {
       return null;
     }
 
@@ -179,6 +186,7 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
       return null;
     }
 
+    submissionPending.current = true;
     setIsSubmitting(true);
     setSubmitError(null);
     setSubmitTraceId(null);
@@ -223,13 +231,14 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
       }
       return null;
     } finally {
+      submissionPending.current = false;
       setIsSubmitting(false);
     }
-  }, [config, isSubmitting, navigate]);
+  }, [config, navigate]);
 
   const resetConfig = useCallback(() => {
-    const defaults = createDefaultBacktestConfig();
-    setConfig(defaults);
+    if (submissionPending.current) return;
+    setDraft(createFreshBacktestDraft());
     setValidationErrors([]);
     setSubmitError(null);
     setSubmitFieldErrors(null);
@@ -238,15 +247,17 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
     } catch {
       // Ignore
     }
-    navigate('/backtests/new/security');
-  }, [navigate]);
+    navigate(workflowLocation(mode, 'security'));
+  }, [navigate, mode]);
 
   const value: BacktestContextValue = {
     config,
+    mode,
+    setMode,
     currentStep,
     stepIndex,
-    totalSteps: WIZARD_STEPS.length,
-    allSteps: WIZARD_STEPS,
+    totalSteps: allSteps.length,
+    allSteps,
     validationErrors,
     isSubmitting,
     submitError,
@@ -254,6 +265,7 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
     submitFieldErrors,
     runId,
     updateConfig,
+    selectSecurity,
     goToStep,
     goNext,
     goBack,

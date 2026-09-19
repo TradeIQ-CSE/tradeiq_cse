@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RiCheckboxCircleLine, RiFileList3Line } from "@remixicon/react";
 import { ApiError } from "../../lib/api";
@@ -16,13 +16,18 @@ import {
 } from "../../components/base/segmented-control/segmented-control";
 import { AppNotice } from "../../components/application/layout/application-layout";
 import { Card, CardHeading } from "./ui";
+import { TradingDetails } from './TradingDetails';
+import { cx } from '@/utils/cx';
 
 interface OrderTicketProps {
   portfolioId: string;
+  mode?: 'simple' | 'advanced';
+  onBusyChange?: (busy: boolean) => void;
 }
 
 interface StoredEstimate {
   hash: string;
+  revision: number;
   estimate: OrderEstimate;
 }
 
@@ -34,15 +39,18 @@ interface StoredEstimate {
 // function for the gate to keep working; it is never bypassed by forgetting
 // to wire up an onChange handler that clears stored state by hand.
 function buildHash(
+  portfolioId: string,
   symbol: string,
   side: OrderSide,
   quantityText: string,
 ): string {
-  return `${symbol}|${side}|${quantityText}`;
+  return JSON.stringify([portfolioId, symbol, side, quantityText]);
 }
 
-export function OrderTicket({ portfolioId }: OrderTicketProps) {
+export function OrderTicket({ portfolioId, mode = 'advanced', onBusyChange }: OrderTicketProps) {
   const { t } = useTranslation();
+  const simple = mode === 'simple';
+  const guidanceId = useId();
   const [symbol, setSymbol] = useState("");
   const [side, setSide] = useState<OrderSide>("buy");
   const [quantityText, setQuantityText] = useState("");
@@ -50,7 +58,11 @@ export function OrderTicket({ portfolioId }: OrderTicketProps) {
   const trimmedSymbol = symbol.trim();
   const quantity = Number(quantityText);
   const hasValidQuantity = Number.isInteger(quantity) && quantity > 0;
-  const currentHash = buildHash(trimmedSymbol, side, quantityText);
+  const currentHash = buildHash(portfolioId, trimmedSymbol, side, quantityText);
+  const activeHash = useRef(currentHash);
+  const revision = useRef(0);
+  if (activeHash.current !== currentHash) revision.current += 1;
+  activeHash.current = currentHash;
 
   const [storedEstimate, setStoredEstimate] = useState<StoredEstimate | null>(
     null,
@@ -72,6 +84,9 @@ export function OrderTicket({ portfolioId }: OrderTicketProps) {
   // make the second request a replay of the first, not prevent it from being
   // sent at all. Mirrors CreatePortfolioForm.tsx's `submitting` ref.
   const submitting = useRef(false);
+  const previewing = useRef(false);
+  const reviewRef = useRef<HTMLDivElement>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
 
   // A 503/network failure deliberately KEEPS the key above so Retry reuses
   // it (see the catch block below) — but that must only survive an *unedited*
@@ -87,6 +102,14 @@ export function OrderTicket({ portfolioId }: OrderTicketProps) {
 
   const estimateMutation = useEstimateOrder(portfolioId);
   const submitMutation = useSubmitOrder(portfolioId);
+  useEffect(() => {
+    onBusyChange?.(estimateMutation.isPending || submitMutation.isPending);
+    return () => onBusyChange?.(false);
+  }, [estimateMutation.isPending, submitMutation.isPending, onBusyChange]);
+  useEffect(() => {
+    setEstimateErrorKey(null);
+  }, [currentHash]);
+  useEffect(() => { setOutcome(null); }, [portfolioId]);
 
   const canPreview =
     trimmedSymbol.length > 0 &&
@@ -96,16 +119,42 @@ export function OrderTicket({ portfolioId }: OrderTicketProps) {
   // Point C: Confirm is gated on all three at once — an estimate must exist,
   // it must have been fetched for exactly today's symbol/side/quantity, and
   // no submit can already be in flight.
-  const canConfirm =
+  // A revision prevents changing away and back (including account A -> B -> A)
+  // from resurrecting a previously invalidated preview or a late response.
+  const matchesEstimate =
     storedEstimate !== null &&
     storedEstimate.hash === currentHash &&
+    storedEstimate.revision === revision.current;
+  const canConfirm = matchesEstimate &&
+    !estimateMutation.isPending &&
     !submitMutation.isPending;
   const isStale =
-    storedEstimate !== null && storedEstimate.hash !== currentHash;
+    storedEstimate !== null && !matchesEstimate;
+  const hasReview = Boolean(storedEstimate || estimateMutation.isPending || estimateErrorKey);
+  const currentStep = matchesEstimate && !estimateMutation.isPending ? 3
+    : trimmedSymbol && hasValidQuantity ? 2 : 1;
+  const guidanceKey = submitMutation.isPending ? 'confirming'
+    : estimateMutation.isPending ? 'reviewing'
+    : !trimmedSymbol && !hasValidQuantity ? 'missingBoth'
+    : !trimmedSymbol ? 'missingCompany'
+    : !hasValidQuantity ? 'missingShares'
+    : matchesEstimate ? 'readyToConfirm' : 'readyToReview';
+  useEffect(() => {
+    if (!storedEstimate || estimateMutation.isPending || !matchesEstimate) return;
+    reviewRef.current?.focus({ preventScroll: true });
+    reviewRef.current?.scrollIntoView?.({ block: 'start' });
+  }, [storedEstimate, estimateMutation.isPending, matchesEstimate]);
+  useEffect(() => {
+    if (!outcome) return;
+    resultRef.current?.focus({ preventScroll: true });
+    resultRef.current?.scrollIntoView?.({ block: 'start' });
+  }, [outcome]);
 
   async function handlePreview() {
-    if (!canPreview) return;
+    if (!canPreview || previewing.current || submitting.current) return;
+    previewing.current = true;
     const hash = currentHash;
+    const requestedRevision = revision.current;
     setEstimateErrorKey(null);
 
     try {
@@ -114,21 +163,31 @@ export function OrderTicket({ portfolioId }: OrderTicketProps) {
         side,
         quantity,
       });
-      setStoredEstimate({ hash, estimate: result.data });
+      setStoredEstimate({ hash, revision: requestedRevision, estimate: result.data });
     } catch (error) {
+      if (activeHash.current !== hash) return;
       setStoredEstimate(null);
       setEstimateErrorKey(
         error instanceof ApiError
           ? mapOrderCode(error.body.code)
           : "paperTrading.ticket.errors.unreachable",
       );
+    } finally {
+      previewing.current = false;
     }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!canConfirm || submitting.current) return;
+    // Enter in a fresh Simple ticket reviews it; it cannot submit without a
+    // matching estimate. Review and confirmation remain separate API actions.
+    if (simple && !canConfirm) {
+      await handlePreview();
+      return;
+    }
+    if (!canConfirm || submitting.current || previewing.current) return;
     submitting.current = true;
+    const submittedHash = currentHash;
 
     // Minted once per logical submission and kept across retries — see the
     // ref comment above and point D.
@@ -148,6 +207,7 @@ export function OrderTicket({ portfolioId }: OrderTicketProps) {
       // back filled or rejected — either is a persisted, auditable result,
       // so this key must never be replayed again.
       idempotencyKeyRef.current = null;
+      if (activeHash.current !== submittedHash) return;
       setOutcome({
         kind: order.status === "filled" ? "filled" : "rejected",
         order,
@@ -156,6 +216,7 @@ export function OrderTicket({ portfolioId }: OrderTicketProps) {
       setQuantityText("");
       setStoredEstimate(null);
     } catch (error) {
+      if (activeHash.current !== submittedHash) return;
       if (error instanceof ApiError) {
         if (error.body.code === "IDEMPOTENCY_KEY_REUSED") {
           // The stored key was replayed against a different canonical
@@ -192,25 +253,39 @@ export function OrderTicket({ portfolioId }: OrderTicketProps) {
     }
   }
 
-  // Two columns on desktop, stacked on mobile: the form on the left stays
-  // put while the estimate on the right updates, so Preview never pushes the
-  // Confirm button out from under the pointer.
+  // Keep the same component positions in both modes so layout changes never
+  // reset input/disclosure state. Simple starts compact, then makes room for
+  // the cost review beside it on desktop (stacked on smaller screens).
   return (
     <form
-      className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2"
+      className={cx('grid w-full grid-cols-1 items-start gap-5',
+        simple && 'mx-auto max-w-2xl',
+        simple && hasReview && 'max-w-6xl',
+        (!simple || hasReview) && 'lg:grid-cols-2')}
       onSubmit={handleSubmit}
     >
-      <Card>
-        <CardHeading title={t("paperTrading.ticket.title")} />
+      <ol hidden={!simple} aria-label={t('paperTrading.workflow.steps.label')}
+        className="col-span-full grid grid-cols-3 gap-2">
+        {(['choose', 'review', 'confirm'] as const).map((step, index) => (
+          <li key={step} aria-current={currentStep === index + 1 ? 'step' : undefined}
+            className={cx('flex min-w-0 items-center gap-2 border-b-2 border-separator-border pb-3',
+              currentStep === index + 1 && 'border-border-focus-ring')}>
+            <span aria-hidden="true" className={cx('flex size-7 shrink-0 items-center justify-center rounded-full bg-background-secondary-default text-body-2-medium text-text-secondary',
+              currentStep === index + 1 && 'bg-button-primary bui-on-accent')}>{index + 1}</span>
+            <span className="text-body-2-medium text-text-primary">{t(`paperTrading.workflow.steps.${step}`)}</span>
+          </li>
+        ))}
+      </ol>
+      <Card className="min-w-0">
+        <CardHeading title={t("paperTrading.ticket.title")}
+          subtitle={simple ? t(trimmedSymbol ? 'paperTrading.workflow.tradePrompt' : 'paperTrading.workflow.choosePrompt') : undefined} />
 
         <div className="flex flex-col gap-5 px-4 pb-4 sm:px-5 sm:pb-5">
-          {outcome && <ResultBanner outcome={outcome} />}
-
-          <AppNotice title={t("paperTrading.ticket.guide.title")}>
-            {t("paperTrading.ticket.guide.body")}
-          </AppNotice>
+          {outcome && <div ref={resultRef} tabIndex={-1} className="outline-none"><ResultBanner outcome={outcome} /></div>}
 
           <SymbolPicker
+            label={simple ? t('paperTrading.workflow.company') : undefined}
+            showCompanyName={simple}
             value={symbol}
             onChange={(next) => {
               setSymbol(next);
@@ -221,7 +296,7 @@ export function OrderTicket({ portfolioId }: OrderTicketProps) {
 
           <div className="flex flex-col gap-1">
             <span className="text-body-medium text-text-secondary">
-              {t("paperTrading.ticket.side")}
+              {t(simple ? 'paperTrading.workflow.action' : "paperTrading.ticket.side")}
             </span>
             <SegmentedControl
               aria-label={t("paperTrading.ticket.side")}
@@ -248,7 +323,7 @@ export function OrderTicket({ portfolioId }: OrderTicketProps) {
           </div>
 
           <Input
-            label={t("paperTrading.ticket.quantity")}
+            label={t(simple ? 'paperTrading.workflow.shareCount' : "paperTrading.ticket.quantity")}
             hint={t("paperTrading.ticket.quantityHint")}
             type="number"
             min={1}
@@ -263,17 +338,23 @@ export function OrderTicket({ portfolioId }: OrderTicketProps) {
             }}
           />
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="flex flex-col gap-2">
+          <p id={guidanceId} hidden={!simple} aria-live="polite"
+            className="text-body-2-regular text-text-secondary">
+            {t(`paperTrading.workflow.guidance.${guidanceKey}`)}
+          </p>
+          <div className={cx('grid grid-cols-1 gap-2', !simple && 'sm:grid-cols-2')}>
             <Button
-              type="button"
-              variant="secondary"
+              type={simple && !matchesEstimate ? 'submit' : 'button'}
+              variant={simple ? 'primary' : 'secondary'}
               leadingIcon={RiFileList3Line}
-              onClick={handlePreview}
+              onClick={simple && !matchesEstimate ? undefined : handlePreview}
               disabled={!canPreview}
+              aria-describedby={simple ? guidanceId : undefined}
             >
-              {t("paperTrading.ticket.preview")}
+              {t(simple ? 'paperTrading.workflow.reviewTrade' : "paperTrading.ticket.preview")}
             </Button>
-            <Button
+            {!simple && <Button
               type="submit"
               variant="primary"
               leadingIcon={RiCheckboxCircleLine}
@@ -281,16 +362,36 @@ export function OrderTicket({ portfolioId }: OrderTicketProps) {
             >
               {t("paperTrading.ticket.confirm")}
             </Button>
+            }
           </div>
+          </div>
+
+          <TradingDetails title={t('paperTrading.workflow.howTradesWork')} expanded={!simple}
+            className={!simple ? 'order-first' : undefined}>
+            <AppNotice title={t("paperTrading.ticket.guide.title")}>
+              {t("paperTrading.ticket.guide.body")}
+            </AppNotice>
+          </TradingDetails>
         </div>
       </Card>
 
+      <div ref={reviewRef} tabIndex={-1} className="min-w-0 scroll-mt-24 outline-none"
+        role="region" aria-label={t('paperTrading.workflow.tradeReview')}
+        hidden={simple && !storedEstimate && !estimateMutation.isPending && !estimateErrorKey}>
       <EstimatePanel
+        simple={simple}
         estimate={storedEstimate?.estimate ?? null}
         isPending={estimateMutation.isPending}
         isStale={isStale}
         errorKey={estimateErrorKey}
+        confirmation={simple && matchesEstimate && !estimateMutation.isPending ? (
+          <Button type="submit" variant="primary" className="w-full"
+            leadingIcon={RiCheckboxCircleLine} disabled={!canConfirm}>
+            {t(`paperTrading.workflow.confirm.${side}`)}
+          </Button>
+        ) : undefined}
       />
+      </div>
     </form>
   );
 }

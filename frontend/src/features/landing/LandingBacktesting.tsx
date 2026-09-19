@@ -75,7 +75,7 @@ export function LandingBacktesting() {
           ))}
         </div>
 
-        <LinkButton href="/backtests/new/security" trailingIcon={RiArrowRightLine} className="mt-5 text-title-3-semibold text-status-blue-text">
+        <LinkButton href="/backtests/new" trailingIcon={RiArrowRightLine} className="mt-5 text-title-3-semibold text-status-blue-text">
           {t('landing.backtesting.cta')}
         </LinkButton>
       </div>

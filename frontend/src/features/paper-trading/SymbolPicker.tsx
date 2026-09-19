@@ -24,6 +24,8 @@ interface SymbolPickerProps {
   value: string;
   onChange: (symbol: string) => void;
   disabled?: boolean;
+  label?: string;
+  showCompanyName?: boolean;
 }
 
 // Reuses the PUBLIC GET /securities (features/markets/useSecurities.ts's
@@ -47,7 +49,7 @@ interface SymbolPickerProps {
 // delisted security (SECURITY_NOT_TRADABLE) can only be discovered when the
 // estimate or submit call comes back with that code — this component does
 // not attempt to pre-filter the results it shows.
-export function SymbolPicker({ value, onChange, disabled }: SymbolPickerProps) {
+export function SymbolPicker({ value, onChange, disabled, label, showCompanyName = false }: SymbolPickerProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -55,6 +57,7 @@ export function SymbolPicker({ value, onChange, disabled }: SymbolPickerProps) {
   // ArrowUp/ArrowDown move and Enter commits. -1 means nothing is
   // highlighted (mouse-only interaction, or no results yet).
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [selectedSecurity, setSelectedSecurity] = useState<SecurityListItem | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const baseId = useId();
   const listboxId = `${baseId}-listbox`;
@@ -92,8 +95,14 @@ export function SymbolPicker({ value, onChange, disabled }: SymbolPickerProps) {
 
   const showDropdown = open && trimmed.length > 0;
   const results = data?.data ?? [];
+  // Use already-fetched search results, not an additional security request.
+  // Never display the old company's name beside an edited or cleared symbol.
+  const company = selectedSecurity?.symbol === value.trim() ? selectedSecurity
+    : results.find((security) => security.symbol === value.trim());
+  const companyNameId = `${baseId}-company-name`;
 
   function selectResult(security: SecurityListItem) {
+    setSelectedSecurity(security);
     onChange(security.symbol);
     setOpen(false);
     setActiveIndex(-1);
@@ -159,7 +168,7 @@ export function SymbolPicker({ value, onChange, disabled }: SymbolPickerProps) {
 
   return (
     <div className="relative" ref={containerRef} onBlur={handleBlur}>
-      <Field label={t("paperTrading.ticket.symbol")}>
+      <Field label={label ?? t("paperTrading.ticket.symbol")}>
         <InputBase
           type="text"
           leadingIcon={RiSearchLine}
@@ -168,6 +177,7 @@ export function SymbolPicker({ value, onChange, disabled }: SymbolPickerProps) {
           aria-expanded={showDropdown}
           aria-controls={listboxId}
           aria-autocomplete="list"
+          aria-describedby={showCompanyName && company ? companyNameId : undefined}
           aria-activedescendant={
             showDropdown && activeIndex >= 0 && activeIndex < results.length
               ? `${listboxId}-option-${activeIndex}`
@@ -186,6 +196,11 @@ export function SymbolPicker({ value, onChange, disabled }: SymbolPickerProps) {
           onKeyDown={handleKeyDown}
         />
       </Field>
+      {showCompanyName && company && (
+        <p id={companyNameId} className="mt-2 text-body-2-medium text-text-secondary">
+          {company.company_name}
+        </p>
+      )}
 
       {showDropdown && (
         <ul

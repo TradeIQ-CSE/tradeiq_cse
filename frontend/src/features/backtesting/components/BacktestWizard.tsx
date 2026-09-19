@@ -1,4 +1,6 @@
 import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react";
+import { useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/base/buttons/button";
 import {
   AppNotice,
@@ -19,12 +21,30 @@ import { ExecutionStep } from "./ExecutionStep";
 import { PortfolioStep } from "./PortfolioStep";
 import { MetricsStep } from "./MetricsStep";
 import { ReviewStep } from "./ReviewStep";
+import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
+import { SimpleCompanyStep, SimpleIdeaStep, SimpleAnalysisSection } from "./SimpleBacktestSteps";
 
 function WizardContent() {
-  const { currentStep, stepIndex, totalSteps, goNext, goBack } =
+  const { currentStep, stepIndex, totalSteps, goNext, goBack, mode, setMode, isSubmitting } =
     useBacktestWizard();
+  const { hash } = useLocation();
+  const contentRef = useRef<HTMLElement>(null);
+  const previousStep = useRef(currentStep);
+  useEffect(() => {
+    const changed = previousStep.current !== currentStep;
+    previousStep.current = currentStep;
+    if (!changed || hash) return;
+    const heading = contentRef.current?.querySelector<HTMLElement>("h2");
+    heading?.focus({ preventScroll: true });
+    heading?.scrollIntoView?.({ block: "start" });
+  }, [currentStep, hash]);
 
   const renderStep = () => {
+    if (mode === "simple") {
+      if (currentStep === "security") return <SimpleCompanyStep />;
+      if (currentStep === "rules") return <SimpleIdeaStep />;
+      return <ReviewStep configuration={<SimpleAnalysisSection />} />;
+    }
     switch (currentStep) {
       case "security":
         return <SecurityStep />;
@@ -53,6 +73,20 @@ function WizardContent() {
         description="Build simple price-based rules, choose realistic execution assumptions, and see how they would have behaved on available CSE end-of-day data."
       />
 
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <SegmentedControl aria-label="Backtest workflow" selectedKeys={[mode]} isDisabled={isSubmitting}
+          onSelectionChange={(keys) => {
+            const selected = Array.from(keys)[0];
+            if (selected === "simple" || selected === "advanced") setMode(selected);
+          }}>
+          <SegmentedControlItem id="simple">Simple</SegmentedControlItem>
+          <SegmentedControlItem id="advanced">Advanced</SegmentedControlItem>
+        </SegmentedControl>
+        <p className="text-body-2-regular text-text-secondary">
+          {mode === "simple" ? "Three steps, with settings you can change." : "Seven steps through every available setting."}
+        </p>
+      </div>
+
       <AppNotice title="A backtest is evidence, not a forecast">
         Historical results can help you understand a rule&apos;s behaviour, but
         they do not predict future prices or guarantee future returns.
@@ -62,7 +96,7 @@ function WizardContent() {
       <ValidationSummary />
 
       <AppPanel className="overflow-hidden p-0">
-        <section className="flex flex-col gap-6 p-4 sm:p-6" aria-live="polite">
+        <section ref={contentRef} className="flex flex-col gap-6 p-4 sm:p-6" aria-live="polite">
           {renderStep()}
 
           <footer className="flex flex-col-reverse gap-3 border-t border-separator-border pt-5 sm:flex-row sm:items-center sm:justify-between">
@@ -70,6 +104,7 @@ function WizardContent() {
               variant="secondary"
               leadingIcon={RiArrowLeftLine}
               onClick={goBack}
+              disabled={isSubmitting}
               aria-label="Navigate to previous step"
               className="w-full sm:w-auto"
             >
@@ -84,6 +119,7 @@ function WizardContent() {
               <Button
                 trailingIcon={RiArrowRightLine}
                 onClick={goNext}
+                disabled={isSubmitting}
                 aria-label="Advance to next step"
                 className="w-full sm:w-auto"
               >

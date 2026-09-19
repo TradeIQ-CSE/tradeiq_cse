@@ -230,7 +230,7 @@ export function Dashboard() {
             <Button className="w-full justify-between" leadingIcon={RiFlaskLine} trailingIcon={RiArrowRightLine} onClick={() => navigate('/paper-trading')}>
               {t('dashboardPage.actions.paperTrade')}
             </Button>
-            <Button className="w-full justify-between" variant="secondary" leadingIcon={RiLineChartLine} trailingIcon={RiArrowRightLine} onClick={() => navigate('/backtests/new/security')}>
+            <Button className="w-full justify-between" variant="secondary" leadingIcon={RiLineChartLine} trailingIcon={RiArrowRightLine} onClick={() => navigate('/backtests/new')}>
               {t('dashboardPage.actions.backtest')}
             </Button>
           </div>

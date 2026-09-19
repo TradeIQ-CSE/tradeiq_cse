@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { RiRefreshLine, RiSettings3Line } from "@remixicon/react";
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
@@ -81,12 +81,19 @@ const FEE_FIELDS: Array<{
   },
 ];
 
-export function ExecutionStep() {
+export function ExecutionStep({ embedded = false }: { embedded?: boolean }) {
   const { config, updateConfig, getStepErrors } = useBacktestWizard();
   const sizingError = getStepErrors("execution").find((error) =>
     error.field.startsWith("positionSizing"),
   );
-  const [isCustomFees, setIsCustomFees] = useState(false);
+  const feeErrors = getStepErrors("execution").filter((error) => error.field.startsWith("fees.") || error.field.includes("Rate"));
+  const hasFeeErrors = feeErrors.length > 0;
+  const [isCustomFees, setIsCustomFees] = useState(() =>
+    Object.keys(DEFAULT_CSE_FEES).some((key) => config.execution.fees[key as keyof FeeConfig] !== DEFAULT_CSE_FEES[key as keyof FeeConfig]),
+  );
+  useEffect(() => {
+    if (hasFeeErrors) setIsCustomFees(true);
+  }, [hasFeeErrors]);
   const currentSizing = config.execution.positionSizing;
   const currentFees = config.execution.fees;
   const selectedSizing = SIZING_OPTIONS.find(
@@ -150,6 +157,7 @@ export function ExecutionStep() {
   return (
     <div className="flex flex-col gap-7">
       <BacktestStepHeader
+        embedded={embedded}
         step={4}
         title="Set execution assumptions"
         description="These controls describe how much simulated capital each entry can use and which transaction charges are deducted. They make historical comparisons more realistic, but they cannot reproduce every market condition."
@@ -195,6 +203,7 @@ export function ExecutionStep() {
                 : String(currentSizing.value ?? "")}
               onChange={updateSizingValue}
               min={selectedSizing.min}
+              isInvalid={Boolean(sizingError)}
               max={selectedSizing.max}
               step={selectedSizing.step}
               hint={selectedSizing.valueSuffix}
@@ -235,7 +244,8 @@ export function ExecutionStep() {
                   onChange={(value) => updateFee(field.key, value)}
                   min={0}
                   step={0.001}
-                  hint={field.description}
+                  isInvalid={feeErrors.some((error) => error.field.includes(field.key))}
+                  hint={feeErrors.find((error) => error.field.includes(field.key))?.message || field.description}
                   fieldClassName="ring-1 ring-inset ring-border-button-default"
                 />
               ) : (

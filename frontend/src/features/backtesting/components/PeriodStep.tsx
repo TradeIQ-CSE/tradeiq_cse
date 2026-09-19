@@ -43,7 +43,7 @@ function buildPresets(minimum: CalendarDate, maximum: CalendarDate) {
   }));
 }
 
-export function PeriodStep() {
+export function PeriodStep({ embedded = false }: { embedded?: boolean }) {
   const { config, updateConfig, getStepErrors } = useBacktestWizard();
   const errors = getStepErrors("period");
   const startError = errors.find((error) => error.field === "startDate");
@@ -82,6 +82,7 @@ export function PeriodStep() {
   return (
     <div className="flex flex-col gap-6">
       <BacktestStepHeader
+        embedded={embedded}
         step={2}
         title="Choose the historical period"
         description="The engine checks each available daily bar inside this inclusive date range. A longer range offers more observations, but it does not make future outcomes more certain."

@@ -161,8 +161,8 @@ export function AppRoutes() {
               </RequireAdmin>
             }
           />
-          <Route path="/backtests" element={<Navigate to="/backtests/new/security" replace />} />
-          <Route path="/backtests/new" element={<Navigate to="/backtests/new/security" replace />} />
+          <Route path="/backtests" element={<Navigate to="/backtests/new/security?mode=simple" replace />} />
+          <Route path="/backtests/new" element={<Navigate to="/backtests/new/security?mode=simple" replace />} />
           <Route path="/backtests/new/:step" element={<BacktestWizard />} />
           <Route path="/backtests/:runId/status" element={<StatusStep />} />
         </Route>
