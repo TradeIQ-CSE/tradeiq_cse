@@ -8,8 +8,7 @@
 # pushed the instant the build finishes.
 #
 # Both halves of a deploy are pulled: the git checkout (compose file, nginx
-# config, this script) and the images GHCR holds for the tracked branch. Either
-# changing is reason enough to re-apply.
+# config, this script) and the images GHCR holds for the tracked branch.
 set -euo pipefail
 
 APP_DIR=${APP_DIR:-/opt/tradeiq}
@@ -21,24 +20,20 @@ cd "$APP_DIR"
 # .env.production is gitignored, so a hard reset cannot destroy the secrets.
 # Reset rather than pull: the checkout must match the branch exactly, and a
 # local edit made while debugging should not block the next deploy.
-commit_before=$(git rev-parse HEAD)
 git fetch --quiet origin "$BRANCH"
 git reset --quiet --hard "origin/$BRANCH"
-commit_after=$(git rev-parse HEAD)
 
-images_before=$($COMPOSE images --quiet | sort | md5sum)
 $COMPOSE pull --quiet
-images_after=$($COMPOSE images --quiet | sort | md5sum)
 
-# A config-only change (nginx, compose, this script) ships no new image but must
-# still be applied, so the commit is checked as well as the image digests.
-if [ "$commit_before" = "$commit_after" ] &&
-   [ "$images_before" = "$images_after" ] &&
-   [ "${FORCE:-}" != "1" ]; then
-  echo "no changes; nothing to do"
-  exit 0
-fi
-
+# No "has anything changed?" check. `up -d` already recreates only the
+# containers whose image or configuration actually moved, and leaves the rest
+# running, so guarding it bought nothing.
+#
+# An earlier version compared `compose images` before and after the pull. That
+# reports the image IDs of the RUNNING containers, which by definition do not
+# change until `up -d` runs, so the comparison always said "no change" and a
+# freshly built image was never deployed. It failed silently, reporting success.
+#
 # --remove-orphans so a service deleted from the compose file actually stops.
 $COMPOSE up -d --remove-orphans
 
