@@ -140,7 +140,6 @@ services:
       # certificate exists yet.
       - ./deploy/nginx/bootstrap.conf:/etc/nginx/available/bootstrap.conf:ro
       - ./deploy/nginx/tls.conf:/etc/nginx/available/tls.conf:ro
-      - ./deploy/nginx/upstreams.conf:/etc/nginx/upstreams.conf:ro
       - ./deploy/nginx/common.conf:/etc/nginx/common.conf:ro
       - ./deploy/nginx/proxy_params:/etc/nginx/proxy_params:ro
       - ./deploy/nginx/entrypoint.sh:/entrypoint.sh:ro
