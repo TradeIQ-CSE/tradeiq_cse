@@ -4,6 +4,8 @@
 // Vite does not read the repository-level Compose .env file when the frontend
 // is run directly. Keep the documented local API origin as a safe default,
 // while still allowing deployments to inject a different browser-visible URL.
+import { apiUrl } from './api-url';
+
 const MARKET_TRADING_API_URL =
   import.meta.env.VITE_MARKET_TRADING_API_URL || 'http://localhost:3001';
 
@@ -36,7 +38,7 @@ export async function getEnvelope<T>(
   path: string,
   params?: Record<string, string | number | undefined>,
 ): Promise<{ data: T; meta?: PageMeta }> {
-  const url = new URL(path, MARKET_TRADING_API_URL);
+  const url = apiUrl(MARKET_TRADING_API_URL, path);
   for (const [key, value] of Object.entries(params ?? {})) {
     if (value !== undefined) url.searchParams.set(key, String(value));
   }

@@ -98,8 +98,10 @@ Confirm `dig +short tradeiqcse.tech` returns the Elastic IP first — certbot
 validates over HTTP and fails if DNS has not caught up.
 
 ```bash
+# --entrypoint certbot is required: the service's own entrypoint is the
+# renewal loop, which would otherwise swallow these arguments and hang.
 docker compose -f docker-compose.prod.yml --env-file .env.production \
-  run --rm certbot certonly --webroot -w /var/www/certbot \
+  run --rm --entrypoint certbot certbot certonly --webroot -w /var/www/certbot \
   -d tradeiqcse.tech -d www.tradeiqcse.tech \
   --agree-tos -m <your-email> --no-eff-email
 
@@ -147,7 +149,7 @@ All commands assume `cd /opt/tradeiq`. `C` below stands for
 | What's running | `C ps` |
 | Memory pressure | `free -h` and `docker stats --no-stream` |
 | Pause deploys | `sudo systemctl stop tradeiq-deploy.timer` |
-| Check TLS renewal | `C run --rm certbot renew --dry-run` |
+| Check TLS renewal | `C run --rm --entrypoint certbot certbot renew --dry-run` |
 
 ### Rolling back
 
