@@ -9,9 +9,12 @@ build/
 *.tsbuildinfo
 
 # Env
+# Every .env variant, not just the bare name: .env.production holds the
+# real signing key and database password, and this repository is public.
 .env
-.env.*.local
+.env.*
 !.env.example
+!.env.*.example
 
 # Python
 __pycache__/
