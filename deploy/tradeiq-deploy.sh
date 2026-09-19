@@ -42,12 +42,6 @@ fi
 # --remove-orphans so a service deleted from the compose file actually stops.
 $COMPOSE up -d --remove-orphans
 
-# nginx resolves its upstreams once at start-up. Replacing a service container
-# gives it a new address on the Compose network, and without this reload nginx
-# keeps proxying to the dead one — a deploy that "succeeds" into 502s.
-$COMPOSE exec -T nginx nginx -s reload 2>/dev/null \
-  || echo "warning: could not reload nginx; is it running?"
-
 # Images pile up fast on a 30 GiB disk: every deploy leaves the previous five
 # behind. Keep a week so a rollback can still find them locally.
 docker image prune --force --filter "until=168h" >/dev/null

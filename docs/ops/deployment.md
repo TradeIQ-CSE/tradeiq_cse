@@ -181,10 +181,6 @@ editing `PUBLIC_ORIGIN` in the workflow and rebuilding.
 
 **Database passwords only apply on first boot.** See step 4.
 
-**nginx caches upstream addresses.** It resolves service names once at start-up,
-so replacing a container without reloading nginx produces 502s. The deploy script
-reloads automatically; if you run `up -d` by hand, reload too.
-
 **2 GiB is the real constraint.** Swap covers the import spikes, but if the box
 starts thrashing, `docker stats` shows which service grew. Stopping the instance
 and changing the type keeps the volume and the Elastic IP.
