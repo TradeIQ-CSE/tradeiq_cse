@@ -11,6 +11,7 @@
 // AuthProvider.tsx) and adds login/signup/logout/me. This file imports from
 // authed-api.ts and never the reverse, so there is no import cycle.
 
+import { apiUrl } from './api-url';
 import { authFetch, IDENTITY_AUTH_API_URL, parseEnvelope, refresh } from './authed-api';
 import type { SessionBody } from './authed-api';
 
@@ -49,7 +50,7 @@ async function unwrap<T>(response: Response): Promise<T> {
 
 /** POST /auth/signup — 201, wrapped session body. Unauthenticated entry point. */
 export async function signup(input: SignupInput): Promise<SessionBody> {
-  const response = await fetch(new URL('/auth/signup', IDENTITY_AUTH_API_URL), {
+  const response = await fetch(apiUrl(IDENTITY_AUTH_API_URL, '/auth/signup'), {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -60,7 +61,7 @@ export async function signup(input: SignupInput): Promise<SessionBody> {
 
 /** POST /auth/login — 200, wrapped session body. Unauthenticated entry point. */
 export async function login(input: LoginInput): Promise<SessionBody> {
-  const response = await fetch(new URL('/auth/login', IDENTITY_AUTH_API_URL), {
+  const response = await fetch(apiUrl(IDENTITY_AUTH_API_URL, '/auth/login'), {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
