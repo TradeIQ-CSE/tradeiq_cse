@@ -4,8 +4,15 @@ import "@testing-library/jest-dom/vitest";
 // once here mirrors production.
 import i18n, { DEFAULT_LANGUAGE } from "../i18n";
 import { afterAll, afterEach, beforeAll } from "vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import { server } from "./server";
+
+// React Router 7 wraps redirect state updates in startTransition by default,
+// where v6 kept that behind the v7_startTransition flag. A <Navigate> into a
+// lazy() route therefore settles a tick later, and `pnpm -r run test` runs
+// three workspaces at once, so findBy* could outrun the 1s default while the
+// /markets chunk resolved. The assertions are unchanged; only the patience is.
+configure({ asyncUtilTimeout: 5000 });
 
 // Node 26 exposes an incomplete global localStorage unless a backing file is
 // configured. That can shadow jsdom's implementation with `undefined`, so

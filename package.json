@@ -2,7 +2,7 @@
   "name": "tradeiq-cse",
   "version": "0.0.0",
   "private": true,
-  "description": "TradeIQ CSE — CSE strategy backtesting, paper-trading, and portfolio-analytics platform",
+  "description": "TradeIQ CSE \u2014 CSE strategy backtesting, paper-trading, and portfolio-analytics platform",
   "engines": {
     "node": ">=20 <21",
     "pnpm": ">=9"
@@ -17,5 +17,10 @@
     "smoke:compose": "bash scripts/compose-smoke.sh",
     "typecheck": "pnpm -r --if-present run typecheck",
     "format": "pnpm -r --if-present run format"
+  },
+  "pnpm": {
+    "overrides": {
+      "multer": "2.4.0"
+    }
   }
 }
