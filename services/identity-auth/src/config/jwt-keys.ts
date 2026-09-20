@@ -4,6 +4,7 @@ import {
   createPublicKey,
   KeyObject,
 } from 'crypto';
+import type { JwtSignOptions } from '@nestjs/jwt';
 import {
   registerDecorator,
   ValidationArguments,
@@ -199,3 +200,17 @@ export function splitKeyRing(value: string): string[] {
     .map((entry) => entry.trim())
     .filter(Boolean);
 }
+
+// @nestjs/jwt 11 types `expiresIn` as ms' template-literal union ('5m', '90s',
+// ...) rather than a plain string, and a value read from the environment can
+// never satisfy that at compile time. AUTH_ACCESS_TOKEN_TTL therefore stays a
+// string in config and is narrowed at the two places that hand it to
+// jsonwebtoken, which still rejects an unparseable duration when it signs —
+// exactly as it did under v10.
+//
+// Only the string half of the union is kept: the TTL always arrives from the
+// environment, and durationToSeconds needs a string to report expires_in.
+export type AccessTokenTtl = Extract<
+  NonNullable<JwtSignOptions['expiresIn']>,
+  string
+>;

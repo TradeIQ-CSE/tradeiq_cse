@@ -6,6 +6,7 @@ import { createPublicKey } from 'crypto';
 import { EmailCipher } from '../common/crypto/email-cipher';
 import {
   ACCESS_TOKEN_ALGORITHM,
+  AccessTokenTtl,
   loadPrivateKey,
   publicKeyId,
 } from '../config/jwt-keys';
@@ -47,7 +48,9 @@ import { JwtAuthGuard } from './jwt-auth.guard';
           signOptions: {
             algorithm: ACCESS_TOKEN_ALGORITHM,
             keyid: publicKeyId(createPublicKey(signingKey)),
-            expiresIn: config.getOrThrow<string>('auth.accessTokenTtl'),
+            expiresIn: config.getOrThrow<string>(
+              'auth.accessTokenTtl',
+            ) as AccessTokenTtl,
             issuer: config.getOrThrow<string>('auth.issuer'),
             audience: config.getOrThrow<string>('auth.audience'),
           },

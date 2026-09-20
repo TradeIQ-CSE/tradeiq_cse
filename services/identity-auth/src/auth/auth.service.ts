@@ -17,6 +17,7 @@ import {
   InvalidCredentialsException,
   RefreshTokenInvalidException,
 } from '../common/errors/api-exception';
+import { AccessTokenTtl } from '../config/jwt-keys';
 import { RefreshToken } from '../entities/refresh-token.entity';
 import { User } from '../entities/user.entity';
 import { LoginDto } from './dto/login.dto';
@@ -227,7 +228,9 @@ export class AuthService {
     const tokens = manager
       ? manager.getRepository(RefreshToken)
       : this.refreshTokens;
-    const accessTtl = this.config.getOrThrow<string>('auth.accessTokenTtl');
+    const accessTtl = this.config.getOrThrow<string>(
+      'auth.accessTokenTtl',
+    ) as AccessTokenTtl;
 
     const accessToken = await this.jwt.signAsync(
       { sub: user.userId, role: user.role },
