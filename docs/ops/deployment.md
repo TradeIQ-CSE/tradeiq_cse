@@ -5,7 +5,10 @@ database, both Nest services, the ML service, the frontend, nginx and certbot.
 Nothing is hand-installed on the server except Docker itself.
 
 - **Host**: EC2 `t3.small` (2 vCPU, 2 GiB + 2 GiB swap), Ubuntu 26.04, `ap-south-1`
-- **Address**: Elastic IP, `tradeiqcse.tech` and `www` as A records
+- **Address**: Elastic IP, `tradeiqcse.tech` and `www` as A records. The apex
+  is the only origin that serves the app; `www` answers with a 301 to it,
+  because the bundle calls the API at the absolute apex origin and the
+  services' CORS allowlists name only the apex.
 - **Registry**: `ghcr.io/tradeiq-cse/tradeiq_cse/*`
 - **Exposed to the internet**: nginx on 80 and 443, nothing else
 
