@@ -14,8 +14,10 @@ import {
   dailyOhlcvFixture,
   securityDetailFixture,
 } from "../../test/fixtures/security-detail";
+import { dataCoverageFixture } from "../../test/fixtures/data-coverage";
 import i18n from "../../i18n";
 import { setMobileViewport } from "../../test/setup";
+import { DataGap } from "../../lib/data-gaps";
 import { SecurityDetailPage } from "./SecurityDetailPage";
 
 const t = i18n.t.bind(i18n);
@@ -492,5 +494,78 @@ describe("SecurityDetailPage", () => {
         name: t("securityDetail.actions.retry"),
       }),
     ).toBeInTheDocument();
+  });
+
+  describe("default range avoiding a missing_data gap", () => {
+    it("opens on the latest full year with no gap when coverage reports one crossing the trailing year", async () => {
+      const gap: DataGap = {
+        from: "2026-01-01",
+        to: "2026-12-31",
+        sessions: 150,
+        kind: "missing_data",
+      };
+      server.use(
+        http.get("*/coverage", () =>
+          HttpResponse.json({
+            data: {
+              ...dataCoverageFixture,
+              prices: { ...dataCoverageFixture.prices, gaps: [gap] },
+            },
+          }),
+        ),
+      );
+      const requests: URL[] = [];
+      server.use(
+        http.get("*/securities/:symbol/ohlcv", ({ request }) => {
+          requests.push(new URL(request.url));
+          return HttpResponse.json({ data: dailyOhlcvFixture });
+        }),
+      );
+
+      renderPage();
+      await screen.findByRole("table");
+
+      // Exactly one request, and it already carries the gap-avoiding dates:
+      // no earlier request with the plain API default, which would be the
+      // flash/double-fetch this is meant to avoid.
+      expect(requests).toHaveLength(1);
+      expect(requests[0].searchParams.get("from")).toBe("2025-01-01");
+      expect(requests[0].searchParams.get("to")).toBe("2025-12-31");
+    });
+
+    it("keeps the API's own default when coverage reports no missing_data gap", async () => {
+      const requests: URL[] = [];
+      server.use(
+        http.get("*/securities/:symbol/ohlcv", ({ request }) => {
+          requests.push(new URL(request.url));
+          return HttpResponse.json({ data: dailyOhlcvFixture });
+        }),
+      );
+
+      renderPage();
+      await screen.findByRole("table");
+
+      expect(requests).toHaveLength(1);
+      expect(requests[0].searchParams.has("from")).toBe(false);
+      expect(requests[0].searchParams.has("to")).toBe(false);
+    });
+
+    it("keeps the API's own default when the coverage request fails", async () => {
+      server.use(http.get("*/coverage", () => HttpResponse.error()));
+      const requests: URL[] = [];
+      server.use(
+        http.get("*/securities/:symbol/ohlcv", ({ request }) => {
+          requests.push(new URL(request.url));
+          return HttpResponse.json({ data: dailyOhlcvFixture });
+        }),
+      );
+
+      renderPage();
+      await screen.findByRole("table");
+
+      expect(requests).toHaveLength(1);
+      expect(requests[0].searchParams.has("from")).toBe(false);
+      expect(requests[0].searchParams.has("to")).toBe(false);
+    });
   });
 });

@@ -28,6 +28,7 @@ import {
 import { cx } from "../../utils/cx";
 import { localeFor } from "../../i18n";
 import { ApiError } from "../../lib/api";
+import { defaultRangeAvoidingGaps } from "../../lib/data-gaps";
 import { formatCount, formatPrice, formatSigned, formatVolume } from "./format";
 import { isWeekend, normalizeOhlcvBars, priceChartMode } from "./ohlcv-chart";
 import {
@@ -37,6 +38,7 @@ import {
   SecurityDetail,
 } from "./types";
 import { useSecurityDetail, useSecurityOhlcv } from "./useSecurityDetail";
+import { useDataCoverage } from "./useDataCoverage";
 import { SecuritySectorIcon } from "./SecuritySectorIcon";
 import { BackToMarketsLink } from "./BackToMarketsLink";
 
@@ -201,16 +203,52 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
   const { t, i18n } = useTranslation();
   const locale = localeFor(i18n.resolvedLanguage ?? i18n.language);
   const detailQuery = useSecurityDetail(symbol);
+  // Never gates the chart: it renders with no gaps while this is loading or
+  // if it errors, per docs/plans/data-gap-handling.md §3.
+  const coverageQuery = useDataCoverage();
+  const priceGaps = useMemo(
+    () => coverageQuery.data?.prices.gaps ?? [],
+    [coverageQuery.data],
+  );
   const [timeframe, setTimeframe] = useState<OhlcvTimeframe>("daily");
   const [committedRange, setCommittedRange] = useState<OhlcvRange>({});
+  // True until the user picks an explicit range (or resets back to the
+  // default): while true, the chart requests `defaultRange` below instead
+  // of `committedRange`.
+  const [isDefaultRange, setIsDefaultRange] = useState(true);
   const [selectedRange, setSelectedRange] = useState<DateRangeValue | null>(
     null,
   );
+
+  // The API's own default is a trailing year, which can open right on a
+  // `missing_data` gap (today: 2026-01-01..). `defaultRangeAvoidingGaps`
+  // pulls that window back to the latest full year with no such gap;
+  // `end === dataTo` means it found nothing to dodge, so `{}` is sent and
+  // the API's own default applies exactly as before.
+  const dataTo = detailQuery.data?.data_to ?? null;
+  const dataFrom = detailQuery.data?.data_from ?? null;
+  const coverageSettled = coverageQuery.isSuccess || coverageQuery.isError;
+  const defaultRange = useMemo<OhlcvRange>(() => {
+    if (!coverageQuery.isSuccess || !dataTo) return {};
+    const computed = defaultRangeAvoidingGaps(
+      dataTo,
+      dataFrom ?? dataTo,
+      priceGaps,
+    );
+    return computed.end === dataTo
+      ? {}
+      : { from: computed.start, to: computed.end };
+  }, [coverageQuery.isSuccess, dataTo, dataFrom, priceGaps]);
+
   const chartQuery = useSecurityOhlcv(
     symbol,
     timeframe,
-    committedRange,
-    detailQuery.isSuccess,
+    isDefaultRange ? defaultRange : committedRange,
+    // While still on the default range, wait for coverage to settle (load
+    // or error) before firing: otherwise this would fetch the API's plain
+    // trailing year first and immediately refetch the gap-avoiding one,
+    // a flash the user would see as the chart jumping.
+    detailQuery.isSuccess && (!isDefaultRange || coverageSettled),
   );
 
   useEffect(() => {
@@ -286,6 +324,7 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
   function resetRange() {
     setSelectedRange(null);
     setCommittedRange({});
+    setIsDefaultRange(true);
   }
 
   // No <main> here: AppShell already renders one around every routed page, and
@@ -372,6 +411,9 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
                         }
                       : {},
                   );
+                  // An explicit pick leaves the default; clearing the
+                  // picker returns to it (same as the reset button).
+                  setIsDefaultRange(!value);
                 }}
               />
             </div>
@@ -500,6 +542,8 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
                 <CandlestickChart
                   data={chartData}
                   mode={chartMode}
+                  timeframe={timeframe}
+                  gaps={priceGaps}
                   locale={locale}
                   accessibleLabel={t(
                     chartMode === "close"
@@ -524,6 +568,10 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
                     volume: t("securityDetail.chart.values.volume"),
                     zoomIn: t("securityDetail.chart.zoomIn"),
                     zoomOut: t("securityDetail.chart.zoomOut"),
+                    gapMissingData: t("securityDetail.chart.gap.missingData"),
+                    gapMarketClosed: t("securityDetail.chart.gap.marketClosed"),
+                    gapRow: ({ kind, from, to }) =>
+                      t("securityDetail.chart.gap.row", { kind, from, to }),
                   }}
                 />
               </div>

@@ -362,6 +362,13 @@
   --color-chart-up:   var(--color-emerald-600);
   --color-chart-down: var(--color-rose-600);
 
+  /* Data-gap band (docs/plans/data-gap-handling.md §4): the same neutral
+   * grey family as --color-chart-track below (a background region standing
+   * in for "nothing was drawn here"), not a status colour. `market_closed`
+   * reuses this same token at a lower fillOpacity rather than a second
+   * colour — see GapBands in components/charts/gap-band.tsx. */
+  --color-chart-gap: var(--color-slate-300);
+
   /* Date range selection: the connecting band and its start/end caps. */
   --color-date-range-background:      var(--color-accent-100);
   --color-date-range-edge-background: var(--color-accent-300);
@@ -603,6 +610,8 @@
   --color-chart-up:   var(--color-emerald-400);
   --color-chart-down: var(--color-rose-400);
 
+  --color-chart-gap: var(--color-slate-700);
+
   --color-date-range-background:      var(--color-accent-950);
   --color-date-range-edge-background: var(--color-accent-800);
 
@@ -802,6 +811,7 @@
   --color-market-loss-text:         var(--color-market-loss-text);
   --color-chart-up:                 var(--color-chart-up);
   --color-chart-down:               var(--color-chart-down);
+  --color-chart-gap:                var(--color-chart-gap);
   --color-date-range-background:      var(--color-date-range-background);
   --color-date-range-edge-background: var(--color-date-range-edge-background);
   --color-calendar-event-blue-background:    var(--color-calendar-event-blue-background);

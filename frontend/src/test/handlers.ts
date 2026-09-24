@@ -6,6 +6,7 @@ import {
   summaryFixture,
 } from './fixtures/paper-trading';
 import { marketOverviewFixture } from './fixtures/market-overview';
+import { dataCoverageFixture } from './fixtures/data-coverage';
 import { securitiesFixture } from './fixtures/securities';
 import {
   dailyOhlcvFixture,
@@ -24,6 +25,10 @@ import {
 export const handlers = [
   http.get('*/market/overview', () => {
     return HttpResponse.json({ data: marketOverviewFixture });
+  }),
+
+  http.get('*/coverage', () => {
+    return HttpResponse.json({ data: dataCoverageFixture });
   }),
 
   // Order matters: the specific /:code/values route must be declared before
