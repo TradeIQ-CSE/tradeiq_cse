@@ -389,6 +389,53 @@ describe('BacktestRunsService - Unit Tests', () => {
       expect(repo.createRun).toHaveBeenCalled();
     });
 
+    it('rejects weekend dates that select no session outside the gap', async () => {
+      dataCoverage.get.mockResolvedValue({
+        data: {
+          prices: {
+            from: '2017-01-02',
+            to: '2026-09-23',
+            gaps: [missingDataGap],
+          },
+          indices: emptyCoverage().data.indices,
+        },
+      });
+      // Saturday 2026-01-03 and Sunday 2026-06-14 lie outside the gap's
+      // weekday bounds, but the sessions they select (Fri 2 Jan, Fri 12 Jun)
+      // are inside it.
+      for (const dates of [
+        { startDate: '2025-06-02', endDate: '2026-01-03' },
+        { startDate: '2025-06-02', endDate: '2026-06-14' },
+      ]) {
+        await expect(
+          service.submitRun({ ...validDto, ...dates }, mockOwnerId),
+        ).rejects.toMatchObject({ code: 'DATE_IN_DATA_GAP' });
+      }
+      expect(repo.createRun).not.toHaveBeenCalled();
+    });
+
+    it('accepts a weekend start that selects the first session after a gap', async () => {
+      dataCoverage.get.mockResolvedValue({
+        data: {
+          prices: {
+            from: '2017-01-02',
+            to: '2026-09-23',
+            gaps: [missingDataGap],
+          },
+          indices: emptyCoverage().data.indices,
+        },
+      });
+      // Saturday 2026-06-13 selects Monday 2026-06-15, which has data.
+      const dto = {
+        ...validDto,
+        startDate: '2026-06-13',
+        endDate: '2026-08-03',
+      };
+
+      await service.submitRun(dto, mockOwnerId);
+      expect(repo.createRun).toHaveBeenCalled();
+    });
+
     it('never rejects dates inside a market_closed gap', async () => {
       dataCoverage.get.mockResolvedValue({
         data: {
