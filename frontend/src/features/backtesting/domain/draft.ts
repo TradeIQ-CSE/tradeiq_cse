@@ -1,5 +1,6 @@
 import { createDefaultBacktestConfig, defaultBacktestPeriod } from './defaults';
 import type { BacktestConfig, SecuritySelection } from './types';
+import type { DataGap } from '../../../lib/data-gaps';
 
 export interface BacktestDraft {
   config: BacktestConfig;
@@ -48,13 +49,20 @@ export function restoreBacktestDraft(value: unknown): BacktestDraft {
   return { config, periodUsesCoverageDefault: saved.periodUsesCoverageDefault === true };
 }
 
-export function selectDraftSecurity(draft: BacktestDraft, security: SecuritySelection): BacktestDraft {
+/** `gaps` (the security's price gaps) is optional so a caller with no
+ * coverage loaded yet still gets the un-gap-aware suggestion rather than
+ * blocking on it — see `defaultBacktestPeriod`. */
+export function selectDraftSecurity(
+  draft: BacktestDraft,
+  security: SecuritySelection,
+  gaps: readonly DataGap[] = [],
+): BacktestDraft {
   return {
     config: {
       ...draft.config,
       security,
       period: draft.periodUsesCoverageDefault
-        ? defaultBacktestPeriod(security.dataFrom, security.dataTo)
+        ? defaultBacktestPeriod(security.dataFrom, security.dataTo, gaps)
         : draft.config.period,
     },
     periodUsesCoverageDefault: draft.periodUsesCoverageDefault,

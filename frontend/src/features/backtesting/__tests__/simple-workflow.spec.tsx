@@ -1,14 +1,15 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { BacktestWizard } from '../components/BacktestWizard';
 import { createDefaultBacktestConfig } from '../domain/defaults';
 import { mapToBacktestRequest } from '../domain/mapper';
 import { ADVANCED_STEPS, simplePageFor, sectionsForPage, workflowLocation } from '../domain/workflow';
 import type { BacktestConfig, CreateBacktestRunResponse } from '../domain/types';
 import * as api from '../api/backtestApi';
+import { renderWithProviders } from '../../../test/render';
 
 const storageKey = 'tradeiq_backtest_draft_v1';
 const company = {
@@ -36,14 +37,17 @@ function HistoryControls() {
 }
 
 function renderWorkflow(entry = '/backtests/new') {
-  return render(<MemoryRouter initialEntries={[entry]}>
-    <HistoryControls />
-    <Routes>
-      <Route path="/backtests/new" element={<Navigate to="/backtests/new/security?mode=simple" replace />} />
-      <Route path="/backtests/new/:step" element={<BacktestWizard />} />
-      <Route path="/backtests/:runId/status" element={<h1>Simulation status</h1>} />
-    </Routes>
-  </MemoryRouter>);
+  return renderWithProviders(
+    <>
+      <HistoryControls />
+      <Routes>
+        <Route path="/backtests/new" element={<Navigate to="/backtests/new/security?mode=simple" replace />} />
+        <Route path="/backtests/new/:step" element={<BacktestWizard />} />
+        <Route path="/backtests/:runId/status" element={<h1>Simulation status</h1>} />
+      </Routes>
+    </>,
+    { initialEntries: [entry] },
+  );
 }
 
 beforeEach(() => {

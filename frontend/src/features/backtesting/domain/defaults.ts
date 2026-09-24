@@ -1,8 +1,22 @@
 import { BacktestConfig, FeeConfig, PeriodConfig } from './types';
 import { parseDate } from '@internationalized/date';
+import { DataGap, snapOutOfDataGap } from '../../../lib/data-gaps';
 
-/** A frontend convenience only: execution still uses the existing API contract. */
-export function defaultBacktestPeriod(dataFrom?: string | null, dataTo?: string | null): PeriodConfig {
+/**
+ * A frontend convenience only: execution still uses the existing API
+ * contract. `gaps` (a security's price gaps, from `useDataCoverage`) is
+ * optional and defaults to none, so every existing caller that predates the
+ * data-gap plan keeps computing the same suggestion; a caller that has
+ * coverage loaded passes it so the suggested start/end never lands inside a
+ * `missing_data` gap (docs/plans/data-gap-handling.md §5) — the default
+ * still stays "the most recent year" even when that year crosses a gap in
+ * the middle, only a boundary landing *inside* one moves.
+ */
+export function defaultBacktestPeriod(
+  dataFrom?: string | null,
+  dataTo?: string | null,
+  gaps: readonly DataGap[] = [],
+): PeriodConfig {
   const parseCoverage = (value: string | null | undefined, fallback: string) => {
     try {
       return parseDate(value ?? fallback);
@@ -16,9 +30,11 @@ export function defaultBacktestPeriod(dataFrom?: string | null, dataTo?: string 
   // remains responsible for explaining unavailable history.
   if (minimum.compare(maximum) > 0) return defaultBacktestPeriod();
   const yearStart = maximum.subtract({ years: 1 }).add({ days: 1 });
+  const startDate = (yearStart.compare(minimum) < 0 ? minimum : yearStart).toString();
+  const endDate = maximum.toString();
   return {
-    startDate: (yearStart.compare(minimum) < 0 ? minimum : yearStart).toString(),
-    endDate: maximum.toString(),
+    startDate: snapOutOfDataGap(gaps, startDate, 'start'),
+    endDate: snapOutOfDataGap(gaps, endDate, 'end'),
   };
 }
 

@@ -44,6 +44,21 @@ function isWeekday(timestamp: number): boolean {
   return day !== 0 && day !== 6;
 }
 
+/**
+ * Mirrors the backend's own weekend roll, applied right before its
+ * DATE_IN_DATA_GAP check (services/market-trading/src/backtest-runs/
+ * backtest-runs.service.ts `toWeekday`): steps `date` forward (`step` 1) or
+ * backward (`step` -1) while it lands on a Saturday or Sunday, leaving a
+ * weekday unchanged. Every gap-aware backtest date check below funnels
+ * through this so the calendar, presets and validation reject exactly the
+ * dates the API would — never more, never less.
+ */
+function toWeekday(date: string, step: 1 | -1): string {
+  let timestamp = toUtcTimestamp(date);
+  while (!isWeekday(timestamp)) timestamp += step * DAY_MS;
+  return toIsoDate(timestamp);
+}
+
 /** Every weekday in `[from, to]`, inclusive of both ends. */
 function weekdaysInclusive(from: string, to: string): string[] {
   const days: string[] = [];
@@ -145,6 +160,117 @@ export function gapContaining(
   date: string,
 ): DataGap | undefined {
   return gaps.find((gap) => gap.from <= date && date <= gap.to);
+}
+
+/** A backtest date is either the start (rolls forward over a weekend) or the
+ * end (rolls backward) of the chosen period — see `toWeekday` above. */
+export type BacktestDateRole = 'start' | 'end';
+
+/**
+ * The `missing_data` gap a backtest `start`/`end` date would hit, after the
+ * same weekend roll the API applies before rejecting it. `market_closed`
+ * gaps never block a backtest date — real market history, like a weekend.
+ */
+export function backtestDateGap(
+  gaps: readonly DataGap[],
+  date: string,
+  role: BacktestDateRole,
+): DataGap | undefined {
+  const missingData = gaps.filter((gap) => gap.kind === 'missing_data');
+  const effective = toWeekday(date, role === 'start' ? 1 : -1);
+  return gapContaining(missingData, effective);
+}
+
+/**
+ * True if `date` itself falls inside a `missing_data` gap. Used by the
+ * period calendar's `isDateUnavailable`, which marks one day at a time
+ * without knowing whether it is about to become the range's start or end.
+ *
+ * This intentionally does *not* union the start/end role rolls the way
+ * `backtestDateGap` does: a weekend immediately touching a gap (e.g. the
+ * Sat/Sun right after a gap that ends on a Friday) rolls clear of it for one
+ * role even though the other role's roll would land inside — as a START it
+ * is perfectly valid, and blocking it on the calendar would refuse a date
+ * the API accepts. The calendar only ever blocks a date the API would
+ * reject *no matter which role it takes* — i.e. a date already inside the
+ * gap — and leaves the role-specific case (a weekend valid as one role but
+ * not the other) to `backtestDateGap` inside `validateBacktestConfig`,
+ * which reports it as a field error once the role is known.
+ */
+export function isBacktestDateUnavailable(
+  gaps: readonly DataGap[],
+  date: string,
+): boolean {
+  const missingData = gaps.filter((gap) => gap.kind === 'missing_data');
+  return gapContaining(missingData, date) !== undefined;
+}
+
+function dayAfter(day: string): string {
+  return toIsoDate(toUtcTimestamp(day) + DAY_MS);
+}
+
+/** The first trading session after a gap ends — the date the period
+ * crossing notice names as when stop-loss/take-profit rules resume acting. */
+export function firstSessionAfterGap(gap: DataGap): string {
+  return toWeekday(dayAfter(gap.to), 1);
+}
+
+/** The last trading session before a gap starts. */
+export function lastSessionBeforeGap(gap: DataGap): string {
+  return toWeekday(dayBefore(gap.from), -1);
+}
+
+/**
+ * Moves a backtest boundary date off a `missing_data` gap it falls in (per
+ * `backtestDateGap`): a start moves to the gap's first session after, an
+ * end to its last session before. A date whose roll does not land in a gap
+ * passes through unchanged — including a weekend that isn't adjacent to
+ * one. Used by `buildPresets` and `defaultBacktestPeriod` so a computed
+ * boundary never lands somewhere the API would reject.
+ */
+export function snapOutOfDataGap(
+  gaps: readonly DataGap[],
+  date: string,
+  role: BacktestDateRole,
+): string {
+  const gap = backtestDateGap(gaps, date, role);
+  if (!gap) return date;
+  return role === 'start' ? firstSessionAfterGap(gap) : lastSessionBeforeGap(gap);
+}
+
+/**
+ * The gaps a chosen backtest period crosses, restricted to `kinds`
+ * (`missing_data` only by default) — the period-notice callers
+ * (PeriodStep, ReviewStep) only ever want the default: a `market_closed`
+ * gap needs no "the backtest skips it" warning, since it's real market
+ * history rather than something the engine has to route around. Both
+ * endpoints are expected to already be clear of `missing_data` gaps (the
+ * calendar and validation reject one inside a gap), so any `missing_data`
+ * overlap found here is a genuine crossing, not an edge touch.
+ *
+ * A caller that also needs `market_closed` crossings — the equity curve's
+ * band rendering, which visualises both kinds — passes `kinds` explicitly
+ * rather than this default changing meaning for everyone.
+ */
+export function crossingDataGaps(
+  gaps: readonly DataGap[],
+  start: string,
+  end: string,
+  kinds: readonly DataGapKind[] = ['missing_data'],
+): DataGap[] {
+  return gapsWithin(
+    gaps.filter((gap) => kinds.includes(gap.kind)),
+    start,
+    end,
+  );
+}
+
+/** The same message text the API returns for `DATE_IN_DATA_GAP`
+ * (services/market-trading/src/backtest-runs/backtest-runs.service.ts), so
+ * client-side pre-submit validation reads identically to a rejected
+ * request. */
+export function dateInGapMessage(gap: DataGap): string {
+  return `No market data from ${gap.from} to ${gap.to}. Choose a date outside this period.`;
 }
 
 function yearBefore(day: string): string {
@@ -322,12 +448,11 @@ export function formatGapBoundary(day: string, locale: string): string {
   }).format(utcDate(day));
 }
 
-/**
- * A compact "from – to" range for the chart band/tooltip: the year is
- * dropped from `from` when both ends fall in the same year, matching how
- * `chartDateLabel` (candlestick.ts) already shortens a period's start.
- */
-export function formatGapDateRange(gap: DataGap, locale: string): string {
+/** The two formatted edges of a gap, the year dropped from `from` when both
+ * ends fall in the same year — shared by `formatGapDateRange` (chart
+ * band/tooltip) and `formatGapProseRange` (crossing-notice sentences),
+ * which only differ in how they join the pair. */
+function gapEdgeLabels(gap: DataGap, locale: string): { from: string; to: string } {
   const from = utcDate(gap.from);
   const to = utcDate(gap.to);
   const sameYear = from.getUTCFullYear() === to.getUTCFullYear();
@@ -342,8 +467,30 @@ export function formatGapDateRange(gap: DataGap, locale: string): string {
     day: 'numeric',
     timeZone: 'UTC',
   });
-  const fromLabel = sameYear ? withoutYear.format(from) : withYear.format(from);
-  return `${fromLabel} – ${withYear.format(to)}`;
+  return {
+    from: sameYear ? withoutYear.format(from) : withYear.format(from),
+    to: withYear.format(to),
+  };
+}
+
+/**
+ * A compact "from – to" range for the chart band/tooltip: the year is
+ * dropped from `from` when both ends fall in the same year, matching how
+ * `chartDateLabel` (candlestick.ts) already shortens a period's start.
+ */
+export function formatGapDateRange(gap: DataGap, locale: string): string {
+  const { from, to } = gapEdgeLabels(gap, locale);
+  return `${from} – ${to}`;
+}
+
+/**
+ * The same compact "from, to" pair as `formatGapDateRange`, joined with the
+ * word "to" instead of an en dash — reads as prose rather than a chart
+ * label. Used by the backtest period's crossing notice.
+ */
+export function formatGapProseRange(gap: DataGap, locale: string): string {
+  const { from, to } = gapEdgeLabels(gap, locale);
+  return `${from} to ${to}`;
 }
 
 export interface GapKindLabels {

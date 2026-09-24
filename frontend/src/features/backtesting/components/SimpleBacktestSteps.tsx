@@ -77,8 +77,8 @@ function ConfigureSection({
 }
 
 export function SimpleCompanyStep() {
-  const { config } = useBacktestWizard();
-  const suggested = defaultBacktestPeriod(config.security.dataFrom, config.security.dataTo);
+  const { config, priceGaps } = useBacktestWizard();
+  const suggested = defaultBacktestPeriod(config.security.dataFrom, config.security.dataTo, priceGaps);
   return (
     <div className="flex flex-col gap-6">
       <BacktestStepHeader step={1} total={3} title="Choose a company and period"

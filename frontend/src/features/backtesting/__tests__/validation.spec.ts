@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { validateBacktestConfig } from '../domain/validation';
 import { createDefaultBacktestConfig as createBlankBacktestConfig } from '../domain/defaults';
+import type { DataGap } from '../../../lib/data-gaps';
 
 function createDefaultBacktestConfig() {
   const config = createBlankBacktestConfig();
@@ -152,6 +153,68 @@ describe('validateBacktestConfig', () => {
           expect.objectContaining({ field: 'endDate' }),
         ]),
       );
+    });
+
+    describe('data-gap validation', () => {
+      it('rejects a start date inside a missing_data gap, with the API\'s own message', () => {
+        const config = createDefaultBacktestConfig();
+        config.period.startDate = '2017-03-15';
+        config.period.endDate = '2017-08-01';
+        const gap: DataGap = { from: '2017-01-01', to: '2017-06-12', sessions: 100, kind: 'missing_data' };
+
+        const result = validateBacktestConfig(config, 'period', [gap]);
+        expect(result.isValid).toBe(false);
+        expect(result.errors).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              step: 'period',
+              field: 'startDate',
+              message: 'No market data from 2017-01-01 to 2017-06-12. Choose a date outside this period.',
+            }),
+          ]),
+        );
+      });
+
+      it('rejects an end date inside a missing_data gap', () => {
+        const config = createDefaultBacktestConfig();
+        config.period.startDate = '2017-01-02';
+        config.period.endDate = '2017-03-15';
+        const gap: DataGap = { from: '2017-01-01', to: '2017-06-12', sessions: 100, kind: 'missing_data' };
+
+        const result = validateBacktestConfig(config, 'period', [gap]);
+        expect(result.isValid).toBe(false);
+        expect(result.errors).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ step: 'period', field: 'endDate' }),
+          ]),
+        );
+      });
+
+      it('accepts a range that only crosses a gap, both ends clear', () => {
+        const config = createDefaultBacktestConfig();
+        config.period.startDate = '2017-01-02';
+        config.period.endDate = '2017-08-01';
+        const gap: DataGap = { from: '2017-01-05', to: '2017-06-12', sessions: 100, kind: 'missing_data' };
+
+        expect(validateBacktestConfig(config, 'period', [gap]).errors).toEqual([]);
+      });
+
+      it('never rejects a date inside a market_closed gap', () => {
+        const config = createDefaultBacktestConfig();
+        config.period.startDate = '2020-04-01';
+        config.period.endDate = '2020-08-01';
+        const gap: DataGap = { from: '2020-03-23', to: '2020-05-08', sessions: 33, kind: 'market_closed' };
+
+        expect(validateBacktestConfig(config, 'period', [gap]).errors).toEqual([]);
+      });
+
+      it('does not flag anything when no gaps are supplied (backward compatible default)', () => {
+        const config = createDefaultBacktestConfig();
+        config.period.startDate = '2017-03-15';
+        config.period.endDate = '2017-08-01';
+
+        expect(validateBacktestConfig(config, 'period').errors).toEqual([]);
+      });
     });
   });
 
