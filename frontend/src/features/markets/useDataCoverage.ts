@@ -21,10 +21,11 @@ const STALE_TIME_MS = 30 * 60 * 1000;
 
 /**
  * GET /coverage — date coverage and detected gaps for prices and indices.
- * Charts must never block on this: they render with no gaps while it's
- * loading and fall back the same way if it errors, so every call site
- * should read `coverageQuery.data?.prices.gaps ?? []` rather than gating on
- * `isPending`/`isError`.
+ * Charts render with no gaps while this loads and fall back the same way if
+ * it errors, so call sites read `coverageQuery.data?.prices.gaps ?? []`. The
+ * security and index detail pages do wait for it to settle before fetching
+ * their default range, which is why a failure retries once, quickly, and then
+ * leaves them on the API's own default.
  */
 export function useDataCoverage() {
   return useQuery({
@@ -34,5 +35,7 @@ export function useDataCoverage() {
       return response.data;
     },
     staleTime: STALE_TIME_MS,
+    retry: 1,
+    retryDelay: 500,
   });
 }
