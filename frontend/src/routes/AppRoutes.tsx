@@ -63,6 +63,11 @@ const BacktestWizard = lazy(() =>
     default: module.BacktestWizard,
   })),
 );
+const BacktestPreviewPage = lazy(() =>
+  import('../features/backtesting/components/BacktestPreviewPage').then((module) => ({
+    default: module.BacktestPreviewPage,
+  })),
+);
 const StatusStep = lazy(() =>
   import('../features/backtesting/components/StatusStep').then((module) => ({
     default: module.StatusStep,
@@ -142,6 +147,12 @@ export function AppRoutes() {
           <Route path="/markets" element={<MarketsPage />} />
           <Route path="/markets/index/:code" element={<IndexDetailPage />} />
           <Route path="/markets/:symbol" element={<SecurityDetailPage />} />
+          {/* Backtests can be set up and run without an account; saving one
+              (and every /backtests/:runId route) needs sign-in. */}
+          <Route path="/backtests" element={<Navigate to="/backtests/new/security?mode=simple" replace />} />
+          <Route path="/backtests/new" element={<Navigate to="/backtests/new/security?mode=simple" replace />} />
+          <Route path="/backtests/new/:step" element={<BacktestWizard />} />
+          <Route path="/backtests/preview" element={<BacktestPreviewPage />} />
         </Route>
 
         <Route element={<ConsoleShellLayout />}>
@@ -161,9 +172,6 @@ export function AppRoutes() {
               </RequireAdmin>
             }
           />
-          <Route path="/backtests" element={<Navigate to="/backtests/new/security?mode=simple" replace />} />
-          <Route path="/backtests/new" element={<Navigate to="/backtests/new/security?mode=simple" replace />} />
-          <Route path="/backtests/new/:step" element={<BacktestWizard />} />
           <Route path="/backtests/:runId/status" element={<StatusStep />} />
         </Route>
 

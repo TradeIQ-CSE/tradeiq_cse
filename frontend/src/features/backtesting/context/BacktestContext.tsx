@@ -10,7 +10,9 @@ import {
 import { createFreshBacktestDraft, restoreBacktestDraft, selectDraftSecurity, updateBacktestDraft } from '../domain/draft';
 import { validateBacktestConfig } from '../domain/validation';
 import { mapToBacktestRequest } from '../domain/mapper';
-import { submitBacktestRun } from '../api/backtestApi';
+import { previewBacktestRun, submitBacktestRun } from '../api/backtestApi';
+import { storeBacktestPreview } from '../domain/preview';
+import { useAuth } from '../../../auth/useAuth';
 import { ApiError } from '../../../lib/api';
 import { DataGap } from '../../../lib/data-gaps';
 import { useDataCoverage } from '../../markets/useDataCoverage';
@@ -67,6 +69,7 @@ function loadInitialDraft() {
 export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { status: authStatus } = useAuth();
   const params = useParams<{ step?: string; runId?: string }>();
 
   const [draft, setDraft] = useState(loadInitialDraft);
@@ -221,6 +224,18 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
 
     try {
       const dto = mapToBacktestRequest(config);
+
+      // No account: run it as a preview. The results come back in the
+      // response and nothing is stored, so the visitor sees them straight
+      // away and is asked to sign in only if they want to keep them.
+      if (authStatus !== 'authenticated') {
+        const results = await previewBacktestRun(dto);
+        const record = { config, results, ranAt: new Date().toISOString() };
+        storeBacktestPreview(record);
+        navigate('/backtests/preview', { state: { preview: record } });
+        return null;
+      }
+
       const response = await submitBacktestRun(dto);
 
       setRunId(response.id);
@@ -279,7 +294,7 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
       submissionPending.current = false;
       setIsSubmitting(false);
     }
-  }, [config, navigate, priceGaps]);
+  }, [authStatus, config, navigate, priceGaps]);
 
   const resetConfig = useCallback(() => {
     if (submissionPending.current) return;

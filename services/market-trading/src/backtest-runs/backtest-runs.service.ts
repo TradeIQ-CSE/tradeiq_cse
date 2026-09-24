@@ -12,6 +12,7 @@ import { runBacktest } from '../backtesting/engine/runBacktest';
 import { validateRule } from '../backtesting/rules/validateRule';
 import {
   BacktestInput,
+  FeeConfig,
   RuleSet,
   BuyConditionType,
   SellConditionType,
@@ -48,6 +49,59 @@ function toWeekday(date: string, step: 1 | -1): string {
   return value.toISOString().slice(0, 10);
 }
 
+interface PreparedRun {
+  ruleSet: RuleSet;
+  feeConfig: FeeConfig;
+  positionSizing: PositionSizingConfig;
+  warmupPeriod: number;
+  warmupPrices: DailyPrice[];
+  simulationPrices: DailyPrice[];
+}
+
+/** The results body a preview returns — the same shape as GET :runId/results. */
+export interface BacktestPreview {
+  initialCapital: number;
+  finalCash: number;
+  finalEquity: number;
+  trades: ReturnType<typeof runBacktest>['trades'];
+  equityCurve: ReturnType<typeof runBacktest>['equityCurve'];
+}
+
+// `warmupPrices` arrive newest first (findWarmupDailyPrices orders DESC so
+// its LIMIT takes the bars nearest the start); the engine needs one
+// chronological series.
+function toEngineInput(
+  run: Pick<
+    BacktestRun,
+    | 'startDate'
+    | 'endDate'
+    | 'startingCapital'
+    | 'ruleConfig'
+    | 'executionAssumptions'
+  >,
+  warmupPrices: DailyPrice[],
+  simulationPrices: DailyPrice[],
+): BacktestInput {
+  const allPrices = [...[...warmupPrices].reverse(), ...simulationPrices];
+  return {
+    bars: allPrices.map((p) => ({
+      date: p.tradeDate,
+      open: p.open ? parseFloat(p.open) : parseFloat(p.close),
+      high: parseFloat(p.high),
+      low: parseFloat(p.low),
+      close: parseFloat(p.close),
+      volume: parseInt(p.volume || '0', 10),
+    })),
+    startDate: run.startDate,
+    endDate: run.endDate,
+    initialCapital: Number(run.startingCapital),
+    positionSizing: run.executionAssumptions.positionSizing,
+    feeConfig: run.executionAssumptions.feeConfig,
+    rules: run.ruleConfig,
+    warmupPeriod: run.executionAssumptions.warmupPeriod,
+  };
+}
+
 @Injectable()
 export class BacktestRunsService {
   constructor(
@@ -55,10 +109,10 @@ export class BacktestRunsService {
     private readonly dataCoverage: DataCoverageService,
   ) {}
 
-  async submitRun(
-    dto: CreateBacktestRunDto,
-    ownerId: string,
-  ): Promise<BacktestRun> {
+  // Everything a run needs before the engine: validation, the data-gap check
+  // and the price history. Shared by a saved run and a preview, so the two
+  // accept and reject exactly the same requests.
+  private async prepareRun(dto: CreateBacktestRunDto): Promise<PreparedRun> {
     // 1. DTO and Boundary Validation
     if (!dto.symbol) {
       throw new BacktestApiError('INVALID_SYMBOL', 'Symbol is required.');
@@ -212,7 +266,23 @@ export class BacktestRunsService {
       value: dto.positionSizing?.value,
     };
 
-    // 5. Persist QUEUED run
+    return {
+      ruleSet,
+      feeConfig,
+      positionSizing,
+      warmupPeriod,
+      warmupPrices,
+      simulationPrices,
+    };
+  }
+
+  async submitRun(
+    dto: CreateBacktestRunDto,
+    ownerId: string,
+  ): Promise<BacktestRun> {
+    const prepared = await this.prepareRun(dto);
+
+    // Persist QUEUED run
     const run = new BacktestRun();
     run.id = crypto.randomUUID();
     run.ownerId = ownerId;
@@ -221,27 +291,68 @@ export class BacktestRunsService {
     run.startDate = dto.startDate;
     run.endDate = dto.endDate;
     run.startingCapital = dto.startingCapital;
-    run.ruleConfig = ruleSet;
+    run.ruleConfig = prepared.ruleSet;
     run.executionAssumptions = {
-      feeConfig,
-      positionSizing,
-      warmupPeriod,
+      feeConfig: prepared.feeConfig,
+      positionSizing: prepared.positionSizing,
+      warmupPeriod: prepared.warmupPeriod,
     };
     run.createdAt = new Date();
 
     await this.repository.createRun(run);
 
-    // 6. Asynchronous Background Execution (Fire-and-forget)
+    // Asynchronous Background Execution (Fire-and-forget)
     this.runExecutionAsync(
       run.id,
       ownerId,
-      warmupPrices,
-      simulationPrices,
+      prepared.warmupPrices,
+      prepared.simulationPrices,
     ).catch((err) => {
       console.error('Unhandled background backtest error:', err);
     });
 
     return run;
+  }
+
+  /**
+   * Runs a backtest for a visitor who is not signed in: the same validation
+   * and engine as `submitRun`, but synchronous and stored nowhere. There is
+   * no run to own, so nothing needs an owner and nothing can be read back
+   * later — saving a result means signing in and submitting it as a run.
+   * One security's daily bars over the dataset window is a few thousand
+   * rows, so the engine finishes well inside a request.
+   */
+  async previewRun(dto: CreateBacktestRunDto): Promise<BacktestPreview> {
+    const prepared = await this.prepareRun(dto);
+    let engineResult: ReturnType<typeof runBacktest>;
+    try {
+      engineResult = runBacktest(
+        toEngineInput(
+          {
+            startDate: dto.startDate,
+            endDate: dto.endDate,
+            startingCapital: dto.startingCapital,
+            ruleConfig: prepared.ruleSet,
+            executionAssumptions: {
+              feeConfig: prepared.feeConfig,
+              positionSizing: prepared.positionSizing,
+              warmupPeriod: prepared.warmupPeriod,
+            },
+          },
+          prepared.warmupPrices,
+          prepared.simulationPrices,
+        ),
+      );
+    } catch (err: unknown) {
+      throw mapEngineError(err);
+    }
+    return {
+      initialCapital: engineResult.initialCapital,
+      finalCash: engineResult.finalCash,
+      finalEquity: engineResult.finalEquity,
+      trades: engineResult.trades,
+      equityCurve: engineResult.equityCurve,
+    };
   }
 
   async getRunStatus(runId: string, ownerId: string): Promise<BacktestRun> {
@@ -345,30 +456,8 @@ export class BacktestRunsService {
         );
       }
 
-      // 2. Map prices to engine format
-      const sortedWarmup = [...warmupPrices].reverse(); // reverse chronological ordering back to normal chronological
-      const allPrices = [...sortedWarmup, ...simulationPrices];
-
-      const bars = allPrices.map((p) => ({
-        date: p.tradeDate,
-        open: p.open ? parseFloat(p.open) : parseFloat(p.close),
-        high: parseFloat(p.high),
-        low: parseFloat(p.low),
-        close: parseFloat(p.close),
-        volume: parseInt(p.volume || '0', 10),
-      }));
-
-      // 3. Assemble inputs
-      const backtestInput: BacktestInput = {
-        bars,
-        startDate: run.startDate,
-        endDate: run.endDate,
-        initialCapital: Number(run.startingCapital),
-        positionSizing: run.executionAssumptions.positionSizing,
-        feeConfig: run.executionAssumptions.feeConfig,
-        rules: run.ruleConfig,
-        warmupPeriod: run.executionAssumptions.warmupPeriod,
-      };
+      // 2-3. Map prices and assemble engine inputs
+      const backtestInput = toEngineInput(run, warmupPrices, simulationPrices);
 
       // 4. Run calculations
       const engineResult = runBacktest(backtestInput);

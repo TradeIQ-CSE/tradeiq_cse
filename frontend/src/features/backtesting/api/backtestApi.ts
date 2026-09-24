@@ -81,6 +81,29 @@ export async function submitBacktestRun(
 }
 
 /**
+ * Runs a backtest without an account via POST /api/v1/backtests/preview. The
+ * API validates it exactly like a saved run but answers with the results
+ * body straight away and stores nothing, so this is a plain fetch: there is
+ * no owner to identify. Saving a result is `submitBacktestRun`, signed in.
+ */
+export async function previewBacktestRun(
+  request: CreateBacktestRunRequest,
+): Promise<BacktestResultsResponse> {
+  const response = await fetch(
+    apiUrl(MARKET_TRADING_API_URL, '/api/v1/backtests/preview').toString(),
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(request),
+    },
+  );
+  return handleResponse<BacktestResultsResponse>(response);
+}
+
+/**
  * Retrieves the live status of a submitted run from GET /api/v1/backtests/:runId
  */
 export async function getBacktestRunStatus(

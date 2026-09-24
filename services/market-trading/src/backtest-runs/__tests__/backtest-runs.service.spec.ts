@@ -623,4 +623,55 @@ describe('BacktestRunsService - Unit Tests', () => {
       );
     });
   });
+
+  describe('Preview runs (no account)', () => {
+    it('returns the same results as the engine and stores nothing', async () => {
+      repo.findSecurityBySymbol.mockResolvedValue(mockSecurity);
+      repo.findDailyPricesBySecurity.mockResolvedValue(sampleBars);
+
+      const direct = runBacktest({
+        bars: sampleBars.map((b) => ({
+          date: b.tradeDate,
+          open: parseFloat(b.open ?? '0'),
+          high: parseFloat(b.high),
+          low: parseFloat(b.low),
+          close: parseFloat(b.close),
+          volume: parseInt(b.volume, 10),
+        })),
+        startDate: '2026-08-01',
+        endDate: '2026-08-05',
+        initialCapital: 1000000,
+        positionSizing: { type: 'full_capital' },
+        feeConfig: DEFAULT_TEST_FEES,
+        rules: {
+          version: '1.0',
+          buyCondition: { type: 'period_start' },
+          sellConditions: [{ type: 'take_profit_pct', value: 10 }],
+        },
+        warmupPeriod: 0,
+      });
+
+      const preview = await service.previewRun(validDto);
+
+      expect(preview).toEqual({
+        initialCapital: direct.initialCapital,
+        finalCash: direct.finalCash,
+        finalEquity: direct.finalEquity,
+        trades: direct.trades,
+        equityCurve: direct.equityCurve,
+      });
+      expect(repo.createRun).not.toHaveBeenCalled();
+      expect(repo.saveResult).not.toHaveBeenCalled();
+      expect(repo.updateRunStatus).not.toHaveBeenCalled();
+    });
+
+    it('rejects a request exactly as a saved run would', async () => {
+      repo.findSecurityBySymbol.mockResolvedValue(null);
+
+      await expect(service.previewRun(validDto)).rejects.toMatchObject({
+        code: 'INVALID_SYMBOL',
+      });
+      expect(repo.createRun).not.toHaveBeenCalled();
+    });
+  });
 });
