@@ -32,10 +32,14 @@ export function defaultBacktestPeriod(
   const yearStart = maximum.subtract({ years: 1 }).add({ days: 1 });
   const startDate = (yearStart.compare(minimum) < 0 ? minimum : yearStart).toString();
   const endDate = maximum.toString();
-  return {
+  const snapped = {
     startDate: snapOutOfDataGap(gaps, startDate, 'start'),
     endDate: snapOutOfDataGap(gaps, endDate, 'end'),
   };
+  // A gap spanning both ends would snap them past each other. Keep the
+  // unsnapped window then: validation names the gap instead of the draft
+  // silently holding an inverted period.
+  return snapped.startDate <= snapped.endDate ? snapped : { startDate, endDate };
 }
 
 /**

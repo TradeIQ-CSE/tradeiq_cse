@@ -218,7 +218,7 @@ function EquityCurvePreview({
           role="img"
           aria-label={`Portfolio equity from ${first.date} to ${last.date}`}
         >
-          {straddles.map(({ gap, before, after }) => {
+          {straddles.map(({ gap }) => {
             const x1 = xForDate(gap.from);
             const x2 = xForDate(gap.to);
             const bandWidth = x2 - x1;
@@ -229,8 +229,8 @@ function EquityCurvePreview({
             const fillOpacity = isClosure ? 0.18 : 0.4;
             const label = isClosure ? 'Market closed' : 'No data';
             const titleText = isClosure
-              ? `Market closed, ${before.date} to ${after.date}`
-              : `No market data, ${before.date} to ${after.date}`;
+              ? `Market closed, ${gap.from} to ${gap.to}`
+              : `No market data, ${gap.from} to ${gap.to}`;
             return (
               <g key={`${gap.kind}-${gap.from}-${gap.to}`}>
                 <rect

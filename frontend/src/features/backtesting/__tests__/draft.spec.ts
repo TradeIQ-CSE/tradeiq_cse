@@ -42,6 +42,13 @@ describe('frontend backtest defaults and restoration', () => {
     expect(defaultBacktestPeriod(from, to)).toEqual(defaultBacktestPeriod());
   });
 
+  it('keeps the unsnapped window when one gap spans both ends', () => {
+    const gap: DataGap = { from: '2025-06-02', to: '2025-12-31', sessions: 153, kind: 'missing_data' };
+    expect(defaultBacktestPeriod('2025-06-10', '2025-11-28', [gap])).toEqual({
+      startDate: '2025-06-10', endDate: '2025-11-28',
+    });
+  });
+
   it('snaps a start date landing inside a gap to the first session after it', () => {
     const gap: DataGap = { from: '2025-01-01', to: '2025-01-10', sessions: 8, kind: 'missing_data' };
     // The naive suggestion (trailing year) starts 2025-01-01, inside the gap.

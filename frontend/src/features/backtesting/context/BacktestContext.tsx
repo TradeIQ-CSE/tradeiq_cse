@@ -132,6 +132,17 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
     setSubmitFieldErrors(null);
   }, [priceGaps]);
 
+  // A security picked before coverage loaded got a default period computed
+  // with no gaps. Recompute it once the gaps arrive, unless the reader has
+  // already set their own dates.
+  useEffect(() => {
+    setDraft((previous) =>
+      previous.periodUsesCoverageDefault && previous.config.security.symbol
+        ? selectDraftSecurity(previous, previous.config.security, priceGaps)
+        : previous,
+    );
+  }, [priceGaps]);
+
   const getStepErrors = useCallback(
     (step: StepKey) => validationErrors.filter((e) => e.step === step),
     [validationErrors],

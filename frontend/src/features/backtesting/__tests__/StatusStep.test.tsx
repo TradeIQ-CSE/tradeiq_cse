@@ -269,7 +269,7 @@ describe('StatusStep equity curve — data gaps', () => {
     const titles = Array.from(container.querySelectorAll('svg title')).map(
       (title) => title.textContent,
     );
-    expect(titles).toContain('Market closed, 2020-03-20 to 2020-05-11');
+    expect(titles).toContain('Market closed, 2020-03-23 to 2020-05-08');
     expect(screen.getByText('No data')).toBeInTheDocument();
     expect(screen.queryByText('Market closed')).not.toBeInTheDocument();
     expect(container.querySelectorAll('svg polyline')).toHaveLength(3);
