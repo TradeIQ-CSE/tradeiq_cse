@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { Route, Routes } from 'react-router-dom';
 import { BacktestWizard } from '../components/BacktestWizard';
 import * as api from '../api/backtestApi';
 import { ApiError } from '../../../lib/api';
 import { createDefaultBacktestConfig } from '../domain/defaults';
+import { renderWithProviders } from '../../../test/render';
 
 import { CreateBacktestRunResponse } from '../domain/types';
 
@@ -51,12 +52,11 @@ describe('BacktestWizard Workflow Integration', () => {
   });
 
   it('renders step 1 (Security) by default and displays heading', () => {
-    render(
-      <MemoryRouter initialEntries={['/backtests/new/security']}>
-        <Routes>
-          <Route path="/backtests/new/:step" element={<BacktestWizard />} />
-        </Routes>
-      </MemoryRouter>,
+    renderWithProviders(
+      <Routes>
+        <Route path="/backtests/new/:step" element={<BacktestWizard />} />
+      </Routes>,
+      { initialEntries: ['/backtests/new/security'] },
     );
 
     expect(screen.getByRole('heading', { name: 'Test a strategy against the past' })).toBeTruthy();
@@ -64,12 +64,11 @@ describe('BacktestWizard Workflow Integration', () => {
   });
 
   it('does not present an incomplete direct review as ready to submit', () => {
-    render(
-      <MemoryRouter initialEntries={['/backtests/new/review']}>
-        <Routes>
-          <Route path="/backtests/new/:step" element={<BacktestWizard />} />
-        </Routes>
-      </MemoryRouter>,
+    renderWithProviders(
+      <Routes>
+        <Route path="/backtests/new/:step" element={<BacktestWizard />} />
+      </Routes>,
+      { initialEntries: ['/backtests/new/review'] },
     );
 
     expect(screen.getByText('Configuration requires attention')).toBeTruthy();
@@ -77,12 +76,11 @@ describe('BacktestWizard Workflow Integration', () => {
   });
 
   it('preserves entered values when moving to the next step and then back', async () => {
-    render(
-      <MemoryRouter initialEntries={['/backtests/new/security']}>
-        <Routes>
-          <Route path="/backtests/new/:step" element={<BacktestWizard />} />
-        </Routes>
-      </MemoryRouter>,
+    renderWithProviders(
+      <Routes>
+        <Route path="/backtests/new/:step" element={<BacktestWizard />} />
+      </Routes>,
+      { initialEntries: ['/backtests/new/security'] },
     );
 
     // Select SAMP from the API-backed universe.
@@ -146,13 +144,12 @@ describe('BacktestWizard Workflow Integration', () => {
       );
     };
 
-    render(
-      <MemoryRouter initialEntries={['/backtests/new/review']}>
-        <Routes>
-          <Route path="/backtests/new/:step" element={<BacktestWizard />} />
-          <Route path="/backtests/:runId/status" element={<LocationTracker />} />
-        </Routes>
-      </MemoryRouter>,
+    renderWithProviders(
+      <Routes>
+        <Route path="/backtests/new/:step" element={<BacktestWizard />} />
+        <Route path="/backtests/:runId/status" element={<LocationTracker />} />
+      </Routes>,
+      { initialEntries: ['/backtests/new/review'] },
     );
 
     expect(screen.getByRole('heading', { name: 'Review simulation assumptions' })).toBeTruthy();
@@ -190,13 +187,12 @@ describe('BacktestWizard Workflow Integration', () => {
 
     const submitSpy = vi.spyOn(api, 'submitBacktestRun').mockReturnValue(submitPromise);
 
-    render(
-      <MemoryRouter initialEntries={['/backtests/new/review']}>
-        <Routes>
-          <Route path="/backtests/new/:step" element={<BacktestWizard />} />
-          <Route path="/backtests/:runId/status" element={<div>Status</div>} />
-        </Routes>
-      </MemoryRouter>,
+    renderWithProviders(
+      <Routes>
+        <Route path="/backtests/new/:step" element={<BacktestWizard />} />
+        <Route path="/backtests/:runId/status" element={<div>Status</div>} />
+      </Routes>,
+      { initialEntries: ['/backtests/new/review'] },
     );
 
     const runBtn = screen.getByRole('button', { name: /run backtest/i });
@@ -227,12 +223,11 @@ describe('BacktestWizard Workflow Integration', () => {
       }),
     );
 
-    render(
-      <MemoryRouter initialEntries={['/backtests/new/review']}>
-        <Routes>
-          <Route path="/backtests/new/:step" element={<BacktestWizard />} />
-        </Routes>
-      </MemoryRouter>,
+    renderWithProviders(
+      <Routes>
+        <Route path="/backtests/new/:step" element={<BacktestWizard />} />
+      </Routes>,
+      { initialEntries: ['/backtests/new/review'] },
     );
 
     const runBtn = screen.getByRole('button', { name: /run backtest/i });
@@ -244,5 +239,46 @@ describe('BacktestWizard Workflow Integration', () => {
       expect(screen.getByText('corr-id-998877')).toBeTruthy();
       expect(screen.getByText(/Your parameters have been retained/)).toBeTruthy();
     });
+  });
+
+  it('maps a DATE_IN_DATA_GAP submission error onto the period step (docs/plans/data-gap-handling.md §5)', async () => {
+    seedValidDraft();
+    vi.spyOn(api, 'submitBacktestRun').mockRejectedValue(
+      new ApiError({
+        code: 'DATE_IN_DATA_GAP',
+        message: 'No market data from 2026-01-01 to 2026-06-12. Choose a date outside this period.',
+        details: { field: 'startDate', from: '2026-01-01', to: '2026-06-12' },
+        trace_id: 'corr-id-gap-1',
+      }),
+    );
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/backtests/new/:step" element={<BacktestWizard />} />
+      </Routes>,
+      { initialEntries: ['/backtests/new/review'] },
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /run backtest/i }));
+
+    // Surfaced immediately on the review page, like any other API error —
+    // ValidationSummary lists every current validation error regardless of
+    // which step is showing (and the "Submission Failed" notice repeats the
+    // same message on its own, hence >0 rather than exactly one match).
+    await waitFor(() => {
+      expect(
+        screen.getAllByText('No market data from 2026-01-01 to 2026-06-12. Choose a date outside this period.').length,
+      ).toBeGreaterThan(0);
+    });
+
+    // Following it opens the period step, where the same message anchors
+    // the start-date field, exactly like a client-caught gap error would.
+    fireEvent.click(screen.getByRole('button', { name: 'Open period' }));
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Choose the historical period' })).toBeTruthy();
+    });
+    expect(
+      screen.getAllByText('No market data from 2026-01-01 to 2026-06-12. Choose a date outside this period.').length,
+    ).toBeGreaterThan(0);
   });
 });

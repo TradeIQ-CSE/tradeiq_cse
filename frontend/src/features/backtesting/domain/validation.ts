@@ -1,14 +1,23 @@
 import { BacktestConfig, StepKey, ValidationError, ValidationResult } from './types';
-import { CSE_DATASET_MIN_DATE, CSE_DATASET_MAX_DATE } from './defaults';
+import { CSE_DATASET_MIN_DATE } from './defaults';
+import { backtestDateGap, dateInGapMessage, DataGap } from '../../../lib/data-gaps';
 
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * Validates the entire backtest configuration or a specific step.
+ * Validates the entire backtest configuration or a specific step. `gaps`
+ * (a security's price gaps, from `useDataCoverage`) is optional and
+ * defaults to none, so a caller that predates the data-gap plan — or one
+ * still waiting on coverage to load — keeps validating exactly as before;
+ * a caller that has it loaded also catches a start/end date a typed edit or
+ * a restored draft put inside a `missing_data` gap, with the same message
+ * text the API itself would reject it with (docs/plans/data-gap-handling.md
+ * §5).
  */
 export function validateBacktestConfig(
   config: BacktestConfig,
   targetStep?: StepKey,
+  gaps: readonly DataGap[] = [],
 ): ValidationResult {
   const errors: ValidationError[] = [];
 
@@ -69,20 +78,14 @@ export function validateBacktestConfig(
         });
       }
 
-      // Dataset bounds validation (2017-2025)
+      // The dataset has no prices before 2017. There is no fixed upper
+      // bound: daily ingestion extends coverage past the 2017–2025 seed, and
+      // each security's own `dataTo` below is the real ceiling.
       if (startDate < CSE_DATASET_MIN_DATE) {
         errors.push({
           step: 'period',
           field: 'startDate',
           message: `Start date cannot precede the available dataset coverage (${CSE_DATASET_MIN_DATE}).`,
-        });
-      }
-
-      if (endDate > CSE_DATASET_MAX_DATE) {
-        errors.push({
-          step: 'period',
-          field: 'endDate',
-          message: `End date cannot exceed the available dataset coverage (${CSE_DATASET_MAX_DATE}).`,
         });
       }
 
@@ -100,6 +103,29 @@ export function validateBacktestConfig(
           step: 'period',
           field: 'endDate',
           message: `End date exceeds historical price coverage for ${config.security.symbol} (${config.security.dataTo}).`,
+        });
+      }
+
+      // Data-gap validation (docs/plans/data-gap-handling.md §5): the same
+      // rule the API applies before its own DATE_IN_DATA_GAP rejection,
+      // mirrored via `backtestDateGap`'s weekend roll (start forward, end
+      // backward), so a typed or restored draft can't slip a gap date past
+      // the client only to be bounced by the server.
+      const startGap = backtestDateGap(gaps, startDate, 'start');
+      if (startGap) {
+        errors.push({
+          step: 'period',
+          field: 'startDate',
+          message: dateInGapMessage(startGap),
+        });
+      }
+
+      const endGap = backtestDateGap(gaps, endDate, 'end');
+      if (endGap) {
+        errors.push({
+          step: 'period',
+          field: 'endDate',
+          message: dateInGapMessage(endGap),
         });
       }
     }

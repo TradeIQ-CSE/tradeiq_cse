@@ -4,10 +4,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { RulesStep } from '../components/RulesStep';
 import { BacktestWizardProvider } from '../context/BacktestContext';
 import { useBacktestWizard } from '../hooks/useBacktestWizard';
 import { BacktestConfig, SellCondition } from '../domain/types';
+import { createTestQueryClient } from '../../../test/render';
 
 const TestConsumer: React.FC<{ onConfigChange?: (config: BacktestConfig) => void }> = ({ onConfigChange }) => {
   const { config } = useBacktestWizard();
@@ -17,6 +19,19 @@ const TestConsumer: React.FC<{ onConfigChange?: (config: BacktestConfig) => void
 
   return <RulesStep />;
 };
+
+// BacktestWizardProvider reads price gaps via useDataCoverage (React Query),
+// so every render needs a QueryClientProvider now — see the /coverage
+// handler default (no gaps) in test/handlers.ts.
+function renderRulesStep(ui: React.ReactElement) {
+  return render(
+    <QueryClientProvider client={createTestQueryClient()}>
+      <MemoryRouter initialEntries={['/backtests/new/rules']}>
+        <BacktestWizardProvider>{ui}</BacktestWizardProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
 
 describe('RulesStep Event & Toggle Behavior', () => {
   afterEach(() => {
@@ -30,13 +45,7 @@ describe('RulesStep Event & Toggle Behavior', () => {
   it('toggles an unselected sell rule (Target Exit Price) on click without creating duplicate entries', () => {
     let latestConfig: BacktestConfig | null = null;
 
-    render(
-      <MemoryRouter initialEntries={['/backtests/new/rules']}>
-        <BacktestWizardProvider>
-          <TestConsumer onConfigChange={(c) => (latestConfig = c)} />
-        </BacktestWizardProvider>
-      </MemoryRouter>,
-    );
+    renderRulesStep(<TestConsumer onConfigChange={(c) => (latestConfig = c)} />);
 
     // Target Exit Price card starts unselected
     const targetPriceCard = screen.getByRole('checkbox', { name: /Target Exit Price/i });
@@ -59,13 +68,7 @@ describe('RulesStep Event & Toggle Behavior', () => {
   it('handles the standard keyboard Space interaction without double toggling', async () => {
     let latestConfig: BacktestConfig | null = null;
 
-    render(
-      <MemoryRouter initialEntries={['/backtests/new/rules']}>
-        <BacktestWizardProvider>
-          <TestConsumer onConfigChange={(c) => (latestConfig = c)} />
-        </BacktestWizardProvider>
-      </MemoryRouter>,
-    );
+    renderRulesStep(<TestConsumer onConfigChange={(c) => (latestConfig = c)} />);
 
     const targetPriceCard = screen.getByRole('checkbox', { name: /Target Exit Price/i });
     const user = userEvent.setup({ delay: null });

@@ -30,6 +30,9 @@ import type {
   BacktestResultsResponse,
   BacktestStatusResponse,
 } from "../domain/types";
+import { useDataCoverage } from "../../markets/useDataCoverage";
+import { crossingDataGaps, type DataGap } from "../../../lib/data-gaps";
+import { chartPalette } from "../../../components/charts/chart-theme";
 
 const MAX_TRANSIENT_RETRIES = 5;
 
@@ -71,15 +74,86 @@ function formatCurrency(value: number) {
   })}`;
 }
 
-function EquityCurvePreview({ data }: { data: BacktestEquityPoint[] }) {
+/** UTC-midnight timestamp for an ISO date, matching lib/data-gaps.ts's own
+ * date math (never a plain `new Date(dateString)`, which applies the
+ * runtime's local time zone to a midnight-only value). */
+function dayTimestamp(date: string): number {
+  return new Date(`${date}T00:00:00Z`).getTime();
+}
+
+/** One point in `data` immediately before a crossed gap, paired with the
+ * point immediately after it — the pair a segment break and a grey rect sit
+ * between. */
+interface GapStraddle {
+  gap: DataGap;
+  before: BacktestEquityPoint;
+  after: BacktestEquityPoint;
+}
+
+/** The gaps of both kinds this equity curve crosses, each paired with the
+ * two real observations either side of it — matching the price charts,
+ * which band a `market_closed` closure as well as a `missing_data` gap
+ * (docs/plans/data-gap-handling.md §6). The curve only ever has a point on
+ * a day the engine actually priced, so a crossed gap always shows up as
+ * exactly one adjacent pair whose dates skip over it. */
+function findGapStraddles(
+  data: readonly BacktestEquityPoint[],
+  gaps: readonly DataGap[],
+): GapStraddle[] {
+  if (data.length < 2) return [];
+  const crossed = crossingDataGaps(gaps, data[0].date, data[data.length - 1].date, [
+    'missing_data',
+    'market_closed',
+  ]);
+  const straddles: GapStraddle[] = [];
+  for (const gap of crossed) {
+    for (let index = 0; index < data.length - 1; index += 1) {
+      const before = data[index];
+      const after = data[index + 1];
+      if (gap.from > before.date && gap.to < after.date) {
+        straddles.push({ gap, before, after });
+        break;
+      }
+    }
+  }
+  return straddles;
+}
+
+/** A band needs roughly this many viewBox units before "No data" fits
+ * without spilling past its own edges — mirrors gap-band.tsx's
+ * `MIN_LABEL_WIDTH`, scaled down for this chart's narrower 720-wide viewBox
+ * versus a full-width Recharts panel. */
+const MIN_LABEL_WIDTH = 48;
+
+function EquityCurvePreview({
+  data,
+  gaps,
+}: {
+  data: BacktestEquityPoint[];
+  gaps: DataGap[];
+}) {
+  // Found on the full-resolution series before any sampling: the points
+  // bordering a gap have to survive downsampling below, and the caption's
+  // session count is only correct against every gap the run actually
+  // crossed, not just the ones a coarser sample happens to still straddle.
+  const straddles = useMemo(() => findGapStraddles(data, gaps), [data, gaps]);
+
   const sampled = useMemo(() => {
     if (data.length <= 120) return data;
     const interval = Math.ceil(data.length / 120);
-    const points = data.filter((_, index) => index % interval === 0);
-    const last = data[data.length - 1];
-    if (points[points.length - 1] !== last) points.push(last);
-    return points;
-  }, [data]);
+    const kept = new Set<number>();
+    data.forEach((_, index) => {
+      if (index % interval === 0) kept.add(index);
+    });
+    kept.add(data.length - 1);
+    // Never sample away a gap's bordering points: losing either one would
+    // either lose the segment break or misplace the grey rect.
+    straddles.forEach(({ before, after }) => {
+      kept.add(data.indexOf(before));
+      kept.add(data.indexOf(after));
+    });
+    return [...kept].sort((a, b) => a - b).map((index) => data[index]);
+  }, [data, straddles]);
 
   if (sampled.length === 0) {
     return (
@@ -95,16 +169,44 @@ function EquityCurvePreview({ data }: { data: BacktestEquityPoint[] }) {
   const spread = maximum - minimum || 1;
   const width = 720;
   const height = 180;
-  const points = sampled
-    .map((point, index) => {
-      const x =
-        sampled.length === 1 ? width / 2 : (index / (sampled.length - 1)) * width;
-      const y = height - ((point.totalEquity - minimum) / spread) * height;
-      return `${x.toFixed(2)},${y.toFixed(2)}`;
-    })
-    .join(" ");
   const first = data[0];
   const last = data[data.length - 1];
+  const firstMs = dayTimestamp(first.date);
+  const lastMs = dayTimestamp(last.date);
+  const dateSpanMs = lastMs - firstMs || 1;
+
+  // Date-proportional, not index-proportional: a gap between two sampled
+  // points then keeps the width its own missing sessions actually cover,
+  // rather than collapsing to the same one-point gap as its neighbours.
+  const xForDate = (date: string) =>
+    first.date === last.date ? width / 2 : ((dayTimestamp(date) - firstMs) / dateSpanMs) * width;
+  const yForEquity = (equity: number) =>
+    height - ((equity - minimum) / spread) * height;
+
+  // Segments split at every straddle the sampled series still carries (its
+  // bordering points are guaranteed present above), so the line never
+  // connects across a gap it has no data for.
+  const straddleBreaks = new Set(
+    straddles.map(({ before, after }) => `${before.date}|${after.date}`),
+  );
+  const segments: BacktestEquityPoint[][] = [];
+  let currentSegment: BacktestEquityPoint[] = [];
+  sampled.forEach((point, index) => {
+    currentSegment.push(point);
+    const next = sampled[index + 1];
+    if (next && straddleBreaks.has(`${point.date}|${next.date}`)) {
+      segments.push(currentSegment);
+      currentSegment = [];
+    }
+  });
+  if (currentSegment.length > 0) segments.push(currentSegment);
+
+  // Only `missing_data` sessions are actually missing — a `market_closed`
+  // closure is real market history the engine correctly has no bars for,
+  // so it never counts toward "sessions without market data".
+  const totalGapSessions = straddles
+    .filter(({ gap }) => gap.kind === 'missing_data')
+    .reduce((sum, { gap }) => sum + gap.sessions, 0);
 
   return (
     <figure className="flex flex-col gap-3">
@@ -116,15 +218,61 @@ function EquityCurvePreview({ data }: { data: BacktestEquityPoint[] }) {
           role="img"
           aria-label={`Portfolio equity from ${first.date} to ${last.date}`}
         >
-          <polyline
-            points={points}
-            fill="none"
-            stroke="var(--color-chart-1)"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          />
+          {straddles.map(({ gap }) => {
+            const x1 = xForDate(gap.from);
+            const x2 = xForDate(gap.to);
+            const bandWidth = x2 - x1;
+            const isClosure = gap.kind === 'market_closed';
+            // Same fillOpacity convention as gap-band.tsx's GapBands: a
+            // market_closed band reads lighter than a missing_data one,
+            // the same band mechanism rather than a second colour.
+            const fillOpacity = isClosure ? 0.18 : 0.4;
+            const label = isClosure ? 'Market closed' : 'No data';
+            const titleText = isClosure
+              ? `Market closed, ${gap.from} to ${gap.to}`
+              : `No market data, ${gap.from} to ${gap.to}`;
+            return (
+              <g key={`${gap.kind}-${gap.from}-${gap.to}`}>
+                <rect
+                  x={x1}
+                  y={0}
+                  width={Math.max(bandWidth, 0)}
+                  height={height}
+                  fill={chartPalette.gap}
+                  fillOpacity={fillOpacity}
+                />
+                {bandWidth >= MIN_LABEL_WIDTH && (
+                  <text
+                    x={x1 + bandWidth / 2}
+                    y={14}
+                    textAnchor="middle"
+                    fontSize={10}
+                    fill={chartPalette.tick}
+                  >
+                    {label}
+                  </text>
+                )}
+                <title>{titleText}</title>
+              </g>
+            );
+          })}
+          {segments.map((segment) => (
+            <polyline
+              key={segment[0].date}
+              points={segment
+                .map(
+                  (point) =>
+                    `${xForDate(point.date).toFixed(2)},${yForEquity(point.totalEquity).toFixed(2)}`,
+                )
+                .join(" ")}
+              fill="none"
+              stroke="var(--color-chart-1)"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
         </svg>
       </div>
       <figcaption className="grid gap-2 text-body-2-regular text-text-secondary sm:grid-cols-3">
@@ -136,11 +284,23 @@ function EquityCurvePreview({ data }: { data: BacktestEquityPoint[] }) {
           {first.date} to {last.date}
         </span>
       </figcaption>
+      {totalGapSessions > 0 && (
+        <p className="text-body-2-regular text-text-secondary">
+          Includes {totalGapSessions.toLocaleString("en-LK")} sessions without
+          market data.
+        </p>
+      )}
     </figure>
   );
 }
 
-function ResultsView({ results }: { results: BacktestResultsResponse }) {
+function ResultsView({
+  results,
+  gaps,
+}: {
+  results: BacktestResultsResponse;
+  gaps: DataGap[];
+}) {
   return (
     <div className="flex flex-col gap-5">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -179,7 +339,7 @@ function ResultsView({ results }: { results: BacktestResultsResponse }) {
             Daily simulated portfolio equity returned by the backtest API.
           </p>
         </div>
-        <EquityCurvePreview data={results.equityCurve} />
+        <EquityCurvePreview data={results.equityCurve} gaps={gaps} />
       </AppPanel>
 
       <AppPanel className="overflow-hidden p-0">
@@ -260,6 +420,10 @@ function ResultsView({ results }: { results: BacktestResultsResponse }) {
 export function StatusStep() {
   const { runId } = useParams<{ runId: string }>();
   const navigate = useNavigate();
+  // Never blocks this page: the equity curve just renders without gap
+  // segments/rects until coverage loads, same as the wizard's own steps.
+  const coverageQuery = useDataCoverage();
+  const priceGaps = coverageQuery.data?.prices.gaps ?? [];
   const [statusData, setStatusData] = useState<BacktestStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pollCount, setPollCount] = useState(0);
@@ -449,7 +613,7 @@ export function StatusStep() {
               }
             />
           ) : results ? (
-            <ResultsView results={results} />
+            <ResultsView results={results} gaps={priceGaps} />
           ) : null}
         </>
       )}

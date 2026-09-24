@@ -11,11 +11,25 @@ import {
   CSE_DATASET_MAX_DATE,
   CSE_DATASET_MIN_DATE,
 } from "../domain/defaults";
+import { crossingNoticeText } from "../domain/gapNotice";
+import {
+  backtestDateGap,
+  crossingDataGaps,
+  dateInGapMessage,
+  isBacktestDateUnavailable,
+  snapOutOfDataGap,
+  type DataGap,
+} from "../../../lib/data-gaps";
 import {
   BacktestFieldError,
   BacktestSectionHeader,
   BacktestStepHeader,
 } from "./BacktestStepLayout";
+
+// Formatted dates throughout this step follow the rest of the backtesting
+// feature (e.g. ReviewStep's LKR figures), which has no i18n wiring of its
+// own yet — see AGENTS.md's scope for this PR.
+const NOTICE_LOCALE = "en-LK";
 
 function laterDate(left: CalendarDate, right: CalendarDate) {
   return left.compare(right) > 0 ? left : right;
@@ -30,24 +44,38 @@ function parseDateOr(value: string | null | undefined, fallback: CalendarDate) {
   }
 }
 
-function buildPresets(minimum: CalendarDate, maximum: CalendarDate) {
+/** Snaps a computed preset/full-range boundary off a `missing_data` gap it
+ * falls in (docs/plans/data-gap-handling.md §5), same rule the API applies. */
+function gapAwareBound(
+  gaps: readonly DataGap[],
+  date: CalendarDate,
+  role: "start" | "end",
+): CalendarDate {
+  const snapped = snapOutOfDataGap(gaps, date.toString(), role);
+  return snapped === date.toString() ? date : parseDate(snapped);
+}
+
+function buildPresets(
+  minimum: CalendarDate,
+  maximum: CalendarDate,
+  gaps: readonly DataGap[],
+) {
   return [1, 2, 5].map((years) => ({
     label: `${years} ${years === 1 ? "year" : "years"}`,
     value: {
-      start: laterDate(
-        minimum,
-        maximum.subtract({ years }).add({ days: 1 }),
+      start: gapAwareBound(
+        gaps,
+        laterDate(minimum, maximum.subtract({ years }).add({ days: 1 })),
+        "start",
       ),
-      end: maximum,
+      end: gapAwareBound(gaps, maximum, "end"),
     },
   }));
 }
 
 export function PeriodStep({ embedded = false }: { embedded?: boolean }) {
-  const { config, updateConfig, getStepErrors } = useBacktestWizard();
+  const { config, updateConfig, getStepErrors, priceGaps } = useBacktestWizard();
   const errors = getStepErrors("period");
-  const startError = errors.find((error) => error.field === "startDate");
-  const endError = errors.find((error) => error.field === "endDate");
 
   const datasetMinimum = parseDate(CSE_DATASET_MIN_DATE);
   const datasetMaximum = parseDate(CSE_DATASET_MAX_DATE);
@@ -62,11 +90,38 @@ export function PeriodStep({ embedded = false }: { embedded?: boolean }) {
   const hasValidCoverage = reportedMinimum.compare(reportedMaximum) <= 0;
   const minimum = hasValidCoverage ? reportedMinimum : datasetMinimum;
   const maximum = hasValidCoverage ? reportedMaximum : datasetMaximum;
+  const gapAwareMinimum = gapAwareBound(priceGaps, minimum, "start");
+  const gapAwareMaximum = gapAwareBound(priceGaps, maximum, "end");
   const value: DateRangeValue = {
     start: parseDateOr(config.period.startDate, minimum),
     end: parseDateOr(config.period.endDate, maximum),
   };
-  const presets = buildPresets(minimum, maximum);
+  const presets = buildPresets(minimum, maximum, priceGaps);
+  const crossedGaps = crossingDataGaps(
+    priceGaps,
+    value.start.toString(),
+    value.end.toString(),
+  );
+
+  // The calendar (isBacktestDateUnavailable) now only blocks a date already
+  // inside a missing_data gap, not one whose role-specific roll would land
+  // in one — that role-aware check happens here instead, computed straight
+  // from the committed range so a bad role (e.g. a weekend end that rolls
+  // back into a gap) shows its field error the moment it's picked, not only
+  // after Next/Run reruns validateCurrentStep. `errors` (from context) wins
+  // when present so an API-returned or dataset-bounds error is never masked.
+  const liveStartGap = backtestDateGap(priceGaps, value.start.toString(), "start");
+  const liveEndGap = backtestDateGap(priceGaps, value.end.toString(), "end");
+  const startError =
+    errors.find((error) => error.field === "startDate") ??
+    (liveStartGap
+      ? { step: "period" as const, field: "startDate", message: dateInGapMessage(liveStartGap) }
+      : undefined);
+  const endError =
+    errors.find((error) => error.field === "endDate") ??
+    (liveEndGap
+      ? { step: "period" as const, field: "endDate", message: dateInGapMessage(liveEndGap) }
+      : undefined);
 
   const applyRange = (range: DateRangeValue | null) => {
     if (!range) return;
@@ -105,6 +160,9 @@ export function PeriodStep({ embedded = false }: { embedded?: boolean }) {
             onChange={applyRange}
             minValue={minimum}
             maxValue={maximum}
+            isDateUnavailable={(date) =>
+              isBacktestDateUnavailable(priceGaps, date.toString())
+            }
             isInvalid={Boolean(startError || endError)}
             describedBy="backtest-period-help"
             aria-label="Backtest simulation date range"
@@ -121,6 +179,24 @@ export function PeriodStep({ embedded = false }: { embedded?: boolean }) {
           </BacktestFieldError>
         </div>
       </section>
+
+      {crossedGaps.length > 0 && (
+        <AppNotice
+          title={
+            crossedGaps.length > 1
+              ? "Selected range crosses data gaps"
+              : "Selected range crosses a data gap"
+          }
+        >
+          <div className="flex flex-col gap-1">
+            {crossedGaps.map((gap) => (
+              <p key={`${gap.from}-${gap.to}`}>
+                {crossingNoticeText(gap, NOTICE_LOCALE)}
+              </p>
+            ))}
+          </div>
+        </AppNotice>
+      )}
 
       <section className="flex flex-col gap-3">
         <BacktestSectionHeader
@@ -145,14 +221,16 @@ export function PeriodStep({ embedded = false }: { embedded?: boolean }) {
           })}
           <Button
             variant={
-              value.start.compare(minimum) === 0 &&
-              value.end.compare(maximum) === 0
+              value.start.compare(gapAwareMinimum) === 0 &&
+              value.end.compare(gapAwareMaximum) === 0
                 ? "primary"
                 : "secondary"
             }
             size="small"
             leadingIcon={RiCalendarCheckLine}
-            onClick={() => applyRange({ start: minimum, end: maximum })}
+            onClick={() =>
+              applyRange({ start: gapAwareMinimum, end: gapAwareMaximum })
+            }
           >
             Full available range
           </Button>

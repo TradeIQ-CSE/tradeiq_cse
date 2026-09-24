@@ -12,12 +12,20 @@ import { validateBacktestConfig } from '../domain/validation';
 import { mapToBacktestRequest } from '../domain/mapper';
 import { submitBacktestRun } from '../api/backtestApi';
 import { ApiError } from '../../../lib/api';
+import { DataGap } from '../../../lib/data-gaps';
+import { useDataCoverage } from '../../markets/useDataCoverage';
 import { ADVANCED_STEPS, SIMPLE_STEPS, simplePageFor, sectionsForPage, workflowLocation, type WorkflowMode } from '../domain/workflow';
 
 const STORAGE_KEY = 'tradeiq_backtest_draft_v1';
 
 export interface BacktestContextValue {
   config: BacktestConfig;
+  /** The selected security's price gaps (from `useDataCoverage`), so a
+   * component doesn't have to fetch coverage a second time to grey out a
+   * date, snap a preset or show the crossing notice. Empty until coverage
+   * loads, and stays empty (never blocks the wizard) if it fails — the API
+   * still guards a submission either way. */
+  priceGaps: DataGap[];
   mode: WorkflowMode;
   setMode: (mode: WorkflowMode) => void;
   currentStep: StepKey;
@@ -63,6 +71,14 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
 
   const [draft, setDraft] = useState(loadInitialDraft);
   const config = draft.config;
+  // A single fetch shared by every step (React Query dedupes identical
+  // queryKeys), not just PeriodStep — presets, the default period and
+  // validation all need the same gap list. Memoised so its identity only
+  // changes when the query's own data does, not on every render — several
+  // callbacks below depend on it.
+  const coverageQuery = useDataCoverage();
+  const coverageGaps = coverageQuery.data?.prices.gaps;
+  const priceGaps = useMemo(() => coverageGaps ?? [], [coverageGaps]);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const submissionPending = useRef(false);
@@ -111,10 +127,21 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
   );
 
   const selectSecurity = useCallback((security: SecuritySelection) => {
-    setDraft((previous) => selectDraftSecurity(previous, security));
+    setDraft((previous) => selectDraftSecurity(previous, security, priceGaps));
     setSubmitError(null);
     setSubmitFieldErrors(null);
-  }, []);
+  }, [priceGaps]);
+
+  // A security picked before coverage loaded got a default period computed
+  // with no gaps. Recompute it once the gaps arrive, unless the reader has
+  // already set their own dates.
+  useEffect(() => {
+    setDraft((previous) =>
+      previous.periodUsesCoverageDefault && previous.config.security.symbol
+        ? selectDraftSecurity(previous, previous.config.security, priceGaps)
+        : previous,
+    );
+  }, [priceGaps]);
 
   const getStepErrors = useCallback(
     (step: StepKey) => validationErrors.filter((e) => e.step === step),
@@ -123,19 +150,19 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
 
   const validateCurrentStep = useCallback(() => {
     const sections = sectionsForPage(mode, currentStep);
-    const errors = sections.flatMap((step) => validateBacktestConfig(config, step).errors);
+    const errors = sections.flatMap((step) => validateBacktestConfig(config, step, priceGaps).errors);
     setValidationErrors((prev) => {
       const otherErrors = prev.filter((e) => !sections.includes(e.step));
       return [...otherErrors, ...errors];
     });
     return errors.length === 0;
-  }, [config, currentStep, mode]);
+  }, [config, currentStep, mode, priceGaps]);
 
   const validateAllSteps = useCallback(() => {
-    const result = validateBacktestConfig(config);
+    const result = validateBacktestConfig(config, undefined, priceGaps);
     setValidationErrors(result.errors);
     return result.isValid;
-  }, [config]);
+  }, [config, priceGaps]);
 
   const goToStep = useCallback(
     (step: StepKey, openSection = true) => {
@@ -178,7 +205,7 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
     }
 
     // Comprehensive client-side validation check
-    const validation = validateBacktestConfig(config);
+    const validation = validateBacktestConfig(config, undefined, priceGaps);
     setValidationErrors(validation.errors);
 
     if (!validation.isValid) {
@@ -205,6 +232,24 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
         setSubmitError(err.body.message || 'Backtest submission failed.');
         setSubmitTraceId(err.body.trace_id || null);
         setSubmitFieldErrors(err.body.fields || null);
+
+        // DATE_IN_DATA_GAP (docs/plans/data-gap-handling.md §2) carries its
+        // gap bounds under `details`, not `fields` — the calendar and
+        // client-side validation are meant to catch this first, so seeing it
+        // here at all means coverage changed between load and submit.
+        // Surface it exactly like any other period error: on the field the
+        // API named, with the API's own message.
+        if (err.body.code === 'DATE_IN_DATA_GAP') {
+          const field = (err.body.details as { field?: string } | undefined)?.field;
+          setValidationErrors((prev) => [
+            ...prev,
+            {
+              step: 'period',
+              field: field === 'endDate' ? 'endDate' : 'startDate',
+              message: err.body.message,
+            },
+          ]);
+        }
 
         // Map backend validation field errors to UI steps
         if (err.body.fields && err.body.fields.length > 0) {
@@ -234,7 +279,7 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
       submissionPending.current = false;
       setIsSubmitting(false);
     }
-  }, [config, navigate]);
+  }, [config, navigate, priceGaps]);
 
   const resetConfig = useCallback(() => {
     if (submissionPending.current) return;
@@ -252,6 +297,7 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
 
   const value: BacktestContextValue = {
     config,
+    priceGaps,
     mode,
     setMode,
     currentStep,

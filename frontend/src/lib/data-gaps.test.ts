@@ -1,13 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import {
   DataGap,
+  backtestDateGap,
+  crossingDataGaps,
+  dateInGapMessage,
   defaultRangeAvoidingGaps,
+  firstSessionAfterGap,
   formatGapBoundary,
   formatGapDateRange,
   formatGapLabel,
+  formatGapProseRange,
   gapContaining,
   gapRuns,
   gapsWithin,
+  isBacktestDateUnavailable,
+  lastSessionBeforeGap,
+  snapOutOfDataGap,
   withGapSlots,
 } from './data-gaps';
 
@@ -367,6 +375,192 @@ describe('formatGapLabel', () => {
   it('prefixes a market_closed gap with "Market closed"', () => {
     expect(formatGapLabel(covidClosure, 'en-US', labels)).toBe(
       'Market closed · Mar 23 – May 8, 2020',
+    );
+  });
+});
+
+describe('formatGapProseRange', () => {
+  it('drops the shared year and joins with "to" instead of an en dash', () => {
+    expect(formatGapProseRange(missingData2026, 'en-US')).toBe('Jan 1 to Jun 12, 2026');
+  });
+
+  it('keeps both years when the gap crosses a year boundary', () => {
+    const crossing: DataGap = {
+      from: '2025-12-20',
+      to: '2026-01-05',
+      sessions: 10,
+      kind: 'missing_data',
+    };
+    expect(formatGapProseRange(crossing, 'en-US')).toBe('Dec 20, 2025 to Jan 5, 2026');
+  });
+});
+
+describe('backtestDateGap', () => {
+  it('catches a weekday sitting directly inside a missing_data gap', () => {
+    expect(backtestDateGap([missingData2026], '2026-03-15', 'start')).toEqual(
+      missingData2026,
+    );
+    expect(backtestDateGap([missingData2026], '2026-03-15', 'end')).toEqual(
+      missingData2026,
+    );
+  });
+
+  it('rolls a weekend start forward before checking, matching the API', () => {
+    // 2025-12-31 is a Wednesday, the gap starts 2026-01-01 (Thursday); the
+    // weekend directly before it (Jan 3-4, both inside the gap already) is
+    // an uninteresting case — use the weekend immediately preceding a gap
+    // that starts on a Monday instead.
+    const mondayGap: DataGap = {
+      from: '2026-06-08', // Monday
+      to: '2026-06-12',
+      sessions: 5,
+      kind: 'missing_data',
+    };
+    // Saturday 2026-06-06 rolls forward to Monday 2026-06-08, the gap's
+    // first day, so a start there is blocked exactly like the API blocks it.
+    expect(backtestDateGap([mondayGap], '2026-06-06', 'start')).toEqual(mondayGap);
+    // The same Saturday rolls backward to Friday 2026-06-05, which is clear.
+    expect(backtestDateGap([mondayGap], '2026-06-06', 'end')).toBeUndefined();
+  });
+
+  it('rolls a weekend end backward before checking, matching the API', () => {
+    // The gap ends Friday 2026-06-12; the following weekend rolls back onto
+    // that Friday, so an end there is blocked, but a start there rolls
+    // forward clear of the gap onto Monday 2026-06-15.
+    expect(backtestDateGap([missingData2026], '2026-06-13', 'end')).toEqual(
+      missingData2026,
+    );
+    expect(backtestDateGap([missingData2026], '2026-06-13', 'start')).toBeUndefined();
+  });
+
+  it('never blocks on a market_closed gap', () => {
+    expect(backtestDateGap([covidClosure], '2020-04-01', 'start')).toBeUndefined();
+  });
+});
+
+describe('isBacktestDateUnavailable', () => {
+  it('is unavailable for any weekday inside a missing_data gap', () => {
+    expect(isBacktestDateUnavailable([missingData2026], '2026-03-15')).toBe(true);
+  });
+
+  // The gap runs 2026-01-01 (Thu) to 2026-06-12 (Fri). Sat 06-13/Sun 06-14
+  // sit right after it — neither date is *itself* in the gap, so the
+  // calendar leaves them clickable even though rolling them backward (the
+  // END role) would land back on the gap's last day. A user who picks one
+  // as an END still gets caught, just by the role-aware `backtestDateGap`
+  // check in `validateBacktestConfig`, not by the calendar refusing the
+  // click outright (see PeriodStep.test.tsx).
+  it('leaves the weekend immediately after a gap selectable — the calendar defers the role check', () => {
+    expect(isBacktestDateUnavailable([missingData2026], '2026-06-13')).toBe(false);
+    expect(isBacktestDateUnavailable([missingData2026], '2026-06-14')).toBe(false);
+  });
+
+  it('leaves the weekend immediately before a gap that starts on a Monday selectable too', () => {
+    const mondayGap: DataGap = {
+      from: '2026-06-08', // Monday
+      to: '2026-06-12',
+      sessions: 5,
+      kind: 'missing_data',
+    };
+    // Sat 06-06 / Sun 06-07 roll forward into the gap for a START, but
+    // neither date is itself inside it, so the calendar still allows them.
+    expect(isBacktestDateUnavailable([mondayGap], '2026-06-06')).toBe(false);
+    expect(isBacktestDateUnavailable([mondayGap], '2026-06-07')).toBe(false);
+  });
+
+  it('is unavailable for a weekend that falls strictly inside a gap', () => {
+    // Sat 2026-01-03 / Sun 2026-01-04 sit inside the 2026-01-01..06-12 gap
+    // itself, not just adjacent to it.
+    expect(isBacktestDateUnavailable([missingData2026], '2026-01-03')).toBe(true);
+    expect(isBacktestDateUnavailable([missingData2026], '2026-01-04')).toBe(true);
+  });
+
+  it('leaves an ordinary weekday and an unrelated weekend available', () => {
+    expect(isBacktestDateUnavailable([missingData2026], '2025-06-01')).toBe(false);
+    expect(isBacktestDateUnavailable([missingData2026], '2025-06-07')).toBe(false);
+  });
+
+  it('never restricts a market_closed date', () => {
+    expect(isBacktestDateUnavailable([covidClosure], '2020-04-01')).toBe(false);
+  });
+});
+
+describe('firstSessionAfterGap / lastSessionBeforeGap', () => {
+  it('names the first weekday after the gap, rolling over a weekend', () => {
+    // The 2026 gap ends on a Friday, so the very next day already works.
+    expect(firstSessionAfterGap(missingData2026)).toBe('2026-06-15');
+  });
+
+  it('rolls a Saturday-after-gap forward to the following Monday', () => {
+    const fridayEndingBeforeWeekend: DataGap = {
+      from: '2026-06-01',
+      to: '2026-06-05', // Friday
+      sessions: 5,
+      kind: 'missing_data',
+    };
+    expect(firstSessionAfterGap(fridayEndingBeforeWeekend)).toBe('2026-06-08');
+  });
+
+  it('names the last weekday before the gap, rolling back over a weekend', () => {
+    const mondayGap: DataGap = {
+      from: '2026-06-08', // Monday
+      to: '2026-06-12',
+      sessions: 5,
+      kind: 'missing_data',
+    };
+    expect(lastSessionBeforeGap(mondayGap)).toBe('2026-06-05'); // the preceding Friday
+  });
+});
+
+describe('snapOutOfDataGap', () => {
+  it('moves a start inside the gap to the first session after it', () => {
+    expect(snapOutOfDataGap([missingData2026], '2026-03-15', 'start')).toBe('2026-06-15');
+  });
+
+  it('moves an end inside the gap to the last session before it', () => {
+    expect(snapOutOfDataGap([missingData2026], '2026-03-15', 'end')).toBe('2025-12-31');
+  });
+
+  it('leaves a date untouched when it is not in a gap', () => {
+    expect(snapOutOfDataGap([missingData2026], '2025-06-01', 'start')).toBe('2025-06-01');
+  });
+});
+
+describe('crossingDataGaps', () => {
+  it('finds a missing_data gap strictly between two cleared endpoints', () => {
+    expect(crossingDataGaps([missingData2026], '2025-06-01', '2026-08-01')).toEqual([
+      missingData2026,
+    ]);
+  });
+
+  it('ignores a market_closed gap', () => {
+    expect(crossingDataGaps([covidClosure], '2020-01-01', '2020-12-31')).toEqual([]);
+  });
+
+  it('returns nothing for a range that never reaches a gap', () => {
+    expect(crossingDataGaps([missingData2026], '2024-01-01', '2024-12-31')).toEqual([]);
+  });
+
+  it('includes a market_closed gap when explicitly asked for it via kinds', () => {
+    expect(
+      crossingDataGaps([covidClosure], '2020-01-01', '2020-12-31', [
+        'missing_data',
+        'market_closed',
+      ]),
+    ).toEqual([covidClosure]);
+  });
+
+  it('still ignores missing_data when kinds asks for market_closed only', () => {
+    expect(
+      crossingDataGaps([missingData2026], '2025-06-01', '2026-08-01', ['market_closed']),
+    ).toEqual([]);
+  });
+});
+
+describe('dateInGapMessage', () => {
+  it('matches the API\'s own DATE_IN_DATA_GAP message text', () => {
+    expect(dateInGapMessage(missingData2026)).toBe(
+      'No market data from 2026-01-01 to 2026-06-12. Choose a date outside this period.',
     );
   });
 });

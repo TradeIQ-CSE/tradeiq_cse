@@ -7,15 +7,22 @@ import { useBacktestWizard } from "../hooks/useBacktestWizard";
 import { entryDescription, exitDescription, sizingDescription } from "../domain/descriptions";
 import { AVAILABLE_METRICS } from "../domain/defaults";
 import { validateBacktestConfig } from "../domain/validation";
+import { crossingNoticeText } from "../domain/gapNotice";
+import { crossingDataGaps } from "../../../lib/data-gaps";
 import {
   BacktestStepHeader,
   ReviewRow,
   ReviewSection,
 } from "./BacktestStepLayout";
 
+// Matches PeriodStep's notice — see its own comment for why this feature
+// hardcodes a locale rather than reading it from i18n.
+const NOTICE_LOCALE = "en-LK";
+
 export function ReviewStep({ configuration }: { configuration?: ReactNode }) {
   const {
     config,
+    priceGaps,
     goToStep,
     submitBacktest,
     isSubmitting,
@@ -26,8 +33,13 @@ export function ReviewStep({ configuration }: { configuration?: ReactNode }) {
     stepIndex,
     totalSteps,
   } = useBacktestWizard();
-  const reviewValidation = validateBacktestConfig(config);
+  const reviewValidation = validateBacktestConfig(config, undefined, priceGaps);
   const isValid = reviewValidation.isValid;
+  const crossedGaps = crossingDataGaps(
+    priceGaps,
+    config.period.startDate,
+    config.period.endDate,
+  );
   const totalFeesPct = (
     Object.values(config.execution.fees).reduce((sum, rate) => sum + rate, 0) *
     100
@@ -70,6 +82,24 @@ export function ReviewStep({ configuration }: { configuration?: ReactNode }) {
               </li>
             ))}
           </ul>
+        </AppNotice>
+      )}
+
+      {crossedGaps.length > 0 && (
+        <AppNotice
+          title={
+            crossedGaps.length > 1
+              ? "Selected range crosses data gaps"
+              : "Selected range crosses a data gap"
+          }
+        >
+          <div className="flex flex-col gap-1">
+            {crossedGaps.map((gap) => (
+              <p key={`${gap.from}-${gap.to}`}>
+                {crossingNoticeText(gap, NOTICE_LOCALE)}
+              </p>
+            ))}
+          </div>
         </AppNotice>
       )}
 

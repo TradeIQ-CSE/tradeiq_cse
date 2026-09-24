@@ -3,6 +3,7 @@ import { createDefaultBacktestConfig, defaultBacktestPeriod } from '../domain/de
 import { createFreshBacktestDraft, restoreBacktestDraft, selectDraftSecurity, updateBacktestDraft } from '../domain/draft';
 import { mapToBacktestRequest } from '../domain/mapper';
 import { validateBacktestConfig } from '../domain/validation';
+import type { DataGap } from '../../../lib/data-gaps';
 
 const security = { symbol: 'COMB.N0000', dataFrom: '2017-01-02', dataTo: '2025-12-31' };
 
@@ -39,6 +40,48 @@ describe('frontend backtest defaults and restoration', () => {
     [null, null], ['bad-date', 'bad-date'], ['2025-12-31', '2024-01-01'],
   ])('falls back safely for missing or invalid coverage: %s, %s', (from, to) => {
     expect(defaultBacktestPeriod(from, to)).toEqual(defaultBacktestPeriod());
+  });
+
+  it('keeps the unsnapped window when one gap spans both ends', () => {
+    const gap: DataGap = { from: '2025-06-02', to: '2025-12-31', sessions: 153, kind: 'missing_data' };
+    expect(defaultBacktestPeriod('2025-06-10', '2025-11-28', [gap])).toEqual({
+      startDate: '2025-06-10', endDate: '2025-11-28',
+    });
+  });
+
+  it('snaps a start date landing inside a gap to the first session after it', () => {
+    const gap: DataGap = { from: '2025-01-01', to: '2025-01-10', sessions: 8, kind: 'missing_data' };
+    // The naive suggestion (trailing year) starts 2025-01-01, inside the gap.
+    expect(defaultBacktestPeriod('2017-01-02', '2025-12-31', [gap])).toEqual({
+      startDate: '2025-01-13', endDate: '2025-12-31',
+    });
+  });
+
+  it('snaps an end date landing inside a gap to the last session before it', () => {
+    const gap: DataGap = { from: '2025-12-20', to: '2025-12-31', sessions: 8, kind: 'missing_data' };
+    expect(defaultBacktestPeriod('2017-01-02', '2025-12-31', [gap])).toEqual({
+      startDate: '2025-01-01', endDate: '2025-12-19',
+    });
+  });
+
+  it('leaves the default alone when it merely crosses a gap in the middle', () => {
+    const gap: DataGap = { from: '2025-06-01', to: '2025-06-10', sessions: 8, kind: 'missing_data' };
+    expect(defaultBacktestPeriod('2017-01-02', '2025-12-31', [gap])).toEqual({
+      startDate: '2025-01-01', endDate: '2025-12-31',
+    });
+  });
+
+  it('never restricts on a market_closed gap', () => {
+    const gap: DataGap = { from: '2025-01-01', to: '2025-01-10', sessions: 8, kind: 'market_closed' };
+    expect(defaultBacktestPeriod('2017-01-02', '2025-12-31', [gap])).toEqual({
+      startDate: '2025-01-01', endDate: '2025-12-31',
+    });
+  });
+
+  it('selectDraftSecurity threads gaps through to the suggested period', () => {
+    const gap: DataGap = { from: '2025-01-01', to: '2025-01-10', sessions: 8, kind: 'missing_data' };
+    const draft = selectDraftSecurity(createFreshBacktestDraft(), security, [gap]);
+    expect(draft.config.period.startDate).toBe('2025-01-13');
   });
 
   it('continues following company coverage until dates are explicitly configured', () => {
