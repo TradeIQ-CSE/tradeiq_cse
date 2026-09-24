@@ -15,8 +15,17 @@ export function useIndices() {
  * GET /indices/{code}/values (§10) — daily close series for one index. With
  * no `range`, the API's own 1-year default applies (same default
  * `useSecurityOhlcv` relies on for securities).
+ *
+ * `enabled` layers on top of the code check: `IndexDetailPage` uses it to
+ * hold the query until coverage has settled, so the gap-avoiding default
+ * (see `defaultRangeAvoidingGaps`) never loses a race with the API's own
+ * default and causes a flash/double fetch.
  */
-export function useIndexValues(code: string, range: OhlcvRange = {}) {
+export function useIndexValues(
+  code: string,
+  range: OhlcvRange = {},
+  enabled = true,
+) {
   return useQuery({
     queryKey: ['index-values', code, range.from ?? null, range.to ?? null],
     queryFn: async () => {
@@ -26,6 +35,6 @@ export function useIndexValues(code: string, range: OhlcvRange = {}) {
       );
       return response.data;
     },
-    enabled: code.trim().length > 0,
+    enabled: enabled && code.trim().length > 0,
   });
 }

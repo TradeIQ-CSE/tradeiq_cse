@@ -397,7 +397,12 @@
         "description": "There's no trading data for the selected dates. Try a different range."
       },
       "zoomIn": "Show fewer periods",
-      "zoomOut": "Show more periods"
+      "zoomOut": "Show more periods",
+      "gap": {
+        "missingData": "No data",
+        "marketClosed": "Market closed",
+        "row": "{{kind}}, {{from}} to {{to}}"
+      }
     },
     "info": {
       "title": "Security information",

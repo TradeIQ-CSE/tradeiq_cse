@@ -20,21 +20,33 @@ import {
   ChartDatum,
   chartDateLabel,
   chartTickLabel,
+  domainBars,
+  volumeDomain,
   windowDomain,
   withCandleComparisons,
 } from "./candlestick";
 import { chartPalette } from "./chart-theme";
+import { DEFAULT_GAP_LABELS, GapBands, GapLabels, gapRowText, gapText } from "./gap-band";
 import { useChartWindow } from "./useChartWindow";
+import { DataGap, GapTimeframe, gapRuns, withGapSlots } from "../../lib/data-gaps";
 
 interface CandlestickChartProps {
   data: readonly ChartDatum[];
   mode?: "candlestick" | "close";
+  /** Drives gap-slot insertion: daily gets one slot per weekday, weekly and
+   * monthly one per week/month entirely inside a gap. Defaults to "daily",
+   * which is a no-op when `gaps` is empty either way. */
+  timeframe?: GapTimeframe;
+  /** Coverage gaps to render as slots (docs/plans/data-gap-handling.md §3–4).
+   * Omit or pass an empty array for a chart with no known gaps — the chart
+   * renders exactly as it did before this prop existed. */
+  gaps?: readonly DataGap[];
   locale?: string;
   accessibleLabel?: string;
   labels?: Partial<CandlestickChartLabels>;
 }
 
-interface CandlestickChartLabels {
+interface CandlestickChartLabels extends GapLabels {
   date: string;
   open: string;
   high: string;
@@ -46,7 +58,11 @@ interface CandlestickChartLabels {
   zoomOut: string;
 }
 
-const DEFAULT_LABELS: CandlestickChartLabels = {
+// Exported for CandlestickTooltip's own unit tests (CandlestickChart.test.tsx)
+// rather than only exercised indirectly through full chart renders, where a
+// gap slot's tiny on-screen position makes a real hover hard to simulate.
+export const DEFAULT_LABELS: CandlestickChartLabels = {
+  ...DEFAULT_GAP_LABELS,
   date: "Date",
   open: "Open",
   high: "High",
@@ -57,6 +73,25 @@ const DEFAULT_LABELS: CandlestickChartLabels = {
   zoomIn: "Show fewer periods",
   zoomOut: "Show more periods",
 };
+
+/** Builds a gap slot in `ChartDatum`'s own shape: every price field null, the
+ * gap it belongs to attached. See `withGapSlots` (lib/data-gaps.ts). */
+function gapChartDatum(
+  date: string,
+  periodEnd: string | undefined,
+  gap: DataGap,
+): ChartDatum {
+  return {
+    date,
+    periodEnd: periodEnd ?? null,
+    open: null,
+    high: null,
+    low: null,
+    close: null,
+    volume: null,
+    gap,
+  };
+}
 
 interface TooltipPayloadItem {
   payload: ChartDatum;
@@ -71,14 +106,18 @@ interface CandlestickTooltipProps extends Omit<
   payload?: TooltipPayloadItem[];
 }
 
-function formatNumber(value: number, locale: string, decimals = 2): string {
+// Accepts null so the tooltip can stay one code path even though a gap
+// slot's fields are all null; the null branch is never actually reached for
+// those, since a slot short-circuits to the gap-label render below instead.
+function formatNumber(value: number | null, locale: string, decimals = 2): string {
+  if (value === null) return "—";
   return value.toLocaleString(locale, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
 }
 
-function CandlestickTooltip({
+export function CandlestickTooltip({
   active,
   payload,
   locale,
@@ -92,6 +131,19 @@ function CandlestickTooltip({
   const point = payload?.[0]?.payload;
   if (!active || !point) return null;
 
+  // A gap slot has no prices to show — the label replaces them entirely
+  // rather than showing a stack of em dashes.
+  if (point.gap) {
+    return (
+      <div className="rounded-lg border border-border-table bg-background-primary-default px-3.5 py-2.5 text-caption-1-medium text-text-primary shadow-lg">
+        <div className="mb-1 text-text-secondary">
+          {chartDateLabel(point, locale)}
+        </div>
+        <div>{gapText(point.gap, locale, labels)}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-lg border border-border-table bg-background-primary-default px-3.5 py-2.5 text-caption-1-medium text-text-primary shadow-lg">
       <div className="mb-1 text-text-secondary">
@@ -99,8 +151,7 @@ function CandlestickTooltip({
       </div>
       {mode === "candlestick" && (
         <div>
-          {labels.open}:{" "}
-          {point.open === null ? "—" : formatNumber(point.open, locale)}
+          {labels.open}: {formatNumber(point.open, locale)}
         </div>
       )}
       <div>
@@ -114,14 +165,11 @@ function CandlestickTooltip({
       </div>
       {point.adjustedClose !== undefined && (
         <div>
-          {labels.adjustedClose}:{" "}
-          {point.adjustedClose === null
-            ? "—"
-            : formatNumber(point.adjustedClose, locale)}
+          {labels.adjustedClose}: {formatNumber(point.adjustedClose, locale)}
         </div>
       )}
       <div>
-        {labels.volume}: {point.volume.toLocaleString(locale)}
+        {labels.volume}: {formatNumber(point.volume, locale, 0)}
       </div>
     </div>
   );
@@ -130,19 +178,32 @@ function CandlestickTooltip({
 export function CandlestickChart({
   data,
   mode = "candlestick",
+  timeframe = "daily",
+  gaps = [],
   locale = "en-US",
   accessibleLabel = "OHLCV price and volume chart",
   labels: labelOverrides,
 }: CandlestickChartProps) {
   const labels = { ...DEFAULT_LABELS, ...labelOverrides };
+  // Slots go in first, so withCandleComparisons (which walks past a slot's
+  // null close to find the last *real* close) sees them; then the CSE-open
+  // fallback below runs over the whole slotted series unchanged.
+  //
   // The CSE source can provide a period high/low/close while leaving open
   // unavailable. Keep the missing open intact for geometry and disclosure,
   // but compare close with the previous period's close so direction colour
   // remains meaningful. A real open always wins when the API provides one.
-  const plottedData = withCandleComparisons(data);
+  const plottedData = withCandleComparisons(
+    withGapSlots(data, gaps, timeframe, gapChartDatum),
+  );
   const showsAdjustedClose = data.some(
     (point) => point.adjustedClose !== undefined,
   );
+  // date + (open, only for candlesticks) + high + low + close +
+  // (adjustedClose, only when the source has it) + volume — used to span a
+  // gap's summary row across every column the real rows have.
+  const columnCount =
+    1 + (mode === "candlestick" ? 1 : 0) + 3 + (showsAdjustedClose ? 1 : 0) + 1;
   const frameRef = useRef<HTMLDivElement | null>(null);
   const [plotWidth, setPlotWidth] = useState(0);
 
@@ -160,11 +221,24 @@ export function CandlestickChart({
   }, []);
 
   // Identifies the series by what it covers, so a different range with the
-  // same number of bars still counts as a new chart.
-  const seriesKey = `${plottedData.length}:${data[0]?.date ?? ""}:${
+  // same number of bars still counts as a new chart. Keyed on the real
+  // `data` prop rather than `plottedData`: the coverage query that supplies
+  // `gaps` resolves on its own schedule, after `data` has often already
+  // rendered, and keying on the slotted length would reset the reader's pan
+  // and zoom the moment those slots appeared.
+  const seriesKey = `${data.length}:${data[0]?.date ?? ""}:${
     data[data.length - 1]?.date ?? ""
   }`;
-  const chartWindow = useChartWindow(plottedData.length, plotWidth, seriesKey);
+  // Passed so useChartWindow can re-anchor a stored start index on the real
+  // bar's own date when `gaps` resolves late and splices slots into the
+  // middle of `plottedData` out from under it (see that hook's own comment).
+  const plottedDates = plottedData.map((point) => point.date);
+  const chartWindow = useChartWindow(
+    plottedData.length,
+    plotWidth,
+    seriesKey,
+    plottedDates,
+  );
   const {
     barWidth,
     visibleCount,
@@ -178,7 +252,26 @@ export function CandlestickChart({
     zoomBy,
   } = chartWindow;
   const visibleBars = plottedData.slice(startIndex, startIndex + visibleCount);
-  const priceDomain = windowDomain(visibleBars, mode);
+  // Shared between the price and volume axes: the window's own real bars,
+  // or (an all-slot window) the nearest real bars just outside it — see
+  // domainBars' own comment.
+  //
+  // Both axes below also need `allowDataOverflow`, even though the domain
+  // is already fixed here: Recharts otherwise ignores an explicit numeric
+  // `domain` prop and recomputes one from the visible data regardless, and
+  // a window that is every slot has no non-null data to recompute it from
+  // — the axis then draws no ticks and no scale for the ReferenceArea band
+  // to size itself against, rather than falling back to what's passed here.
+  const windowBars = domainBars(plottedData, startIndex, visibleCount);
+  const priceDomain = windowDomain(windowBars, mode);
+  // One run per gap visible in the current window, for the grey band on
+  // both the price and volume panels below.
+  const gapBandRuns = gapRuns(visibleBars);
+  // Every run across the full series (not just the window), for the
+  // screen-reader table further down — that table represents the whole
+  // series regardless of pan/zoom, same as it always has.
+  const allGapRuns = gapRuns(plottedData);
+  const runByStartIndex = new Map(allGapRuns.map((run) => [run.startIndex, run]));
 
   // Wheel has to be bound here rather than through onWheel: React attaches a
   // passive listener, which cannot preventDefault, so a sideways scroll would
@@ -297,6 +390,9 @@ export function CandlestickChart({
                 stroke={chartPalette.grid}
                 strokeOpacity={0.35}
               />
+              {/* Behind the line: a run of null closes already breaks it, this
+                  just paints the stretch it broke across. */}
+              <GapBands runs={gapBandRuns} locale={locale} labels={labels} />
               <XAxis
                 dataKey="date"
                 hide
@@ -305,6 +401,7 @@ export function CandlestickChart({
               />
               <YAxis
                 domain={priceDomain}
+                allowDataOverflow
                 width={VALUE_AXIS_WIDTH}
                 stroke={chartPalette.axis}
                 tickCount={4}
@@ -335,6 +432,7 @@ export function CandlestickChart({
                 dot={false}
                 activeDot={{ r: 3, fill: chartPalette.price }}
                 isAnimationActive={false}
+                connectNulls={false}
               />
             </LineChart>
           ) : (
@@ -347,9 +445,11 @@ export function CandlestickChart({
                 stroke={chartPalette.grid}
                 strokeOpacity={0.35}
               />
+              <GapBands runs={gapBandRuns} locale={locale} labels={labels} />
               <XAxis dataKey="date" hide stroke={chartPalette.axis} />
               <YAxis
                 domain={priceDomain}
+                allowDataOverflow
                 width={VALUE_AXIS_WIDTH}
                 stroke={chartPalette.axis}
                 tickCount={4}
@@ -410,6 +510,14 @@ export function CandlestickChart({
               stroke={chartPalette.grid}
               strokeOpacity={0.3}
             />
+            {/* No label here: the price/close panel above already shows it,
+                and there is no room to repeat it in this shorter panel. */}
+            <GapBands
+              runs={gapBandRuns}
+              locale={locale}
+              labels={labels}
+              withLabel={false}
+            />
             <XAxis
               dataKey="date"
               minTickGap={28}
@@ -426,6 +534,8 @@ export function CandlestickChart({
               chart and shifts volume bars away from their candles.
             */}
             <YAxis
+              domain={volumeDomain(windowBars)}
+              allowDataOverflow
               width={VALUE_AXIS_WIDTH}
               tick={false}
               tickLine={false}
@@ -510,28 +620,42 @@ export function CandlestickChart({
           </tr>
         </thead>
         <tbody>
-          {data.map((point) => (
-            <tr key={`${point.date}-${point.periodEnd ?? ""}-accessible`}>
-              <th>{chartDateLabel(point, locale)}</th>
-              {mode === "candlestick" && (
-                <td>
-                  {point.open === null ? "—" : formatNumber(point.open, locale)}
-                </td>
-              )}
-              <td>{formatNumber(point.high, locale)}</td>
-              <td>{formatNumber(point.low, locale)}</td>
-              <td>{formatNumber(point.close, locale)}</td>
-              {showsAdjustedClose && (
-                <td>
-                  {point.adjustedClose === undefined ||
-                  point.adjustedClose === null
-                    ? "—"
-                    : formatNumber(point.adjustedClose, locale)}
-                </td>
-              )}
-              <td>{point.volume.toLocaleString(locale)}</td>
-            </tr>
-          ))}
+          {plottedData.map((point, index) => {
+            // A gap collapses to one row for the whole run rather than one
+            // per slot — "No data, 1 Jan 2026 to 12 Jun 2026" reads far
+            // better to a screen reader than 117 identical empty rows.
+            const run = runByStartIndex.get(index);
+            if (run) {
+              return (
+                <tr key={`gap-${run.gap.kind}-${run.gap.from}-${run.gap.to}`}>
+                  <th scope="row" colSpan={columnCount}>
+                    {gapRowText(run.gap, locale, labels)}
+                  </th>
+                </tr>
+              );
+            }
+            if (point.gap) return null; // an interior slot of an already-emitted run
+
+            return (
+              <tr key={`${point.date}-${point.periodEnd ?? ""}-accessible`}>
+                <th>{chartDateLabel(point, locale)}</th>
+                {mode === "candlestick" && (
+                  <td>{formatNumber(point.open, locale)}</td>
+                )}
+                <td>{formatNumber(point.high, locale)}</td>
+                <td>{formatNumber(point.low, locale)}</td>
+                <td>{formatNumber(point.close, locale)}</td>
+                {showsAdjustedClose && (
+                  <td>
+                    {point.adjustedClose === undefined
+                      ? "—"
+                      : formatNumber(point.adjustedClose, locale)}
+                  </td>
+                )}
+                <td>{formatNumber(point.volume, locale, 0)}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

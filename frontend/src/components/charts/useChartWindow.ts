@@ -17,17 +17,26 @@ import {
  * Zoom is held as the number of bars the reader wants on screen, not as a bar
  * width in pixels. The width is derived, so the window is correct on the first
  * paint — before the panel has been measured — and survives a resize.
+ *
+ * `dates` is the plotted series' own dates, in the same order as `total`
+ * counts — see the effect below for why a bar's identity, not its raw
+ * index, is what a late-arriving change to the series has to preserve.
  */
 export function useChartWindow(
   total: number,
   plotWidth: number,
   seriesKey: string,
+  dates: readonly string[] = [],
 ) {
   const [targetVisible, setTargetVisible] = useState(DEFAULT_VISIBLE_BARS);
   const [start, setStart] = useState(Number.MAX_SAFE_INTEGER);
   // Panning is expressed in bars, but a gesture arrives in pixels; the
   // remainder carries between events so slow drags aren't swallowed.
   const carriedPixels = useRef(0);
+  // What `start` was last resolved against, so a later change to `dates`
+  // (see the effect below) can look up the date the reader was actually
+  // looking at rather than just its old numeric position.
+  const previousRef = useRef({ seriesKey, dates, start });
 
   const barWidth = barWidthFor(plotWidth, targetVisible);
   // Before the panel has been measured there is no width to divide, so honour
@@ -54,12 +63,41 @@ export function useChartWindow(
   // recent bars at the default zoom instead of keeping the old window. Keyed
   // on what the series covers rather than how many bars it holds, because two
   // different ranges can hold the same count and would otherwise inherit the
-  // previous pan and zoom.
+  // previous pan and zoom. `seriesKey` deliberately ignores gaps (see
+  // CandlestickChart), so this branch never fires just because the coverage
+  // query resolved — that case is the one below instead.
+  //
+  // `gaps` arrives from its own query and can resolve well after the reader
+  // has already panned, zoomed, or pressed Home/End on the ungapped series.
+  // `withGapSlots` then splices placeholder bars into the middle of
+  // `plottedData`, which grows `total` and shifts every real bar after the
+  // first slot to a higher index — but a `start` already stored as a plain
+  // number does not know that, and would go on pointing at whatever now
+  // happens to sit at that offset, silently dragging the window into (or
+  // past) the new grey band. Re-resolving `start` by the bar's own date
+  // instead keeps the reader looking at the same bar they left on. The
+  // untouched default window (`start` still the MAX_SAFE_INTEGER sentinel,
+  // "show the latest bars") needs no re-resolving: `clampStartIndex` already
+  // recomputes it against the current `total` on every render.
   useEffect(() => {
-    setTargetVisible(DEFAULT_VISIBLE_BARS);
-    setStart(Number.MAX_SAFE_INTEGER);
-    carriedPixels.current = 0;
-  }, [seriesKey]);
+    const previous = previousRef.current;
+    previousRef.current = { seriesKey, dates, start };
+
+    if (seriesKey !== previous.seriesKey) {
+      setTargetVisible(DEFAULT_VISIBLE_BARS);
+      setStart(Number.MAX_SAFE_INTEGER);
+      carriedPixels.current = 0;
+      return;
+    }
+
+    if (dates === previous.dates || previous.start === Number.MAX_SAFE_INTEGER) {
+      return;
+    }
+    const anchorDate = previous.dates[previous.start];
+    if (anchorDate === undefined) return;
+    const resolved = dates.indexOf(anchorDate);
+    if (resolved !== -1 && resolved !== previous.start) setStart(resolved);
+  }, [seriesKey, dates, start]);
 
   const panByBars = useCallback(
     (bars: number) => {

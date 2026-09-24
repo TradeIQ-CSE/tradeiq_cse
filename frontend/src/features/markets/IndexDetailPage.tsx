@@ -22,11 +22,13 @@ import {
 import { cx } from "../../utils/cx";
 import { localeFor } from "../../i18n";
 import { ApiError } from "../../lib/api";
+import { defaultRangeAvoidingGaps } from "../../lib/data-gaps";
 import { formatPrice, formatSigned } from "./format";
 import { resampleIndexValues } from "./index-chart";
 import { isWeekend } from "./ohlcv-chart";
 import { OhlcvRange, OhlcvTimeframe } from "./types";
 import { useIndices, useIndexValues } from "./useIndices";
+import { useDataCoverage } from "./useDataCoverage";
 import { BackToMarketsLink } from "./BackToMarketsLink";
 
 const TIMEFRAMES: OhlcvTimeframe[] = ["daily", "weekly", "monthly"];
@@ -36,14 +38,54 @@ function IndexDetailView({ code }: { code: string }) {
   const { t, i18n } = useTranslation();
   const locale = localeFor(i18n.resolvedLanguage ?? i18n.language);
   const indicesQuery = useIndices();
+  // Never gates the chart: it renders with no gaps while this is loading or
+  // if it errors, per docs/plans/data-gap-handling.md §3.
+  const coverageQuery = useDataCoverage();
+  const indexGaps = useMemo(
+    () => coverageQuery.data?.indices.gaps ?? [],
+    [coverageQuery.data],
+  );
   const [timeframe, setTimeframe] = useState<OhlcvTimeframe>("daily");
   const [committedRange, setCommittedRange] = useState<OhlcvRange>({});
+  // True until the user picks an explicit range (or resets back to the
+  // default): while true, the chart requests `defaultRange` below instead
+  // of `committedRange`.
+  const [isDefaultRange, setIsDefaultRange] = useState(true);
   const [selectedRange, setSelectedRange] = useState<DateRangeValue | null>(
     null,
   );
 
   const index = indicesQuery.data?.data.find((entry) => entry.code === code);
-  const valuesQuery = useIndexValues(code, committedRange);
+
+  // The API's own default is a trailing year, which can open right on a
+  // `missing_data` gap (today: 2026-01-01..). `defaultRangeAvoidingGaps`
+  // pulls that window back to the latest full year with no such gap;
+  // `end === indexTo` means it found nothing to dodge, so `{}` is sent and
+  // the API's own default applies exactly as before.
+  const indexTo = coverageQuery.data?.indices.to ?? index?.latest?.date ?? null;
+  const indexFrom = coverageQuery.data?.indices.from ?? null;
+  const coverageSettled = coverageQuery.isSuccess || coverageQuery.isError;
+  const defaultRange = useMemo<OhlcvRange>(() => {
+    if (!coverageQuery.isSuccess || !indexTo) return {};
+    const computed = defaultRangeAvoidingGaps(
+      indexTo,
+      indexFrom ?? indexTo,
+      indexGaps,
+    );
+    return computed.end === indexTo
+      ? {}
+      : { from: computed.start, to: computed.end };
+  }, [coverageQuery.isSuccess, indexTo, indexFrom, indexGaps]);
+
+  const valuesQuery = useIndexValues(
+    code,
+    isDefaultRange ? defaultRange : committedRange,
+    // While still on the default range, wait for coverage to settle (load
+    // or error) before firing: otherwise this would fetch the API's plain
+    // trailing year first and immediately refetch the gap-avoiding one, a
+    // flash the user would see as the chart jumping.
+    indicesQuery.isSuccess && (!isDefaultRange || coverageSettled),
+  );
 
   const chartData = useMemo(
     () =>
@@ -110,6 +152,7 @@ function IndexDetailView({ code }: { code: string }) {
   function resetRange() {
     setSelectedRange(null);
     setCommittedRange({});
+    setIsDefaultRange(true);
   }
 
   return (
@@ -211,6 +254,9 @@ function IndexDetailView({ code }: { code: string }) {
                     ? { from: value.start.toString(), to: value.end.toString() }
                     : {},
                 );
+                // An explicit pick leaves the default; clearing the picker
+                // returns to it (same as the reset button).
+                setIsDefaultRange(!value);
               }}
             />
           </div>
@@ -282,11 +328,19 @@ function IndexDetailView({ code }: { code: string }) {
               data={chartData}
               locale={locale}
               height={320}
+              timeframe={timeframe}
+              gaps={indexGaps}
               accessibleLabel={t("markets.indices.chartLabel", {
                 name: index.name,
               })}
               dateLabel={t("securityDetail.chart.values.date")}
               closeLabel={t("securityDetail.chart.values.close")}
+              gapLabels={{
+                gapMissingData: t("securityDetail.chart.gap.missingData"),
+                gapMarketClosed: t("securityDetail.chart.gap.marketClosed"),
+                gapRow: ({ kind, from, to }) =>
+                  t("securityDetail.chart.gap.row", { kind, from, to }),
+              }}
             />
           )}
         </div>

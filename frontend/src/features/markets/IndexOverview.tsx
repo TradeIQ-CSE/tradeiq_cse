@@ -7,14 +7,24 @@ import { cx } from "../../utils/cx";
 import { localeFor } from "../../i18n";
 import { ApiError } from "../../lib/api";
 import { formatPrice, formatSigned } from "./format";
+import { DataGap } from "../../lib/data-gaps";
 import { Index } from "./types";
 import { useIndexValues, useIndices } from "./useIndices";
+import { useDataCoverage } from "./useDataCoverage";
 
 // The user asked for these two specifically; /indices also carries the two
 // total-return series (ASTRI, SL20TRI), which aren't part of this ask.
 const DISPLAY_CODES = ["ASPI", "SL20"];
 
-function IndexBlock({ index, locale }: { index: Index; locale: string }) {
+function IndexBlock({
+  index,
+  locale,
+  gaps,
+}: {
+  index: Index;
+  locale: string;
+  gaps: DataGap[];
+}) {
   const { t } = useTranslation();
   const valuesQuery = useIndexValues(index.code);
   const latest = index.latest;
@@ -74,11 +84,18 @@ function IndexBlock({ index, locale }: { index: Index; locale: string }) {
         <IndexLineChart
           data={values}
           locale={locale}
+          gaps={gaps}
           accessibleLabel={t("markets.indices.chartLabel", {
             name: index.name,
           })}
           dateLabel={t("securityDetail.chart.values.date")}
           closeLabel={t("securityDetail.chart.values.close")}
+          gapLabels={{
+            gapMissingData: t("securityDetail.chart.gap.missingData"),
+            gapMarketClosed: t("securityDetail.chart.gap.marketClosed"),
+            gapRow: ({ kind, from, to }) =>
+              t("securityDetail.chart.gap.row", { kind, from, to }),
+          }}
         />
       )}
     </div>
@@ -96,6 +113,9 @@ export function IndexOverview() {
   const { t, i18n } = useTranslation();
   const locale = localeFor(i18n.resolvedLanguage ?? i18n.language);
   const { data, isPending, isError, error } = useIndices();
+  // Never gates the cards: they render with no gaps while this is loading
+  // or if it errors, per docs/plans/data-gap-handling.md §3.
+  const indexGaps = useDataCoverage().data?.indices.gaps ?? [];
 
   const indices = (data?.data ?? [])
     .filter((index) => DISPLAY_CODES.includes(index.code))
@@ -141,7 +161,7 @@ export function IndexOverview() {
               key={index.code}
               className="min-w-0 sm:first:pr-5 sm:last:pl-5"
             >
-              <IndexBlock index={index} locale={locale} />
+              <IndexBlock index={index} locale={locale} gaps={indexGaps} />
             </div>
           ))}
         </div>

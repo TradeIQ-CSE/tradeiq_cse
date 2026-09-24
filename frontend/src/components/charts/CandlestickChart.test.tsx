@@ -18,7 +18,27 @@ import {
   DEFAULT_VISIBLE_BARS,
 } from "./candlestick";
 import { chartPalette } from "./chart-theme";
-import { CandlestickChart } from "./CandlestickChart";
+import { CandlestickChart, CandlestickTooltip, DEFAULT_LABELS } from "./CandlestickChart";
+import { DataGap } from "../../lib/data-gaps";
+
+const missingDataGap: DataGap = {
+  from: "2026-01-06",
+  to: "2026-01-07",
+  sessions: 2,
+  kind: "missing_data",
+};
+
+function gapSlot(date: string, gap: DataGap = missingDataGap): ChartDatum {
+  return {
+    date,
+    open: null,
+    high: null,
+    low: null,
+    close: null,
+    volume: null,
+    gap,
+  };
+}
 
 // Asserting against palette fields rather than literal colours: these are
 // now CSS custom properties that follow the theme, and what this suite
@@ -54,6 +74,13 @@ describe("candleBody", () => {
     expect(candleColor(p)).toBe(chartPalette.neutral);
     expect(p.open).toBeNull();
   });
+
+  it("returns null for a gap slot rather than a zero-width range", () => {
+    const slot = gapSlot("2026-01-06");
+    expect(candleGeometryOpen(slot)).toBeNull();
+    expect(candleBody(slot)).toBeNull();
+    expect(candleColor(slot)).toBe(chartPalette.neutral);
+  });
 });
 
 describe("candleWick", () => {
@@ -67,6 +94,10 @@ describe("candleWick", () => {
     // body high = max(open, close) = 108 (open here); low = 95, high = 112
     const p = point({ open: 108, close: 101, low: 95, high: 112 });
     expect(candleWick(p)).toEqual([108 - 95, 112 - 108]);
+  });
+
+  it("returns null for a gap slot", () => {
+    expect(candleWick(gapSlot("2026-01-06"))).toBeNull();
   });
 });
 
@@ -121,6 +152,22 @@ describe("withCandleComparisons", () => {
       chartPalette.neutral,
       chartPalette.up,
       chartPalette.down,
+    ]);
+  });
+
+  it("skips gap slots: the first real bar after a gap compares against the last real close before it", () => {
+    const result = withCandleComparisons([
+      point({ date: "2026-01-05", open: 100, close: 100 }),
+      gapSlot("2026-01-06"),
+      gapSlot("2026-01-07"),
+      point({ date: "2026-01-08", open: 105, close: 105 }),
+    ]);
+
+    expect(result.map(({ comparisonClose }) => comparisonClose)).toEqual([
+      null,
+      100,
+      100,
+      100,
     ]);
   });
 });
@@ -400,5 +447,287 @@ describe("window reset and wheel panning", () => {
 
     // Opens on the newest bars, so it is already at the right-hand end.
     expect(fireEvent.wheel(frame, { deltaX: 400 })).toBe(true);
+  });
+
+  it("keeps the same real bars in view when gaps resolve after the reader has already pressed End", async () => {
+    // `gaps` comes from its own query and can resolve after the reader has
+    // moved the window; `seriesKey` deliberately ignores gaps (see the
+    // component's own comment) so that alone must not reset it. But
+    // withGapSlots splices its slots into the middle of plottedData, which
+    // used to leave a plain stored index pointing at whatever now happened
+    // to sit at that offset — dragging the view into the new grey band with
+    // no action from the reader.
+    const bounds = {
+      x: 0,
+      y: 0,
+      top: 0,
+      right: 800,
+      bottom: 400,
+      left: 0,
+      width: 800,
+      height: 400,
+      toJSON: () => ({}),
+    } as DOMRect;
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue(bounds);
+
+    // Real bars for every day in January except the 10th-16th — a real
+    // `missing_data` stretch the coverage query only reports once it
+    // resolves, same as JKH's own 2026 gap.
+    const dayOffsets = Array.from({ length: 40 }, (_, i) => i).filter(
+      (i) => i < 9 || i > 15,
+    );
+    const data = dayOffsets.map((offset, index) =>
+      point({
+        date: new Date(Date.UTC(2026, 0, 1) + offset * 86_400_000)
+          .toISOString()
+          .slice(0, 10),
+        close: 100 + index,
+        volume: 1_000 + index,
+      }),
+    );
+
+    const { container, rerender } = render(
+      <CandlestickChart data={data} gaps={[]} timeframe="daily" />,
+    );
+    await waitFor(() => {
+      expect(container.querySelectorAll(".recharts-wrapper")).toHaveLength(2);
+    });
+
+    const frame = container.querySelector<HTMLElement>("[data-chart-mode]")!;
+    frame.focus();
+    fireEvent.keyDown(frame, { key: "End" });
+    // 33 real bars, 15 visible: End opens on index 18, whose bar is 26 Jan.
+    expect(frame.dataset.startIndex).toBe("18");
+
+    // The coverage query resolves: 12-16 Jan (5 weekdays) is a gap, all of
+    // it before 26 Jan, so withGapSlots splices 5 slots in ahead of the
+    // window. Re-anchoring on 26 Jan's own date — rather than leaving the
+    // stored index at a plain 18 — moves the window to 23 with it.
+    const gap: DataGap = {
+      from: "2026-01-10",
+      to: "2026-01-16",
+      sessions: 5,
+      kind: "missing_data",
+    };
+    rerender(<CandlestickChart data={data} gaps={[gap]} timeframe="daily" />);
+
+    await waitFor(() => {
+      expect(frame.dataset.startIndex).toBe("23");
+    });
+  });
+});
+
+describe("gap slots", () => {
+  // A short real bar either side of a 2-weekday gap (Mon 5 – Tue 6 Jan
+  // 2026), well under DEFAULT_VISIBLE_BARS so the whole series — real bars
+  // and slots — renders in one window with no panning involved.
+  const gap: DataGap = {
+    from: "2026-01-05",
+    to: "2026-01-06",
+    sessions: 2,
+    kind: "missing_data",
+  };
+  const realBars = [
+    point({ date: "2026-01-02", close: 100 }),
+    point({ date: "2026-01-07", close: 108 }),
+    point({ date: "2026-01-08", close: 110 }),
+  ];
+
+  it("renders without throwing and keeps the chart mode when gaps are passed", () => {
+    const { container } = render(
+      <CandlestickChart data={realBars} gaps={[gap]} timeframe="daily" />,
+    );
+    expect(container.firstChild).toHaveAttribute(
+      "data-chart-mode",
+      "candlestick",
+    );
+  });
+
+  it("collapses a gap's slots into one screen-reader row instead of one per slot", () => {
+    render(
+      <CandlestickChart
+        data={realBars}
+        gaps={[gap]}
+        timeframe="daily"
+        accessibleLabel="Daily history"
+      />,
+    );
+
+    const table = screen.getByRole("table", { name: "Daily history" });
+    // One summary row for the whole gap ("No data, Jan 6, 2026 to Jan 7,
+    // 2026") rather than a row per missing weekday.
+    expect(
+      within(table).getByRole("row", { name: /No data, Jan 5, 2026 to Jan 6, 2026/ }),
+    ).toBeInTheDocument();
+    // And the real bars either side of the gap still get their own rows.
+    expect(within(table).getByRole("row", { name: /Jan 2, 2026/ })).toBeInTheDocument();
+    expect(within(table).getByRole("row", { name: /Jan 7, 2026/ })).toBeInTheDocument();
+  });
+
+  it("draws a labelled band across a wide-enough gap run", async () => {
+    const bounds = {
+      x: 0,
+      y: 0,
+      top: 0,
+      right: 800,
+      bottom: 400,
+      left: 0,
+      width: 800,
+      height: 400,
+      toJSON: () => ({}),
+    } as DOMRect;
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue(bounds);
+
+    const { container } = render(
+      <CandlestickChart data={realBars} gaps={[gap]} timeframe="daily" />,
+    );
+
+    await waitFor(() => {
+      expect(container.querySelectorAll(".recharts-wrapper")).toHaveLength(2);
+    });
+
+    // The band's label reuses the same "No data · <range>" text the
+    // tooltip shows for a slot (formatGapLabel, lib/data-gaps.ts).
+    expect(await screen.findByText("No data · Jan 5 – Jan 6, 2026")).toBeInTheDocument();
+  });
+
+  it("keeps the axis from collapsing to [0, 1] even when a window lands entirely on a gap", () => {
+    // Only the two gap slots and nothing else: windowDomain would fall back
+    // to [0, 1] on its own, but the chart's domainBars call reaches outside
+    // the (here, whole) window for the nearest real bars — this is really
+    // an integration check that CandlestickChart wires domainBars in, the
+    // arithmetic itself is covered by chart-window.test.ts.
+    const { container } = render(
+      <CandlestickChart data={realBars} gaps={[gap]} timeframe="daily" />,
+    );
+    expect(container.firstChild).toBeInTheDocument();
+  });
+
+  it("still draws the band, its label and a priced axis when the whole visible window is gap slots", async () => {
+    // Reproduces the JKH-daily production bug: a 15-bar window panned into
+    // the middle of a gap wide enough that no real bar is on screen at all.
+    // Recharts drops an explicit numeric YAxis domain and recomputes one
+    // from the (here, entirely null) visible data unless `allowDataOverflow`
+    // is set, which used to leave the axis with no ticks and the
+    // ReferenceArea with no scale to size itself against — the chart went
+    // fully blank but for the x-axis date ticks.
+    const bounds = {
+      x: 0,
+      y: 0,
+      top: 0,
+      right: 800,
+      bottom: 400,
+      left: 0,
+      width: 800,
+      height: 400,
+      toJSON: () => ({}),
+    } as DOMRect;
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue(bounds);
+
+    const wideGap: DataGap = {
+      from: "2026-01-01",
+      to: "2026-06-12",
+      sessions: 117,
+      kind: "missing_data",
+    };
+    const data = [
+      point({ date: "2025-12-31", close: 100 }),
+      point({ date: "2026-06-15", close: 108 }),
+    ];
+
+    const { container } = render(
+      <CandlestickChart data={data} gaps={[wideGap]} timeframe="daily" />,
+    );
+
+    await waitFor(() => {
+      expect(container.querySelectorAll(".recharts-wrapper")).toHaveLength(2);
+    });
+
+    // Home to the first bar, then one page forward: a whole window's width
+    // past the opening real bar, landing entirely inside the gap's 117
+    // slots on either side.
+    const frame = container.querySelector<HTMLElement>("[data-chart-mode]")!;
+    frame.focus();
+    fireEvent.keyDown(frame, { key: "Home" });
+    fireEvent.keyDown(frame, { key: "PageDown" });
+    expect(frame.dataset.startIndex).toBe("15");
+
+    expect(
+      await screen.findByText("No data · Jan 1 – Jun 12, 2026"),
+    ).toBeInTheDocument();
+    // One band rect on the price panel, one on the volume panel below it.
+    expect(
+      container.querySelectorAll(".recharts-reference-area-rect"),
+    ).toHaveLength(2);
+    expect(
+      container.querySelectorAll(
+        ".recharts-yAxis .recharts-cartesian-axis-tick",
+      ).length,
+    ).toBeGreaterThan(0);
+  });
+});
+
+describe("CandlestickTooltip", () => {
+  it("shows the gap label instead of prices when the hovered point is a slot", () => {
+    const gap: DataGap = {
+      from: "2026-01-05",
+      to: "2026-01-06",
+      sessions: 2,
+      kind: "missing_data",
+    };
+    const slot = gapSlot("2026-01-05", gap);
+
+    render(
+      <CandlestickTooltip
+        active
+        payload={[{ payload: slot }]}
+        locale="en-US"
+        labels={DEFAULT_LABELS}
+        mode="candlestick"
+      />,
+    );
+
+    expect(screen.getByText("No data · Jan 5 – Jan 6, 2026")).toBeInTheDocument();
+    expect(screen.queryByText(/High:/)).not.toBeInTheDocument();
+  });
+
+  it("labels a market_closed slot as Market closed", () => {
+    const closure: DataGap = {
+      from: "2020-03-23",
+      to: "2020-05-08",
+      sessions: 33,
+      kind: "market_closed",
+      label: "CSE closed (COVID-19)",
+    };
+    const slot = gapSlot("2020-03-23", closure);
+
+    render(
+      <CandlestickTooltip
+        active
+        payload={[{ payload: slot }]}
+        locale="en-US"
+        labels={DEFAULT_LABELS}
+        mode="candlestick"
+      />,
+    );
+
+    expect(
+      screen.getByText("Market closed · Mar 23 – May 8, 2020"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows prices as usual for a real bar", () => {
+    render(
+      <CandlestickTooltip
+        active
+        payload={[{ payload: point({ close: 108 }) }]}
+        locale="en-US"
+        labels={DEFAULT_LABELS}
+        mode="candlestick"
+      />,
+    );
+
+    expect(screen.getByText(/Close:/)).toBeInTheDocument();
+    expect(screen.queryByText(/No data/)).not.toBeInTheDocument();
   });
 });

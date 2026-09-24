@@ -7,9 +7,13 @@ import {
   barWidthFor,
   clampStartIndex,
   defaultStartIndex,
+  domainBars,
+  isRealBar,
   visibleCountFor,
+  volumeDomain,
   windowDomain,
 } from "./candlestick";
+import { DataGap } from "../../lib/data-gaps";
 
 const bar = (close: number, extra: Partial<ChartDatum> = {}): ChartDatum => ({
   date: "2025-01-02",
@@ -19,6 +23,23 @@ const bar = (close: number, extra: Partial<ChartDatum> = {}): ChartDatum => ({
   close,
   volume: 100,
   ...extra,
+});
+
+const missingData: DataGap = {
+  from: "2026-01-06",
+  to: "2026-01-07",
+  sessions: 2,
+  kind: "missing_data",
+};
+
+const slot = (date: string): ChartDatum => ({
+  date,
+  open: null,
+  high: null,
+  low: null,
+  close: null,
+  volume: null,
+  gap: missingData,
 });
 
 describe("barWidthFor", () => {
@@ -100,6 +121,76 @@ describe("windowDomain", () => {
 
   it("falls back to a unit domain with no bars", () => {
     expect(windowDomain([], "candlestick")).toEqual([0, 1]);
+  });
+
+  it("ignores gap slots mixed in with real bars", () => {
+    const withSlot = [bar(100), slot("2026-01-06"), bar(110)];
+    expect(windowDomain(withSlot, "candlestick")).toEqual(
+      windowDomain([bar(100), bar(110)], "candlestick"),
+    );
+  });
+
+  it("falls back to a unit domain when every bar on screen is a gap slot", () => {
+    expect(windowDomain([slot("2026-01-06"), slot("2026-01-07")], "candlestick")).toEqual(
+      [0, 1],
+    );
+  });
+});
+
+describe("isRealBar", () => {
+  it("is true for an ordinary bar and false for a gap slot", () => {
+    expect(isRealBar(bar(100))).toBe(true);
+    expect(isRealBar(slot("2026-01-06"))).toBe(false);
+  });
+});
+
+describe("domainBars", () => {
+  it("returns the window's own real bars when it has any", () => {
+    const all = [bar(90), bar(100), slot("2026-01-06"), bar(110)];
+    expect(domainBars(all, 1, 2)).toEqual([bar(100)]);
+  });
+
+  it("reaches outside the window for the nearest real bar on each side when the whole window is a gap", () => {
+    const all = [
+      bar(90, { date: "2026-01-02" }),
+      slot("2026-01-06"),
+      slot("2026-01-07"),
+      bar(110, { date: "2026-01-12" }),
+    ];
+    // The window (indexes 1..2) is entirely slots: the axis should still
+    // price itself from the bars just outside it, so it never collapses to
+    // windowDomain's [0, 1] fallback.
+    expect(domainBars(all, 1, 2)).toEqual([
+      bar(90, { date: "2026-01-02" }),
+      bar(110, { date: "2026-01-12" }),
+    ]);
+  });
+
+  it("uses whichever side has a real bar when the gap sits at one edge of the series", () => {
+    const all = [slot("2026-01-06"), slot("2026-01-07"), bar(110, { date: "2026-01-12" })];
+    expect(domainBars(all, 0, 2)).toEqual([bar(110, { date: "2026-01-12" })]);
+  });
+});
+
+describe("volumeDomain", () => {
+  it("starts at 0 and tops out at the highest real volume", () => {
+    expect(volumeDomain([bar(100, { volume: 500 }), bar(110, { volume: 900 })])).toEqual([
+      0, 900,
+    ]);
+  });
+
+  it("ignores gap slots mixed in with real bars", () => {
+    expect(
+      volumeDomain([bar(100, { volume: 500 }), slot("2026-01-06"), bar(110, { volume: 900 })]),
+    ).toEqual([0, 900]);
+  });
+
+  it("falls back to a unit domain with no bars", () => {
+    expect(volumeDomain([])).toEqual([0, 1]);
+  });
+
+  it("falls back to a unit domain when every bar is a gap slot", () => {
+    expect(volumeDomain([slot("2026-01-06"), slot("2026-01-07")])).toEqual([0, 1]);
   });
 });
 

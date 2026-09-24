@@ -31,6 +31,14 @@ export interface ChartPalette {
   tick: string;
   /** Hover band behind the active candle. */
   cursor: string;
+  /**
+   * Fill for the grey band a data gap draws across the price and volume
+   * panels. One token for both `missing_data` and `market_closed`: the two
+   * kinds share the same mechanism (docs/plans/data-gap-handling.md §4) and
+   * are told apart by a lighter fill opacity on `market_closed` rather than
+   * a second colour — see GapBands in components/charts/gap-band.tsx.
+   */
+  gap: string;
 }
 
 export const chartPalette: ChartPalette = {
@@ -47,4 +55,5 @@ export const chartPalette: ChartPalette = {
   axis: "var(--color-border-button-default)",
   tick: "var(--color-text-tertiary)",
   cursor: "var(--color-background-secondary-hover)",
+  gap: "var(--color-chart-gap)",
 };

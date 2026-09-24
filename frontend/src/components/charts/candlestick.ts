@@ -3,12 +3,18 @@
 // fast refresh, and this logic needs no React to be tested.
 
 import { chartPalette } from './chart-theme';
+import { DataGap } from '../../lib/data-gaps';
 
 export interface CandleDatum {
   open: number | null;
-  high: number;
-  low: number;
-  close: number;
+  /**
+   * `null` only for a gap slot (docs/plans/data-gap-handling.md §4): a
+   * placeholder bar with no real session behind it. A real bar's high/low/
+   * close always come from the API, which never omits them.
+   */
+  high: number | null;
+  low: number | null;
+  close: number | null;
   /**
    * Used only to choose an up/down colour when the source has no opening
    * price. Geometry and displayed OHLC values must continue to use `open`.
@@ -20,48 +26,77 @@ export interface ChartDatum extends CandleDatum {
   date: string;
   periodEnd?: string | null;
   adjustedClose?: number | null;
-  volume: number;
+  volume: number | null;
+  /** Present only for a gap slot — see `withGapSlots` (lib/data-gaps.ts). */
+  gap?: DataGap;
+}
+
+/** A gap slot has no real prices; everything else is a genuine trading bar. */
+export function isRealBar(point: ChartDatum): boolean {
+  return point.gap === undefined;
 }
 
 /**
  * Add a close-to-close comparison without rewriting a missing opening price.
  * This keeps the API truth available to labels and assistive technology while
  * giving charts a standard directional colour when OHLC is incomplete.
+ *
+ * Walks forward tracking the last *real* close rather than simply reading
+ * `data[index - 1]`, so a gap slot's null close is skipped: the first real
+ * bar after a gap compares against the last real close before it, not
+ * against the placeholder bar directly in front of it.
  */
 export function withCandleComparisons(
   data: readonly ChartDatum[],
 ): ChartDatum[] {
-  return data.map((point, index) => ({
-    ...point,
-    comparisonClose: data[index - 1]?.close ?? null,
-  }));
+  let lastRealClose: number | null = null;
+  return data.map((point) => {
+    const comparisonClose = lastRealClose;
+    if (point.close !== null) lastRealClose = point.close;
+    return { ...point, comparisonClose };
+  });
 }
 
 /**
  * Missing opens remain missing in labels and tooltips. Close is used only as
  * neutral chart geometry so Recharts can still place a wick for that bar.
+ * Null for a gap slot, which has no close to fall back to either.
  */
-export function candleGeometryOpen(point: CandleDatum): number {
+export function candleGeometryOpen(point: CandleDatum): number | null {
   return point.open ?? point.close;
 }
 
-/** The filled body of a candle, spanning open to close in either direction. */
-export function candleBody(point: CandleDatum): [number, number] {
+/**
+ * The filled body of a candle, spanning open to close in either direction.
+ * `null` for a gap slot: returning null (rather than a zero-width range)
+ * tells Recharts' function-accessor Bar there is nothing to draw for that
+ * bar, the same way a null `close` breaks a Line.
+ */
+export function candleBody(point: CandleDatum): [number, number] | null {
   const open = candleGeometryOpen(point);
+  if (open === null || point.close === null) return null;
   return [Math.min(open, point.close), Math.max(open, point.close)];
 }
 
-/** Lower and upper wick lengths, measured out from the body. */
-export function candleWick(point: CandleDatum): [number, number] {
-  const bodyHigh = Math.max(candleGeometryOpen(point), point.close);
+/** Lower and upper wick lengths, measured out from the body. `null` for a
+ * gap slot, for the same reason as `candleBody`. */
+export function candleWick(point: CandleDatum): [number, number] | null {
+  const open = candleGeometryOpen(point);
+  if (open === null || point.close === null || point.low === null || point.high === null) {
+    return null;
+  }
+  const bodyHigh = Math.max(open, point.close);
   return [bodyHigh - point.low, point.high - bodyHigh];
 }
 
 /**
  * The candle's colour, chosen from a theme-resolved palette rather than fixed
- * hexes — the chart has to read on both a light and a dark ground.
+ * hexes — the chart has to read on both a light and a dark ground. Neutral
+ * for a gap slot too, though that colour is never actually seen: the slot's
+ * body and wick are both null, so Recharts draws nothing for it.
  */
 export function candleColor(point: CandleDatum): string {
+  if (point.close === null) return chartPalette.neutral;
   const reference = point.open ?? point.comparisonClose;
   if (reference === null || reference === undefined) {
     return chartPalette.neutral;
@@ -162,18 +197,59 @@ export function defaultStartIndex(visibleCount: number, total: number): number {
   return Math.max(0, total - visibleCount);
 }
 
-/** Price bounds for the bars on screen, padded, so the window fills the panel. */
+/**
+ * Price bounds for the bars on screen, padded, so the window fills the
+ * panel. Gap slots are ignored — they carry no price — so a domain computed
+ * from an all-slot selection would otherwise fall through to the [0, 1]
+ * fallback below; callers use `domainBars` to avoid that case entirely.
+ */
 export function windowDomain(
-  bars: ChartDatum[],
+  bars: readonly ChartDatum[],
   mode: 'candlestick' | 'close',
 ): [number, number] {
+  const real = bars.filter(isRealBar);
   const prices =
     mode === 'close'
-      ? bars.map((bar) => bar.close)
-      : bars.flatMap((bar) => [bar.low, bar.high]);
+      ? real.map((bar) => bar.close as number)
+      : real.flatMap((bar) => [bar.low as number, bar.high as number]);
   if (prices.length === 0) return [0, 1];
   const lowest = Math.min(...prices);
   const highest = Math.max(...prices);
   const padding = Math.max((highest - lowest) * 0.05, 1);
   return [lowest - padding, highest + padding];
+}
+
+/**
+ * The bars `windowDomain` should price the axis from: the visible window's
+ * own real bars, or — when the whole window landed on a gap — the nearest
+ * real bar just outside it on each side, so the axis never collapses to
+ * `windowDomain`'s [0, 1] fallback (docs/plans/data-gap-handling.md §4).
+ */
+export function domainBars(
+  all: readonly ChartDatum[],
+  startIndex: number,
+  visibleCount: number,
+): ChartDatum[] {
+  const visible = all.slice(startIndex, startIndex + visibleCount);
+  const real = visible.filter(isRealBar);
+  if (real.length > 0) return real;
+
+  const before = [...all.slice(0, startIndex)].reverse().find(isRealBar);
+  const after = all.slice(startIndex + visibleCount).find(isRealBar);
+  return [before, after].filter((bar): bar is ChartDatum => bar !== undefined);
+}
+
+/**
+ * Volume bounds for `domainBars`' bars, mirroring what Recharts' own
+ * `[0, 'auto']` default already computes for a window with a real bar in
+ * it: volume bars always start at 0, and the top is the highest volume on
+ * screen. Passed explicitly (with `allowDataOverflow`) only so an all-slot
+ * window still has a domain to draw its axis and gap band from — a gap
+ * slot's volume is always null, so Recharts' own auto-domain has nothing to
+ * compute it from without `domainBars`' nearest-real-bar fallback.
+ */
+export function volumeDomain(bars: readonly ChartDatum[]): [number, number] {
+  const volumes = bars.filter(isRealBar).map((bar) => bar.volume as number);
+  if (volumes.length === 0) return [0, 1];
+  return [0, Math.max(...volumes)];
 }
