@@ -16,7 +16,7 @@ describe('DataAvailability', () => {
       ),
     );
 
-    renderWithProviders(<DataAvailability latestSession="2026-09-23" />);
+    renderWithProviders(<DataAvailability />);
 
     expect(
       await screen.findByText('Last updated: Sep 23, 2026'),
@@ -34,7 +34,7 @@ describe('DataAvailability', () => {
       ),
     );
 
-    renderWithProviders(<DataAvailability latestSession="2026-09-23" />);
+    renderWithProviders(<DataAvailability />);
 
     expect(await screen.findByText('Prices')).toBeInTheDocument();
     expect(screen.queryByText(/Data gaps:/)).not.toBeInTheDocument();
@@ -44,7 +44,7 @@ describe('DataAvailability', () => {
     server.use(http.get('*/coverage', () => HttpResponse.error()));
 
     const { container } = renderWithProviders(
-      <DataAvailability latestSession="2026-09-23" />,
+      <DataAvailability />,
     );
 
     await new Promise((resolve) => setTimeout(resolve, 800));

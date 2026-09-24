@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DataGap } from '../../lib/data-gaps';
-import { overviewWindows } from './overview-windows';
+import { overviewWindows, windowLabel } from './overview-windows';
 
 const gap: DataGap = {
   from: '2026-01-01',
@@ -50,5 +50,18 @@ describe('overviewWindows', () => {
         gaps: [{ ...gap, kind: 'market_closed' }],
       }),
     ).toBeNull();
+  });
+});
+
+describe('windowLabel', () => {
+  it('names a whole calendar year by the year alone', () => {
+    expect(windowLabel({ start: '2025-01-01', end: '2025-12-31' }, 'en-LK')).toBe('2025');
+    // Dec 31 on a weekend: the window ends on the Friday before.
+    expect(windowLabel({ start: '2022-01-01', end: '2022-12-30' }, 'en-LK')).toBe('2022');
+  });
+
+  it('shows both dates for a window that starts on Jan 1 but stops early', () => {
+    expect(windowLabel({ start: '2025-01-01', end: '2025-01-31' }, 'en-LK')).not.toBe('2025');
+    expect(windowLabel({ start: '2025-01-01', end: '2025-01-31' }, 'en-LK')).toContain('–');
   });
 });

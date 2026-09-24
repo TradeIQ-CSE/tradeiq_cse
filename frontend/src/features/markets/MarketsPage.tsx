@@ -118,7 +118,7 @@ export function MarketsPage() {
         description={pageDescription}
       />
 
-      <DataAvailability latestSession={resolvedAsOf} />
+      <DataAvailability />
 
       <IndexOverview />
 

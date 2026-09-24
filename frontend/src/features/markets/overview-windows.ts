@@ -3,6 +3,7 @@ import {
   DefaultRange,
   defaultRangeAvoidingGaps,
   firstSessionAfterGap,
+  formatGapBoundary,
 } from '../../lib/data-gaps';
 import { CoverageWindow } from './useDataCoverage';
 
@@ -66,4 +67,20 @@ export function overviewWindows(
         ? 'recent'
         : 'fullYear',
   };
+}
+
+/**
+ * "2025" when the window is that whole calendar year, otherwise
+ * "Mar 3, 2025 – Mar 2, 2026". A window counts as the whole year when it
+ * starts on Jan 1 and reaches the year's last weekday (Dec 29–31: the window
+ * ends on a session, so a weekend Dec 31 pulls it back to the Friday).
+ */
+export function windowLabel(window: DefaultRange, locale: string): string {
+  const year = window.start.slice(0, 4);
+  const wholeYear =
+    window.start === `${year}-01-01` &&
+    window.end >= `${year}-12-29` &&
+    window.end <= `${year}-12-31`;
+  if (wholeYear) return year;
+  return `${formatGapBoundary(window.start, locale)} – ${formatGapBoundary(window.end, locale)}`;
 }

@@ -15,27 +15,17 @@ import { ApiError } from "../../lib/api";
 import { formatPrice, formatSigned } from "./format";
 import {
   DataGap,
-  DefaultRange,
   formatGapBoundary,
   formatGapProseRange,
 } from "../../lib/data-gaps";
 import { Index, OhlcvRange } from "./types";
 import { useIndexValues, useIndices } from "./useIndices";
 import { useDataCoverage } from "./useDataCoverage";
-import { OverviewView, overviewWindows } from "./overview-windows";
+import { OverviewView, overviewWindows, windowLabel } from "./overview-windows";
 
 // The user asked for these two specifically; /indices also carries the two
 // total-return series (ASTRI, SL20TRI), which aren't part of this ask.
 const DISPLAY_CODES = ["ASPI", "SL20"];
-
-/** "2025" for a calendar year, otherwise "Mar 3, 2025 – Mar 2, 2026". */
-function windowLabel(window: DefaultRange, locale: string): string {
-  const year = window.start.slice(0, 4);
-  if (window.start === `${year}-01-01` && window.end.startsWith(year)) {
-    return year;
-  }
-  return `${formatGapBoundary(window.start, locale)} – ${formatGapBoundary(window.end, locale)}`;
-}
 
 function IndexBlock({
   index,
@@ -157,7 +147,11 @@ export function IndexOverview() {
     () => overviewWindows(coverageQuery.data?.indices),
     [coverageQuery.data],
   );
-  const [chosenView, setChosenView] = useState<OverviewView | null>(null);
+  // A choice belongs to the gap it was made for: if coverage refreshes and
+  // reports a different gap, the windows move and the default applies again.
+  const gapKey = windows ? `${windows.gap.from}:${windows.gap.to}` : null;
+  const [chosen, setChosen] = useState<{ gapKey: string | null; view: OverviewView } | null>(null);
+  const chosenView = chosen?.gapKey === gapKey ? chosen.view : null;
   const view = chosenView ?? windows?.defaultView ?? "fullYear";
   const activeWindow = windows
     ? view === "recent"
@@ -192,7 +186,7 @@ export function IndexOverview() {
               selectedKeys={new Set([view])}
               onSelectionChange={(keys) => {
                 const [next] = [...keys];
-                if (next) setChosenView(next as OverviewView);
+                if (next) setChosen({ gapKey, view: next as OverviewView });
               }}
             >
               <SegmentedControlItem id="fullYear">

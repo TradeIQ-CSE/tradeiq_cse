@@ -107,11 +107,14 @@ function CoverageRow({
  * having to find a grey band first. Hidden while coverage loads or if it
  * fails — the charts and tables don't depend on it.
  */
-export function DataAvailability({ latestSession }: { latestSession: string }) {
+export function DataAvailability() {
   const { t, i18n } = useTranslation();
   const locale = localeFor(i18n.resolvedLanguage ?? i18n.language);
   const coverage = useDataCoverage().data;
   if (!coverage) return null;
+  // The latest price session, from coverage rather than the securities
+  // list: that list follows the date picked in the table, this must not.
+  const latestSession = coverage.prices.to;
 
   return (
     <AppPanel className="flex flex-col gap-4">
