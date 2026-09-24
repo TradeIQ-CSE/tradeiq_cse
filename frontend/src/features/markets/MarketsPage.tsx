@@ -2,8 +2,6 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import {
-  RiCalendarLine,
-  RiLineChartLine,
   RiStarFill,
   RiStarLine,
 } from "@remixicon/react";
@@ -23,7 +21,6 @@ import {
   PageIntro,
   PageState,
   PageToolbar,
-  StatSurface,
 } from "../../components/application/layout/application-layout";
 import { ChevronUpDownSmall } from "../../components/foundations/icons/chevrons";
 import { useTopbarSearch } from "../../components/layout/useTopbarSearch";
@@ -33,6 +30,7 @@ import { SecuritiesSort } from "./types";
 import { useSecurities } from "./useSecurities";
 import { useSectorOptions } from "./useSectorOptions";
 import { IndexOverview } from "./IndexOverview";
+import { DataAvailability } from "./DataAvailability";
 import { TopMovers } from "./TopMovers";
 import { SecuritySectorIcon } from "./SecuritySectorIcon";
 import {
@@ -88,7 +86,6 @@ export function MarketsPage() {
       count: total,
       formattedCount: formatCount(total, locale),
     }),
-    resolvedAsOf ? t("markets.asOfDescription", { date: resolvedAsOf }) : null,
     t("markets.notice.eod"),
   ]
     .filter(Boolean)
@@ -121,22 +118,9 @@ export function MarketsPage() {
         description={pageDescription}
       />
 
-      <IndexOverview />
+      <DataAvailability />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <StatSurface
-          icon={RiLineChartLine}
-          label={t("markets.stats.listed")}
-          value={formatCount(total, locale)}
-          className="gap-2 p-3"
-        />
-        <StatSurface
-          icon={RiCalendarLine}
-          label={t("markets.stats.asOf")}
-          value={resolvedAsOf || dash}
-          className="gap-2 p-3"
-        />
-      </div>
+      <IndexOverview />
 
       <TopMovers asOf={selectedTradingDate} sector={selectedSector} />
 

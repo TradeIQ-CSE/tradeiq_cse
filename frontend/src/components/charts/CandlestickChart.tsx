@@ -622,7 +622,7 @@ export function CandlestickChart({
         <tbody>
           {plottedData.map((point, index) => {
             // A gap collapses to one row for the whole run rather than one
-            // per slot — "No data, 1 Jan 2026 to 12 Jun 2026" reads far
+            // per slot — "Data gap, 1 Jan 2026 to 12 Jun 2026" reads far
             // better to a screen reader than 117 identical empty rows.
             const run = runByStartIndex.get(index);
             if (run) {

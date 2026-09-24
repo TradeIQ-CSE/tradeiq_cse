@@ -159,7 +159,7 @@ describe('StatusStep equity curve — data gaps', () => {
     });
 
     expect(container.querySelector('svg rect')).toBeTruthy();
-    expect(screen.getByText('No data')).toBeInTheDocument();
+    expect(screen.getByText('Data gap')).toBeInTheDocument();
     expect(
       screen.getByText(`Includes ${priceGap2026.sessions.toLocaleString('en-LK')} sessions without market data.`),
     ).toBeInTheDocument();
@@ -265,12 +265,12 @@ describe('StatusStep equity curve — data gaps', () => {
     // on-band text label by design (same "no room" rule as gap-band.tsx) —
     // its <title> still carries the kind, which is what a hover/tooltip and
     // an a11y tree read from. The much wider missing_data band does clear
-    // the threshold and keeps its visible "No data" label.
+    // the threshold and keeps its visible "Data gap" label.
     const titles = Array.from(container.querySelectorAll('svg title')).map(
       (title) => title.textContent,
     );
     expect(titles).toContain('Market closed, 2020-03-23 to 2020-05-08');
-    expect(screen.getByText('No data')).toBeInTheDocument();
+    expect(screen.getByText('Data gap')).toBeInTheDocument();
     expect(screen.queryByText('Market closed')).not.toBeInTheDocument();
     expect(container.querySelectorAll('svg polyline')).toHaveLength(3);
 

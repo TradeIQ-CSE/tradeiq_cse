@@ -364,11 +364,11 @@ describe('defaultRangeAvoidingGaps', () => {
 });
 
 describe('formatGapLabel', () => {
-  const labels = { missingData: 'No data', marketClosed: 'Market closed' };
+  const labels = { missingData: 'Data gap', marketClosed: 'Market closed' };
 
-  it('prefixes a missing_data gap with "No data"', () => {
+  it('prefixes a missing_data gap with "Data gap"', () => {
     expect(formatGapLabel(missingData2026, 'en-US', labels)).toBe(
-      'No data · Jan 1 – Jun 12, 2026',
+      'Data gap · Jan 1 – Jun 12, 2026',
     );
   });
 
