@@ -61,7 +61,9 @@ export const DEFAULT_CSE_FEES: FeeConfig = {
 };
 
 /**
- * ADR 0007: Validated seed dataset window is 2017–2025.
+ * ADR 0007: the validated seed window is 2017–2025. Daily ingestion extends
+ * coverage past it, so the max is only a fallback for a security that
+ * reports no coverage, never a validation ceiling.
  */
 export const CSE_DATASET_MIN_DATE = '2017-01-01';
 export const CSE_DATASET_MAX_DATE = '2025-12-31';

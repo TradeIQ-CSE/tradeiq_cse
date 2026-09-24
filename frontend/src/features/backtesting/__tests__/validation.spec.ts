@@ -121,20 +121,13 @@ describe('validateBacktestConfig', () => {
       );
     });
 
-    it('should reject end date after 2025 dataset boundary', () => {
+    it('accepts an end date after 2025 within the security coverage', () => {
       const config = createDefaultBacktestConfig();
-      config.period.endDate = '2026-01-01';
+      config.security = { ...config.security, symbol: 'JKH.N0000', dataFrom: '2017-01-02', dataTo: '2026-09-23' };
+      config.period = { startDate: '2026-06-15', endDate: '2026-09-23' };
 
       const result = validateBacktestConfig(config, 'period');
-      expect(result.isValid).toBe(false);
-      expect(result.errors).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            field: 'endDate',
-            message: expect.stringContaining('cannot exceed the available dataset coverage (2025-12-31)'),
-          }),
-        ]),
-      );
+      expect(result.errors.filter((error) => error.field === 'endDate')).toEqual([]);
     });
 
     it('should reject dates outside security-specific coverage window', () => {

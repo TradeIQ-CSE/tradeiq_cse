@@ -1,5 +1,5 @@
 import { BacktestConfig, StepKey, ValidationError, ValidationResult } from './types';
-import { CSE_DATASET_MIN_DATE, CSE_DATASET_MAX_DATE } from './defaults';
+import { CSE_DATASET_MIN_DATE } from './defaults';
 import { backtestDateGap, dateInGapMessage, DataGap } from '../../../lib/data-gaps';
 
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
@@ -78,20 +78,14 @@ export function validateBacktestConfig(
         });
       }
 
-      // Dataset bounds validation (2017-2025)
+      // The dataset has no prices before 2017. There is no fixed upper
+      // bound: daily ingestion extends coverage past the 2017–2025 seed, and
+      // each security's own `dataTo` below is the real ceiling.
       if (startDate < CSE_DATASET_MIN_DATE) {
         errors.push({
           step: 'period',
           field: 'startDate',
           message: `Start date cannot precede the available dataset coverage (${CSE_DATASET_MIN_DATE}).`,
-        });
-      }
-
-      if (endDate > CSE_DATASET_MAX_DATE) {
-        errors.push({
-          step: 'period',
-          field: 'endDate',
-          message: `End date cannot exceed the available dataset coverage (${CSE_DATASET_MAX_DATE}).`,
         });
       }
 
