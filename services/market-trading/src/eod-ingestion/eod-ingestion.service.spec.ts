@@ -1,4 +1,5 @@
 import { DataSource } from 'typeorm';
+import { DataCoverageService } from '../data-coverage/data-coverage.service';
 import { EodIngestionService } from './eod-ingestion.service';
 import {
   EodIngestionReceipt,
@@ -28,7 +29,10 @@ const receipt = {
 
 describe('EodIngestionService serialization retries', () => {
   function serviceAndAttempt() {
-    const service = new EodIngestionService({} as DataSource);
+    const service = new EodIngestionService(
+      {} as DataSource,
+      { invalidate: jest.fn() } as unknown as DataCoverageService,
+    );
     const attempt = jest.spyOn(
       service as unknown as ServiceWithAttempt,
       'ingestAttempt',

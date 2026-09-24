@@ -6,6 +6,7 @@ import {
   ValidationFailedException,
 } from '../common/errors/api-exception';
 import { toIsoDate } from '../common/market-date';
+import { DataCoverageService } from '../data-coverage/data-coverage.service';
 import {
   EodIngestionReceipt,
   EodIngestionRequest,
@@ -76,7 +77,10 @@ function wait(milliseconds: number): Promise<void> {
 
 @Injectable()
 export class EodIngestionService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly dataCoverage: DataCoverageService,
+  ) {}
 
   async findLatest(): Promise<EodIngestionReceipt | null> {
     const rows: RunRow[] = await this.dataSource.query(
@@ -326,6 +330,10 @@ export class EodIngestionService {
       const completed = await this.findRun(input.batch_id, queryRunner.manager);
       if (!completed) throw new Error('Committed ingestion receipt is missing');
       await queryRunner.commitTransaction();
+      // A new trading day changes the price coverage window, so the cached
+      // gap analysis (data-coverage.service.ts) must not keep serving stale
+      // gaps until its TTL expires.
+      this.dataCoverage.invalidate();
       return receipt(completed, false);
     } catch (error) {
       if (queryRunner.isTransactionActive)

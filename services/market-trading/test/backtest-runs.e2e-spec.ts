@@ -11,6 +11,7 @@ import { BacktestRunsService } from '../src/backtest-runs/backtest-runs.service'
 import { BacktestRunsRepository } from '../src/backtest-runs/backtest-runs.repository';
 import { BacktestRun } from '../src/backtest-runs/backtest-run.entity';
 import { BacktestResult } from '../src/backtest-runs/backtest-result.entity';
+import { DataCoverageService } from '../src/data-coverage/data-coverage.service';
 import { configureMarketTradingApp } from '../src/app.setup';
 
 // Signed here rather than mocked: these tests are the reason the routes are
@@ -149,6 +150,20 @@ describe('Backtest Runs (e2e)', () => {
         {
           provide: BacktestRunsRepository,
           useValue: mockRepo,
+        },
+        {
+          // No known gaps: these tests are exercising auth/ownership, not
+          // data-gap handling (covered in backtest-runs.service.spec.ts).
+          provide: DataCoverageService,
+          useValue: {
+            get: jest.fn().mockResolvedValue({
+              data: {
+                prices: { from: null, to: null, gaps: [] },
+                indices: { from: null, to: null, gaps: [] },
+              },
+            }),
+            invalidate: jest.fn(),
+          },
         },
       ],
     }).compile();

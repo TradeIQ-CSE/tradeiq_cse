@@ -34,6 +34,7 @@ top-level `error` key:
 | `fields` | array | 400 only | One entry per offending input; non-empty on every `VALIDATION_FAILED`. Absent for all other codes |
 | `fields[].field` | string | — | The input name: query param, path param, or JSON body path (dot notation for nested body fields) |
 | `fields[].reason` | string | — | Why the value was rejected, stated in terms of the expected value only |
+| `details` | object | code-specific | Structured, code-specific payload for codes that need more than `message`; present only when non-empty. e.g. `422 DATE_IN_DATA_GAP` carries `{ field, from, to }` — the offending date field and the gap's bounds (see endpoint-catalogue-v0.md §11) |
 | `trace_id` | string | yes | Opaque correlation id matching the service's structured logs. The only diagnostic handle exposed — quote it when reporting bugs |
 
 Success responses never contain `error`; error responses never contain `data`.
@@ -50,6 +51,7 @@ Success responses never contain `error`; error responses never contain `data`.
 | 404 | `INDEX_NOT_FOUND` | — | `{code}` matches no market index | Show "unknown index" state |
 | 409 | `CONFLICT` | — | State conflict (e.g. duplicate unique value) | Refresh state, surface message |
 | 422 | `BUSINESS_RULE_VIOLATION` | — | Well-formed request rejected by a domain rule (e.g. insufficient buying power) | Surface `message`; no field highlight |
+| 422 | `DATE_IN_DATA_GAP` | — | A backtest start or end date falls in a period with no market data (`details` carries `field`, `from`, `to`) | Ask for a date outside `details.from`–`details.to`; do not retry unchanged |
 | 429 | `RATE_LIMITED` | — | Quota exceeded (per-key, per-user, or per-IP; model per SRS 3.1.3.3) | Back off until `reset_at` |
 | 503 | `DEPENDENCY_UNAVAILABLE` | — | A required internal service is temporarily unavailable | Preserve retry/idempotency key and retry with backoff |
 | 500 | `INTERNAL` | — | Unexpected server failure | Generic error UI + log `trace_id` |

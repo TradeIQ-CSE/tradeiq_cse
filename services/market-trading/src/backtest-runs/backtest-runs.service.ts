@@ -6,6 +6,7 @@ import { CreateBacktestRunDto } from './dto/create-backtest-run.dto';
 import { BacktestRun } from './backtest-run.entity';
 import { BacktestResult } from './backtest-result.entity';
 import { DailyPrice } from '../db/entities/daily-price.entity';
+import { DataCoverageService } from '../data-coverage/data-coverage.service';
 import { BacktestApiError, mapEngineError } from './errors/backtest-api-error';
 import { runBacktest } from '../backtesting/engine/runBacktest';
 import { validateRule } from '../backtesting/rules/validateRule';
@@ -35,9 +36,24 @@ function validateStateTransition(
   }
 }
 
+// Steps an ISO date over a weekend, forwards (1) or backwards (-1), leaving a
+// weekday unchanged. UTC throughout so the runtime's time zone cannot shift
+// the calendar day.
+function toWeekday(date: string, step: 1 | -1): string {
+  const [year, month, day] = date.split('-').map(Number);
+  const value = new Date(Date.UTC(year, month - 1, day));
+  while (value.getUTCDay() === 0 || value.getUTCDay() === 6) {
+    value.setUTCDate(value.getUTCDate() + step);
+  }
+  return value.toISOString().slice(0, 10);
+}
+
 @Injectable()
 export class BacktestRunsService {
-  constructor(private readonly repository: BacktestRunsRepository) {}
+  constructor(
+    private readonly repository: BacktestRunsRepository,
+    private readonly dataCoverage: DataCoverageService,
+  ) {}
 
   async submitRun(
     dto: CreateBacktestRunDto,
@@ -118,6 +134,37 @@ export class BacktestRunsService {
       throw new BacktestApiError(
         'INVALID_SYMBOL',
         `Symbol '${dto.symbol}' not found.`,
+      );
+    }
+
+    // 3.5 Data-gap validation. A start or end date that falls inside a
+    // `missing_data` gap must not silently start (or end) the
+    // simulation on the first bar the price lookup happens to find
+    // (docs/plans/data-gap-handling.md §2). A range that only crosses a gap
+    // is accepted unchanged, and `market_closed` gaps (real market history,
+    // like a weekend) never reject either end.
+    // Gap bounds are always weekdays, so a weekend start is first moved
+    // forward, and a weekend end back, to the session it actually selects:
+    // otherwise an end on the Sunday after a gap would pass and quietly end
+    // the run on the last bar before it.
+    const coverage = await this.dataCoverage.get();
+    const gapContaining = (date: string) =>
+      coverage.data.prices.gaps.find(
+        (gap) =>
+          gap.kind === 'missing_data' && date >= gap.from && date <= gap.to,
+      );
+    const startGap = gapContaining(toWeekday(dto.startDate, 1));
+    const dateGap = startGap ?? gapContaining(toWeekday(dto.endDate, -1));
+    if (dateGap) {
+      throw new BacktestApiError(
+        'DATE_IN_DATA_GAP',
+        `No market data from ${dateGap.from} to ${dateGap.to}. Choose a date outside this period.`,
+        {
+          field: startGap ? 'startDate' : 'endDate',
+          from: dateGap.from,
+          to: dateGap.to,
+        },
+        HttpStatus.UNPROCESSABLE_ENTITY,
       );
     }
 

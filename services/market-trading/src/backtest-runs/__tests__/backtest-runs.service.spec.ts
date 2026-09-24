@@ -8,10 +8,21 @@ import { Security } from '../../db/entities/security.entity';
 import { DailyPrice } from '../../db/entities/daily-price.entity';
 import { runBacktest, BacktestInput } from '../../backtesting';
 import { RuleSet } from '../../backtesting/domain/types';
+import { DataCoverageService } from '../../data-coverage/data-coverage.service';
+
+// Empty by default: only the data-gap tests below give this a gap to react
+// to, so every other case exercises the same "no known gaps" behaviour.
+const emptyCoverage = () => ({
+  data: {
+    prices: { from: null, to: null, gaps: [] },
+    indices: { from: null, to: null, gaps: [] },
+  },
+});
 
 describe('BacktestRunsService - Unit Tests', () => {
   let service: BacktestRunsService;
   let repo: jest.Mocked<BacktestRunsRepository>;
+  let dataCoverage: jest.Mocked<DataCoverageService>;
 
   const mockOwnerId = 'owner-uuid';
 
@@ -109,6 +120,11 @@ describe('BacktestRunsService - Unit Tests', () => {
       runInTransaction: jest.fn((cb) => cb({})),
     };
 
+    const mockDataCoverage = {
+      get: jest.fn().mockResolvedValue(emptyCoverage()),
+      invalidate: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BacktestRunsService,
@@ -116,11 +132,16 @@ describe('BacktestRunsService - Unit Tests', () => {
           provide: BacktestRunsRepository,
           useValue: mockRepoMethods,
         },
+        {
+          provide: DataCoverageService,
+          useValue: mockDataCoverage,
+        },
       ],
     }).compile();
 
     service = module.get<BacktestRunsService>(BacktestRunsService);
     repo = module.get(BacktestRunsRepository);
+    dataCoverage = module.get(DataCoverageService);
   });
 
   describe('Validation Checks', () => {
@@ -225,6 +246,215 @@ describe('BacktestRunsService - Unit Tests', () => {
       expect(error).toBeInstanceOf(BacktestApiError);
       expect((error as BacktestApiError).code).toBe('INSUFFICIENT_WARMUP_DATA');
       expect(repo.createRun).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Data-gap validation (docs/plans/data-gap-handling.md §2)', () => {
+    const missingDataGap = {
+      from: '2026-01-01',
+      to: '2026-06-12',
+      sessions: 117,
+      kind: 'missing_data' as const,
+    };
+    const marketClosedGap = {
+      from: '2020-03-23',
+      to: '2020-05-08',
+      sessions: 33,
+      kind: 'market_closed' as const,
+      label: 'CSE closed (COVID-19)',
+    };
+
+    beforeEach(() => {
+      repo.findSecurityBySymbol.mockResolvedValue(mockSecurity);
+      repo.findDailyPricesBySecurity.mockResolvedValue(sampleBars);
+      repo.findWarmupDailyPrices.mockResolvedValue([]);
+    });
+
+    afterEach(async () => {
+      // Lets the fire-and-forget background execution settle before the next
+      // test swaps the mocks out from under it.
+      await new Promise((r) => setTimeout(r, 10));
+    });
+
+    it('rejects a start date inside a missing_data gap', async () => {
+      dataCoverage.get.mockResolvedValue({
+        data: {
+          prices: {
+            from: '2017-01-02',
+            to: '2026-09-23',
+            gaps: [missingDataGap],
+          },
+          indices: emptyCoverage().data.indices,
+        },
+      });
+      const dto = {
+        ...validDto,
+        startDate: '2026-03-01',
+        endDate: '2026-08-01',
+      };
+
+      let error: unknown;
+      try {
+        await service.submitRun(dto, mockOwnerId);
+      } catch (err) {
+        error = err;
+      }
+      expect(error).toBeInstanceOf(BacktestApiError);
+      expect((error as BacktestApiError).code).toBe('DATE_IN_DATA_GAP');
+      expect((error as BacktestApiError).message).toBe(
+        'No market data from 2026-01-01 to 2026-06-12. Choose a date outside this period.',
+      );
+      expect((error as BacktestApiError).details).toMatchObject({
+        field: 'startDate',
+        from: '2026-01-01',
+        to: '2026-06-12',
+      });
+      expect(repo.createRun).not.toHaveBeenCalled();
+    });
+
+    it('rejects an end date inside a missing_data gap', async () => {
+      dataCoverage.get.mockResolvedValue({
+        data: {
+          prices: {
+            from: '2017-01-02',
+            to: '2026-09-23',
+            gaps: [missingDataGap],
+          },
+          indices: emptyCoverage().data.indices,
+        },
+      });
+      const dto = {
+        ...validDto,
+        startDate: '2025-06-01',
+        endDate: '2026-03-01',
+      };
+
+      let error: unknown;
+      try {
+        await service.submitRun(dto, mockOwnerId);
+      } catch (err) {
+        error = err;
+      }
+      expect(error).toBeInstanceOf(BacktestApiError);
+      expect((error as BacktestApiError).code).toBe('DATE_IN_DATA_GAP');
+      expect((error as BacktestApiError).details).toMatchObject({
+        field: 'endDate',
+        from: '2026-01-01',
+        to: '2026-06-12',
+      });
+      expect(repo.createRun).not.toHaveBeenCalled();
+    });
+
+    it('accepts a range that crosses a missing_data gap', async () => {
+      dataCoverage.get.mockResolvedValue({
+        data: {
+          prices: {
+            from: '2017-01-02',
+            to: '2026-09-23',
+            gaps: [missingDataGap],
+          },
+          indices: emptyCoverage().data.indices,
+        },
+      });
+      const dto = {
+        ...validDto,
+        startDate: '2025-06-01',
+        endDate: '2026-08-01',
+      };
+
+      await service.submitRun(dto, mockOwnerId);
+      expect(repo.createRun).toHaveBeenCalled();
+    });
+
+    it('accepts dates that sit right on the gap edges', async () => {
+      dataCoverage.get.mockResolvedValue({
+        data: {
+          prices: {
+            from: '2017-01-02',
+            to: '2026-09-23',
+            gaps: [missingDataGap],
+          },
+          indices: emptyCoverage().data.indices,
+        },
+      });
+      // 2025-12-31 and 2026-06-15 are the last/first *present* sessions either
+      // side of the gap — neither is one of the missing weekdays it names.
+      const dto = {
+        ...validDto,
+        startDate: '2025-12-31',
+        endDate: '2026-06-15',
+      };
+
+      await service.submitRun(dto, mockOwnerId);
+      expect(repo.createRun).toHaveBeenCalled();
+    });
+
+    it('rejects weekend dates that select no session outside the gap', async () => {
+      dataCoverage.get.mockResolvedValue({
+        data: {
+          prices: {
+            from: '2017-01-02',
+            to: '2026-09-23',
+            gaps: [missingDataGap],
+          },
+          indices: emptyCoverage().data.indices,
+        },
+      });
+      // Saturday 2026-01-03 and Sunday 2026-06-14 lie outside the gap's
+      // weekday bounds, but the sessions they select (Fri 2 Jan, Fri 12 Jun)
+      // are inside it.
+      for (const dates of [
+        { startDate: '2025-06-02', endDate: '2026-01-03' },
+        { startDate: '2025-06-02', endDate: '2026-06-14' },
+      ]) {
+        await expect(
+          service.submitRun({ ...validDto, ...dates }, mockOwnerId),
+        ).rejects.toMatchObject({ code: 'DATE_IN_DATA_GAP' });
+      }
+      expect(repo.createRun).not.toHaveBeenCalled();
+    });
+
+    it('accepts a weekend start that selects the first session after a gap', async () => {
+      dataCoverage.get.mockResolvedValue({
+        data: {
+          prices: {
+            from: '2017-01-02',
+            to: '2026-09-23',
+            gaps: [missingDataGap],
+          },
+          indices: emptyCoverage().data.indices,
+        },
+      });
+      // Saturday 2026-06-13 selects Monday 2026-06-15, which has data.
+      const dto = {
+        ...validDto,
+        startDate: '2026-06-13',
+        endDate: '2026-08-03',
+      };
+
+      await service.submitRun(dto, mockOwnerId);
+      expect(repo.createRun).toHaveBeenCalled();
+    });
+
+    it('never rejects dates inside a market_closed gap', async () => {
+      dataCoverage.get.mockResolvedValue({
+        data: {
+          prices: {
+            from: '2017-01-02',
+            to: '2026-09-23',
+            gaps: [marketClosedGap],
+          },
+          indices: emptyCoverage().data.indices,
+        },
+      });
+      const dto = {
+        ...validDto,
+        startDate: '2020-04-01',
+        endDate: '2020-04-15',
+      };
+
+      await service.submitRun(dto, mockOwnerId);
+      expect(repo.createRun).toHaveBeenCalled();
     });
   });
 

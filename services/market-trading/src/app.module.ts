@@ -7,6 +7,7 @@ import authConfig from './config/auth.config';
 import databaseConfig from './config/database.config';
 import ingestionConfig from './config/ingestion.config';
 import { validate } from './config/env.validation';
+import { DataCoverageModule } from './data-coverage/data-coverage.module';
 import { HealthModule } from './health/health.module';
 import { IndicesModule } from './indices/indices.module';
 import { MarketOverviewModule } from './market-overview/market-overview.module';
@@ -43,6 +44,7 @@ import { EodIngestionModule } from './eod-ingestion/eod-ingestion.module';
         synchronize: false,
       }),
     }),
+    DataCoverageModule,
     HealthModule,
     IndicesModule,
     MarketOverviewModule,

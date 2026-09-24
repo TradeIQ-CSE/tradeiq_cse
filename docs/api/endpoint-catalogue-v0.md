@@ -12,7 +12,8 @@
 
 These endpoints are the **market-data slice** consumed by the React SPA. The
 first four were the week-1 slice; the two index endpoints (§9, §10) followed
-with TIQ-98:
+with TIQ-98; the coverage endpoint (§11) followed with the data-gap-handling
+plan:
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -22,6 +23,7 @@ with TIQ-98:
 | GET | `/market/overview` | Top gainers / losers / most-active |
 | GET | `/indices` | Market indices with their latest close and change |
 | GET | `/indices/{code}/values` | Daily close series for one index |
+| GET | `/coverage` | Price and index date coverage, with detected gaps |
 
 They are the **web application's internal API** (SRS 3.1.2.1). The **public developer
 API** (SRS 3.1.3) is a *separate, versioned* surface scheduled for Phase 8 — nothing
@@ -545,3 +547,53 @@ for.
 |---|---|---|
 | 400 | `VALIDATION_FAILED` | malformed `from`/`to`; `from` > `to`; `code` longer than 20 characters |
 | 404 | `INDEX_NOT_FOUND` | `code` matches no index |
+
+---
+
+## 11. `GET /coverage`
+
+Date coverage and detected gaps for prices and indices, so charts can draw a
+grey band instead of stretching a line across missing sessions, and so the
+backtest period picker can keep start/end dates out of an undetected outage.
+See [`docs/plans/data-gap-handling.md`](../plans/data-gap-handling.md) for the
+full design.
+
+### 200 — example
+
+`GET /coverage`
+
+```json
+{
+  "data": {
+    "prices":  { "from": "2017-01-02", "to": "2026-09-23",
+                 "gaps": [{ "from": "2026-01-01", "to": "2026-06-12",
+                            "sessions": 117, "kind": "missing_data" }] },
+    "indices": { "from": "2017-01-02", "to": "2026-09-23", "gaps": [ ] }
+  }
+}
+```
+
+### Field notes
+
+- `prices` and `indices` are measured independently — their coverage windows
+  and gaps can differ, because their underlying tables
+  (`market_data.daily_prices`, `market_data.index_values`) are populated on
+  different schedules.
+- `from` / `to`: the first and last distinct trade date in the table; both
+  `null` and `gaps: []` when the table is empty.
+- Each gap's `from`/`to` are the first and last missing **weekday**, not
+  calendar day, plus `sessions` (the weekday count). Only runs of four or more
+  missing weekdays are reported; weekends and holiday runs of up to three
+  weekdays are not gaps.
+- `kind` is `missing_data` (trading happened, the data is absent — e.g. a
+  pipeline outage or a period yet to be backfilled) or `market_closed` (a
+  curated CSE-wide closure, which also carries a `label`). Gaps are never
+  reported for a leading or trailing stretch — only between two dates the
+  table actually has.
+- The result is cached for up to 10 minutes; a new EOD or index ingestion run
+  clears the cache immediately, so a freshly-loaded day is reflected without
+  waiting for the TTL.
+
+### Errors
+
+None — this endpoint has no parameters.
