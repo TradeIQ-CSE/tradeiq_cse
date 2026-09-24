@@ -12,8 +12,7 @@ export function LandingMarketSection() {
         <div>
           <p className="text-headline-semibold text-status-blue-text">{t('landing.marketData.eyebrow')}</p>
           <h2 className="landing-display mt-4 text-display-4-bold text-text-primary sm:text-display-3-bold">{t('landing.marketData.headingLine1')}<br />{t('landing.marketData.headingLine2')}</h2>
-          <p className="landing-lead mt-5 max-w-lg text-headline-regular text-text-secondary">{t('landing.marketData.overview')}</p>
-          <LinkButton href="/markets" trailingIcon={RiArrowRightLine} className="mt-6 text-title-3-semibold text-status-blue-text">{t('landing.marketData.explore')}</LinkButton>
+          <LinkButton href="/markets" trailingIcon={RiArrowRightLine} className="mt-8 text-title-3-semibold text-status-blue-text">{t('landing.marketData.explore')}</LinkButton>
         </div>
         <LandingMarketData />
       </div>
