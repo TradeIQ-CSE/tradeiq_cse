@@ -23,7 +23,16 @@ const CAPABILITIES = [
 ] as const;
 
 const LIMITATIONS = ['marketData', 'execution', 'backtests', 'signals'] as const;
-const FAQS = ['paperTrading', 'backtesting', 'account', 'advice', 'data'] as const;
+// Grouped by the part of the site they're about, in the order a visitor
+// meets them. Answers are a sentence or two; each fact is checked against the
+// code it describes (fees: backtesting/domain/defaults.ts, orders and
+// capital: docs/api/paper-trading-v1.md).
+const FAQ_GROUPS = [
+  { key: 'basics', items: ['cost', 'account', 'advice'] },
+  { key: 'backtesting', items: ['whatBacktest', 'rules', 'backtestFees', 'save', 'future', 'manyCompanies'] },
+  { key: 'paperTrading', items: ['whatPaper', 'virtualMoney', 'price', 'fill', 'paperFees', 'cantTrade'] },
+  { key: 'data', items: ['source', 'fresh', 'history', 'gaps'] },
+] as const;
 
 export function HowItWorksPage() {
   const { t } = useTranslation();
@@ -124,17 +133,26 @@ export function HowItWorksPage() {
                 <h2 id="faq-heading" className="landing-display mt-4 text-display-4-bold text-text-primary sm:text-display-3-bold">
                   {t('howItWorks.faq.heading')}
                 </h2>
-                <div className="mt-8 divide-y divide-separator-border">
-                  {FAQS.map((key) => (
-                    <details key={key} className="group py-1">
-                      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-xl px-3 py-4 text-left text-headline-semibold text-text-primary outline-none hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring">
-                        {t(`howItWorks.faq.items.${key}.question`)}
-                        <RiAddLine className="size-5 shrink-0 text-foreground-icon-secondary transition-transform group-open:rotate-45" aria-hidden />
-                      </summary>
-                      <p className="max-w-3xl px-3 pb-5 text-body-regular text-text-secondary">
-                        {t(`howItWorks.faq.items.${key}.answer`)}
-                      </p>
-                    </details>
+                <div className="mt-8 flex flex-col gap-10">
+                  {FAQ_GROUPS.map((group) => (
+                    <div key={group.key}>
+                      <h3 className="px-3 text-title-3-semibold text-text-primary">
+                        {t(`howItWorks.faq.groups.${group.key}`)}
+                      </h3>
+                      <div className="mt-2 divide-y divide-separator-border">
+                        {group.items.map((key) => (
+                          <details key={key} className="group py-1">
+                            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-xl px-3 py-4 text-left text-headline-medium text-text-primary outline-none hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring">
+                              {t(`howItWorks.faq.items.${key}.question`)}
+                              <RiAddLine className="size-5 shrink-0 text-foreground-icon-secondary transition-transform group-open:rotate-45" aria-hidden />
+                            </summary>
+                            <p className="max-w-3xl px-3 pb-5 text-body-regular text-text-secondary">
+                              {t(`howItWorks.faq.items.${key}.answer`)}
+                            </p>
+                          </details>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>

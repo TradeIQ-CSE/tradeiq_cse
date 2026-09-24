@@ -440,8 +440,8 @@
         "market": "Browse CSE",
         "workspace": "How it works",
         "backtesting": "Test a strategy",
-        "newsEvents": "News & Events",
-        "aboutUs": "About Us"
+        "newsEvents": "News & events",
+        "aboutUs": "About us"
       },
       "openAccount": "Create account",
       "signIn": "Sign in",
@@ -449,10 +449,9 @@
     },
     "hero": {
       "badge": "Colombo Stock Exchange",
-      "headlineLine1": "The professional edge",
-      "headlineLine2": "for CSE investors.",
-      "subtitle": "Browse CSE prices, test an investing idea using historical data, and practise trading with virtual money in one clear workspace.",
-      "getStarted": "Get started free",
+      "headlineLine1": "Test before you invest",
+      "headlineLine2": "With real CSE data",
+      "getStarted": "Get started",
       "pauseVideo": "Pause background video",
       "playVideo": "Play background video",
       "explore": "Explore markets",
@@ -472,87 +471,108 @@
         }
       },
       "signIn": "Sign in",
-      "dataNote": "End-of-day data · Delayed"
+      "dataNote": "End-of-day data · Delayed",
+      "promises": {
+        "free": "Free to use",
+        "noMoney": "No real money involved",
+        "realData": "Real CSE prices"
+      }
     },
     "marketData": {
-      "eyebrow": "Market data",
-      "headingLine1": "The full CSE picture,",
-      "headingLine2": "at a glance.",
-      "overview": "Browse listed companies, compare their latest available prices, and open a security to see how its price has moved. Filter by sector or review the session's gainers, losers, and most active securities.",
-      "explore": "Explore the markets",
-      "description": "Open Markets to search every security and review its available price history.",
-      "cta": "View all securities",
-      "cardTitle": "CSE Securities",
+      "eyebrow": "Look up companies",
+      "headingLine1": "Every CSE company,",
+      "headingLine2": "in one place",
+      "explore": "Browse companies",
+      "cardTitle": "CSE companies",
       "descriptionCounted": "A selection from {{formattedCount}} listed securities. Explore the full market with search and historical charts.",
       "sample": "Sample data",
-      "sampleNote": "Illustrative prices preview the Markets workspace. They are not a live market feed.",
-      "security": "Security / Company",
-      "priceLabel": "Price (LKR) / Change"
+      "sampleNote": "Sample prices, for illustration only."
     },
     "insights": {
-      "eyebrow": "THE WORKSPACE",
-      "description": "Start with a listed company, test an idea on past prices, then practise buying and selling with virtual money. Your simulated portfolio keeps the results together.",
-      "heading": "Chart. Test. Track.",
+      "eyebrow": "What you can do",
+      "heading": "More to explore",
       "planned": "Planned",
       "capabilities": {
-        "charting": {
-          "title": "Historical backtesting",
-          "description": "Choose a CSE security and run clear buy and sell rules against past prices. This shows how the rules would have behaved, not what will happen next.",
-          "cta": "Test an idea"
+        "market": {
+          "title": "Follow the market",
+          "description": "See how the whole CSE is moving with the ASPI and S&P SL20.",
+          "cta": "See the indices"
         },
-        "portfolio": {
-          "title": "Portfolio analytics",
-          "description": "See the virtual cash, holdings, gains, and losses created by your practice trades in one simple view.",
-          "cta": "See a paper portfolio"
+        "history": {
+          "title": "Look back at your trades",
+          "description": "Every practice order you placed, in one list.",
+          "cta": "See your orders"
         },
-        "trading": {
-          "title": "Paper trading",
-          "description": "Practise placing buy and sell orders with virtual money. You can learn how an order works without using real money.",
-          "cta": "Practise a trade"
+        "learn": {
+          "title": "Learn how it works",
+          "description": "Plain answers to common questions.",
+          "cta": "Read the guide"
         },
-        "signals": {
+      "signals": {
           "title": "Model-driven signals",
           "description": "Direction probabilities from a statistical model. This is not built yet, so no signal is shown anywhere until it is."
         }
       }
     },
     "backtesting": {
-      "eyebrow": "STRATEGY BACKTESTING",
-      "headingLine1": "Test before",
-      "headingLine2": "you invest.",
-      "description": "Backtesting means running a set of buy and sell rules against past CSE prices. A guided 7-step setup helps you choose a security, define the rules and costs, and review the simulated result.",
-      "quickTitle": "Quick Backtest",
-      "quickDescription": "Choose a security and simple price rules. TradeIQ fills in sensible simulation settings so you can learn the flow.",
-      "customTitle": "Custom Backtest",
-      "customDescription": "Choose the starting cash, trading costs, risk limits, and measurements used in the simulation.",
-      "cta": "Run your first backtest",
-      "previewTitle": "Define your strategy",
+      "eyebrow": "Test an idea",
+      "headingLine1": "What if you had",
+      "headingLine2": "invested back then?",
+      "facts": {
+        "noAccount": "No account needed",
+        "fees": "Fees included"
+      },
+      "cta": "Try your first test",
+      "previewTitle": "Your idea",
       "previewLabel": "Example setup",
-      "previewNote": "Illustrative parameters, not a recommendation. Historical results do not predict future returns.",
+      "previewNote": "Example only. Past results don’t promise future ones.",
       "steps": {
-        "mode": "Mode",
-        "strategy": "Strategy",
-        "market": "Market",
-        "execution": "Execution",
-        "portfolio": "Portfolio",
-        "metrics": "Metrics",
-        "results": "Results"
+        "security": "Company & period",
+        "rules": "Your idea",
+        "review": "Review & run"
       },
-      "selectStrategy": "Select Rules",
-      "parameters": "Parameters",
+      "entryRule": "Entry rule",
+      "exitRules": "Exit rules",
       "rules": {
-        "priceFalls": "Buy: price falls to",
-        "takeProfit": "Sell: take profit",
-        "stopLoss": "Sell: stop loss",
-        "endOfPeriod": "Sell: end of period"
+        "priceFallsPct": "Price falls by %",
+        "takeProfit": "Take profit (%)",
+        "stopLoss": "Stop loss (%)",
+        "endOfPeriod": "End of period"
       },
-      "takeProfitPct": "Take Profit",
-      "stopLossPct": "Stop Loss"
+      "values": {
+        "drop": "Drop",
+        "takeProfit": "Take profit",
+        "stopLoss": "Stop loss"
+      }
+    },
+    "paperTrading": {
+      "eyebrow": "Practise with virtual money",
+      "headingLine1": "What if you started",
+      "headingLine2": "investing today?",
+      "facts": {
+        "virtualMoney": "Virtual money, real CSE prices",
+        "nothingReal": "Nothing real is bought or sold",
+        "track": "Track your picks day by day"
+      },
+      "cta": "Place your first practice trade",
+      "previewTitle": "Place a practice order",
+      "previewLabel": "Example order",
+      "buy": "Buy",
+      "sell": "Sell",
+      "quantity": "Quantity",
+      "shares_one": "{{formattedCount}} share",
+      "shares_other": "{{formattedCount}} shares",
+      "rows": {
+        "price": "Price (latest close)",
+        "cost": "Shares cost",
+        "fees": "Fees (1.12%)",
+        "total": "Total from virtual cash"
+      },
+      "previewNote": "Example only. Orders fill at the latest closing price."
     },
     "cta": {
-      "heading": "Build confidence before you invest.",
-      "subtitle": "Browse CSE securities, test rules on historical prices, and practise trades with virtual money.",
-      "button": "Create a free account",
+      "heading": "Build confidence before you invest",
+      "button": "Create an account",
       "dataNote": "End-of-day data · Delayed"
     },
     "footer": {
@@ -564,81 +584,143 @@
   },
   "howItWorks": {
     "hero": {
-      "eyebrow": "TradeIQ explained",
-      "heading": "Learn how the platform works before you begin.",
-      "description": "TradeIQ helps you explore the Colombo Stock Exchange, test investing rules on historical prices, and practise trades with virtual money. It is a research and learning workspace, not a broker or investment adviser.",
-      "browse": "Browse CSE markets",
+      "eyebrow": "How it works",
+      "heading": "Learn to invest without risking a rupee",
+      "description": "Look up CSE companies, test ideas on past prices, and practise with virtual money.",
+      "browse": "Browse companies",
       "account": "Create an account"
     },
     "capabilities": {
-      "eyebrow": "A simple workflow",
-      "heading": "Explore. Test. Practise. Review.",
-      "description": "Each part of TradeIQ answers a different question. You can begin with public market browsing, then use the simulation tools when you are ready.",
+      "eyebrow": "Four steps",
+      "heading": "Look up. Test. Practise. Track.",
+      "description": "Start anywhere. You only need an account to practise or save your work.",
       "step": "Step {{number}}",
       "items": {
         "markets": {
-          "title": "Explore market data",
-          "description": "Search CSE-listed companies, compare the latest available end-of-day prices, filter by sector, and open historical price charts. Public market browsing does not require an account."
+          "title": "Look up a company",
+          "description": "Search any company on the CSE. See its latest price and a chart back to 2017."
         },
         "backtesting": {
-          "title": "Backtest an idea",
-          "description": "Choose a security and apply defined buy and sell rules to past prices. The simulation can include starting cash, trading costs, and risk limits so you can review how those rules behaved historically."
+          "title": "Test an idea",
+          "description": "Pick a company, a time period, and a rule for when to buy and sell. See what you would have made or lost, fees included."
         },
         "paperTrading": {
-          "title": "Practise paper trading",
-          "description": "Place simulated buy and sell orders using virtual cash. Paper trading lets you learn the order workflow and observe the result without sending an order to a real exchange or risking money."
+          "title": "Practise with virtual money",
+          "description": "Buy and sell CSE shares with virtual money at real prices."
         },
         "portfolio": {
-          "title": "Review a simulated portfolio",
-          "description": "Track virtual cash, holdings, orders, and simulated gains or losses in one place. This helps connect individual practice trades to the overall portfolio."
+          "title": "Track how you’re doing",
+          "description": "See your cash, your shares, and your gains or losses in one place."
         }
       }
     },
     "limitations": {
-      "heading": "What TradeIQ does not do",
-      "description": "Clear boundaries matter when a platform deals with financial information. These limitations apply to the current build.",
+      "heading": "What TradeIQ doesn’t do",
+      "description": "Good to know before you start.",
       "items": {
         "marketData": {
-          "title": "It is not a live market terminal",
-          "description": "Prices are end-of-day data and may be delayed. TradeIQ shows the relevant session date where it is available."
+          "title": "No live prices",
+          "description": "Prices update once a day, after the market closes."
         },
         "execution": {
-          "title": "It does not place real trades",
-          "description": "Paper-trading orders use virtual money and are not routed to the Colombo Stock Exchange, a broker, or a bank account."
+          "title": "No real trades",
+          "description": "Nothing is sent to the CSE, a broker, or a bank."
         },
         "backtests": {
-          "title": "Historical results are not forecasts",
-          "description": "A backtest describes how selected rules behaved under past conditions. It cannot predict future prices or guarantee a return."
+          "title": "No predictions",
+          "description": "Past results show what happened, not what will happen."
         },
         "signals": {
-          "title": "Model-driven signals are not available yet",
-          "description": "TradeIQ does not currently display AI predictions or model-generated trade recommendations. Planned features are not presented as working capabilities."
+          "title": "No tips",
+          "description": "TradeIQ never tells you what to buy or sell."
         }
       }
     },
     "faq": {
       "eyebrow": "Common questions",
-      "heading": "TradeIQ FAQ",
+      "heading": "Questions and answers",
+      "groups": {
+        "basics": "The basics",
+        "backtesting": "Testing an idea",
+        "paperTrading": "Practising with virtual money",
+        "data": "Prices and data"
+      },
       "items": {
-        "paperTrading": {
-          "question": "What is paper trading?",
-          "answer": "Paper trading is simulated trading with virtual cash. You practise choosing a security, order side, quantity, and order settings, but no real money or exchange order is involved."
-        },
-        "backtesting": {
-          "question": "What is backtesting?",
-          "answer": "Backtesting applies a defined set of trading rules to historical prices. It can help you understand how the rules would have behaved in the selected period, including the effect of assumptions such as commissions and slippage."
+        "cost": {
+          "question": "Does it cost anything?",
+          "answer": "No. TradeIQ is free to use."
         },
         "account": {
           "question": "Do I need an account?",
-          "answer": "No account is needed to browse public CSE market data. An account is required for personal simulations such as backtests, paper-trading orders, and portfolios."
+          "answer": "Not to look up companies or test an idea. You need one to save a test or to practise with virtual money."
         },
         "advice": {
-          "question": "Does TradeIQ provide investment advice?",
-          "answer": "No. TradeIQ provides information, research tools, and simulations for educational use. It does not recommend that you buy or sell a security."
+          "question": "Will TradeIQ tell me what to buy?",
+          "answer": "No. TradeIQ is for learning and trying ideas. It doesn’t give investment advice."
         },
-        "data": {
-          "question": "How current is the market data?",
-          "answer": "TradeIQ uses end-of-day CSE market data rather than a live intraday feed. The Markets pages show the session date associated with the available prices."
+        "whatBacktest": {
+          "question": "What is backtesting?",
+          "answer": "Trying a buying and selling rule on past prices to see how it would have done."
+        },
+        "rules": {
+          "question": "What rules can I use?",
+          "answer": "Buy on the first day, after the price falls by a set percentage, or when it drops to a set price. Sell at a profit target, a loss limit, a set price, or at the end of the period."
+        },
+        "backtestFees": {
+          "question": "Are fees included?",
+          "answer": "Yes. Each buy and sell pays standard CSE fees of 1.12%. You can change them in the Advanced setup."
+        },
+        "save": {
+          "question": "Is my test saved?",
+          "answer": "Only if you have an account. Otherwise the result stays in your browser tab until you close it."
+        },
+        "future": {
+          "question": "If a rule worked before, will it work again?",
+          "answer": "Not necessarily. Past results don’t promise future ones."
+        },
+        "manyCompanies": {
+          "question": "Can I test more than one company at once?",
+          "answer": "Not yet. Each test uses one company."
+        },
+        "whatPaper": {
+          "question": "What is paper trading?",
+          "answer": "Buying and selling shares with virtual money, so you can practise without risk."
+        },
+        "virtualMoney": {
+          "question": "How much virtual money do I get?",
+          "answer": "Rs. 1,000,000 to start. You can pick any amount from Rs. 100,000 to Rs. 100,000,000."
+        },
+        "price": {
+          "question": "What price do I pay?",
+          "answer": "The latest closing price. On weekends and holidays, that’s the close from the last trading day."
+        },
+        "fill": {
+          "question": "When does my order go through?",
+          "answer": "Straight away. The whole order goes through, or none of it does."
+        },
+        "paperFees": {
+          "question": "Do I pay fees?",
+          "answer": "Yes, 1.12% on each buy and sell, based on standard CSE fees. It comes out of your virtual cash."
+        },
+        "cantTrade": {
+          "question": "Why can’t I trade some companies?",
+          "answer": "Suspended or delisted companies can’t be traded. Neither can a company with no price for the latest trading day."
+        },
+        "source": {
+          "question": "Where do the prices come from?",
+          "answer": "Public data from the Colombo Stock Exchange."
+        },
+        "fresh": {
+          "question": "How up to date are the prices?",
+          "answer": "They’re closing prices, updated once a day after the market closes."
+        },
+        "history": {
+          "question": "How far back does the data go?",
+          "answer": "To January 2017."
+        },
+        "gaps": {
+          "question": "Why are some parts of a chart grey?",
+          "answer": "Those are data gaps, days where prices are missing. TradeIQ never fills them with guesses. The Markets page lists every gap."
         }
       }
     }

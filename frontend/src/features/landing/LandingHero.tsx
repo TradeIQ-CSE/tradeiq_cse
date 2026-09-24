@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import { RiArrowRightLine, RiTimeLine } from '@remixicon/react';
+import { RiArrowRightLine } from '@remixicon/react';
 import { ButtonLink } from '@/components/base/buttons/button';
 import { Chip } from '@/components/base/badges/chip';
 import { LandingBackdrop } from './LandingBackdrop';
+import { LandingPromises } from './LandingPromises';
 
 const HERO_CONTAINER = 'mx-auto w-full max-w-[96rem] px-4 sm:px-6 lg:px-8';
 
@@ -13,18 +14,20 @@ export function LandingHero() {
       <div className={HERO_CONTAINER}>
         <div className="landing-hero-media relative isolate overflow-hidden rounded-3xl p-4 text-center sm:px-8 sm:py-10 lg:px-12 lg:py-16">
           <LandingBackdrop />
-          <div className="landing-hero-glass relative mx-auto flex max-w-5xl flex-col items-center rounded-3xl px-5 py-10 sm:px-12 sm:py-20">
-            <Chip variant="caption" color="soft" className="landing-media-chip">{t('landing.hero.badge')}</Chip>
-            <h1 className="landing-display mt-6 max-w-5xl text-display-4-bold text-text-primary sm:text-display-1-bold lg:text-large-title-bold">
-              {t('landing.hero.headlineLine1')}{' '}
-              <span className="block">{t('landing.hero.headlineLine2')}</span>
+          <div className="landing-hero-glass relative mx-auto flex max-w-5xl flex-col items-center rounded-3xl px-5 py-10 sm:px-12 sm:py-16">
+            <Chip variant="subtle" color="soft" className="landing-media-chip rounded-full px-4 py-1.5 text-headline-medium">{t('landing.hero.badge')}</Chip>
+            {/* The one sentence a visitor reads in three seconds. */}
+            <h1 className="landing-display landing-hero-title mt-6 max-w-5xl font-bold text-text-primary">
+              {t('landing.hero.headlineLine1')}
+              <span className="landing-hero-accent block">{t('landing.hero.headlineLine2')}</span>
             </h1>
-            <p className="landing-lead mt-6 max-w-2xl text-headline-regular text-text-secondary">{t('landing.hero.subtitle')}</p>
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <ButtonLink href="/markets" variant="primary">{t('landing.hero.getStarted')}</ButtonLink>
-              <ButtonLink href="/login" variant="secondary" trailingIcon={RiArrowRightLine} className="landing-media-secondary-button">{t('landing.hero.signIn')}</ButtonLink>
+
+            <div className="mt-10 flex flex-wrap justify-center gap-3">
+              <ButtonLink href="/markets" variant="primary" trailingIcon={RiArrowRightLine}>{t('landing.hero.getStarted')}</ButtonLink>
+              <ButtonLink href="/login" variant="secondary" className="landing-media-secondary-button">{t('landing.hero.signIn')}</ButtonLink>
             </div>
-            <p className="mt-6 flex items-center gap-2 text-body-2-medium text-text-secondary"><RiTimeLine className="size-4" aria-hidden />{t('landing.hero.dataNote')}</p>
+
+            <LandingPromises className="mt-6" />
           </div>
         </div>
       </div>

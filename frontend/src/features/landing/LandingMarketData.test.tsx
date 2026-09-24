@@ -7,10 +7,11 @@ import i18n from '../../i18n';
 const t = i18n.t.bind(i18n);
 
 describe('LandingMarketData', () => {
-  it('renders every fixed preview row immediately', () => {
+  it('renders the first three fixed preview rows immediately', () => {
     renderWithProviders(<LandingMarketData />);
 
-    for (const security of LANDING_MARKET_PREVIEW) {
+    expect(screen.getAllByRole('listitem')).toHaveLength(3);
+    for (const security of LANDING_MARKET_PREVIEW.slice(0, 3)) {
       expect(screen.getByText(security.symbol)).toBeInTheDocument();
       expect(screen.getByText(security.company_name)).toBeInTheDocument();
     }
@@ -19,7 +20,7 @@ describe('LandingMarketData', () => {
   it('uses the security sector as its visual identity instead of a symbol initial', () => {
     renderWithProviders(<LandingMarketData />);
 
-    expect(screen.getAllByRole('img', { name: 'Banks sector' })).toHaveLength(2);
+    expect(screen.getAllByRole('img', { name: 'Banks sector' })).toHaveLength(1);
     expect(
       screen.getByRole('img', { name: 'Telecommunication Services sector' }),
     ).toHaveAttribute('data-sector-category', '50');
@@ -35,7 +36,7 @@ describe('LandingMarketData', () => {
   it('describes the preview without claiming a listed-securities count', () => {
     renderWithProviders(<LandingMarketData />);
 
-    expect(screen.getByText(t('landing.marketData.description'))).toBeInTheDocument();
+    expect(screen.getByText(t('landing.marketData.sampleNote'))).toBeInTheDocument();
     expect(screen.queryByText(t('landing.marketData.descriptionCounted', { count: 5, formattedCount: '5' }))).not.toBeInTheDocument();
   });
 });

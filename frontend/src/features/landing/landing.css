@@ -180,3 +180,14 @@
     transform: none;
   }
 }
+
+/* The hero's second headline line: same weight, the brand accent, so the
+   promise ("with real CSE data") reads as part of the sentence. */
+.landing-hero-accent { color: var(--color-accent-300); }
+
+/* The hero line is the one thing a visitor must read, so it goes past the
+   largest type token (large-title, 4rem) and scales with the viewport. */
+.landing-hero-title {
+  font-size: clamp(2.75rem, 7.5vw, 5.75rem);
+  line-height: 1.02;
+}
