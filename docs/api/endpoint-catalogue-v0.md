@@ -41,6 +41,14 @@ from the verified token. Those moved into `market-trading` with
 [ADR 0009](../adr/0009-market-trading-owns-paper-trading.md); the four endpoints
 below are unaffected by that move.
 
+One backtest route needs no account: `POST /api/v1/backtests/preview` takes the
+same body as `POST /api/v1/backtests`, applies the same validation (including
+`DATE_IN_DATA_GAP`), runs the engine synchronously and answers `200` with the
+body `GET /api/v1/backtests/{runId}/results` returns — `initialCapital`,
+`finalCash`, `finalEquity`, `trades`, `equityCurve`. It stores nothing, so there
+is no run id and nothing to read back; the SPA keeps the result in the tab and
+saving it means signing in and submitting it as a normal run.
+
 ## 2. Conventions
 
 ### 2.1 Response envelopes
@@ -97,10 +105,20 @@ which can differ from the price `as_of` (see §9).
 
 ### 2.5 Rate limiting
 
-Requests are rate-limited per client IP inside the service. Over-limit requests
-receive `429 RATE_LIMITED` with `reset_at` in the error body and a `Retry-After`
-header (model per SRS 3.1.3.3). Normal SPA usage is far below the limit; FE only
-needs to handle the 429 envelope gracefully.
+Requests are rate-limited per client IP by the nginx edge
+(`deploy/nginx/rate-limit.conf`), not inside the services: nginx sees every
+replica's traffic, so the limit holds however many are running. Over-limit
+requests receive `429` with the standard error envelope — code `RATE_LIMITED`,
+a `trace_id` — and a `Retry-After: 60` header. There is no `reset_at` field.
+
+| Route | Limit per IP |
+|---|---|
+| Every `/api/` route | 20 requests/second, bursts of 40 |
+| `POST /api/auth/auth/login`, `/api/auth/auth/signup` (shared) | 5/minute, bursts of 5 |
+| `POST /api/market/api/v1/backtests/preview` | 6/minute, bursts of 6 |
+
+The stricter limits apply on top of the general one. Normal SPA usage is far
+below all three; the FE only needs to show the 429 envelope's message.
 
 ---
 

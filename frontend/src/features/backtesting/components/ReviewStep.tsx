@@ -4,6 +4,7 @@ import { Button } from "@/components/base/buttons/button";
 import { Chip } from "@/components/base/badges/chip";
 import { AppNotice } from "@/components/application/layout/application-layout";
 import { useBacktestWizard } from "../hooks/useBacktestWizard";
+import { useAuth } from "../../../auth/useAuth";
 import { entryDescription, exitDescription, sizingDescription } from "../domain/descriptions";
 import { AVAILABLE_METRICS } from "../domain/defaults";
 import { validateBacktestConfig } from "../domain/validation";
@@ -33,6 +34,7 @@ export function ReviewStep({ configuration }: { configuration?: ReactNode }) {
     stepIndex,
     totalSteps,
   } = useBacktestWizard();
+  const { status: authStatus } = useAuth();
   const reviewValidation = validateBacktestConfig(config, undefined, priceGaps);
   const isValid = reviewValidation.isValid;
   const crossedGaps = crossingDataGaps(
@@ -222,9 +224,9 @@ export function ReviewStep({ configuration }: { configuration?: ReactNode }) {
             Run this historical simulation
           </h3>
           <p className="text-body-regular text-text-secondary">
-            TradeIQ will create an asynchronous run, track its status, and
-            display only the results returned by the API. Historical output is
-            not investment advice or a prediction.
+            {authStatus === "authenticated"
+              ? "TradeIQ runs the simulation and saves it to your account so you can come back to it. Historical results are not investment advice or a prediction."
+              : "No account needed. You'll see the results right away, and you can sign in afterwards if you want to save them. Historical results are not investment advice or a prediction."}
           </p>
         </div>
         <Button
@@ -234,7 +236,7 @@ export function ReviewStep({ configuration }: { configuration?: ReactNode }) {
           disabled={!isValid || isSubmitting}
           className="w-full shrink-0 sm:w-auto"
         >
-          {isSubmitting ? "Submitting simulation" : "Run backtest"}
+          {isSubmitting ? "Running simulation" : "Run backtest"}
         </Button>
       </section>
     </div>

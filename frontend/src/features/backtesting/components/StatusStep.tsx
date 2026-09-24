@@ -294,7 +294,7 @@ function EquityCurvePreview({
   );
 }
 
-function ResultsView({
+export function ResultsView({
   results,
   gaps,
 }: {

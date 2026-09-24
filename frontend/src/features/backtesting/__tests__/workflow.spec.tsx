@@ -178,6 +178,36 @@ describe('BacktestWizard Workflow Integration', () => {
     });
   });
 
+  it('runs a preview without an account and shows the results page, saving nothing', async () => {
+    seedValidDraft();
+    const submitSpy = vi.spyOn(api, 'submitBacktestRun');
+    const previewSpy = vi.spyOn(api, 'previewBacktestRun').mockResolvedValue({
+      initialCapital: 1_000_000,
+      finalCash: 1_050_000,
+      finalEquity: 1_050_000,
+      trades: [],
+      equityCurve: [],
+    });
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/backtests/new/:step" element={<BacktestWizard />} />
+        <Route path="/backtests/preview" element={<div data-testid="preview-target" />} />
+      </Routes>,
+      { initialEntries: ['/backtests/new/review'], auth: { status: 'anonymous' } },
+    );
+
+    expect(screen.getByText(/No account needed/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /run backtest/i }));
+
+    await waitFor(() => expect(screen.getByTestId('preview-target')).toBeTruthy());
+    expect(previewSpy).toHaveBeenCalledTimes(1);
+    expect(submitSpy).not.toHaveBeenCalled();
+    const stored = JSON.parse(sessionStorage.getItem('tradeiq_backtest_preview_v1') ?? 'null');
+    expect(stored.results.finalEquity).toBe(1_050_000);
+    expect(stored.config.security.symbol).toBe(sampSecurity.symbol);
+  });
+
   it('prevents duplicate submissions when Run Backtest is clicked repeatedly', async () => {
     seedValidDraft();
     let resolveSubmit: (val: CreateBacktestRunResponse) => void;

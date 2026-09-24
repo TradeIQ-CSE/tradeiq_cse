@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
 import { DataCoverageModule } from '../data-coverage/data-coverage.module';
 import { BacktestRunsController } from './backtest-runs.controller';
+import { BacktestPreviewController } from './backtest-preview.controller';
 import { BacktestRunsService } from './backtest-runs.service';
 import { BacktestRunsRepository } from './backtest-runs.repository';
 import { BacktestRun } from './backtest-run.entity';
@@ -21,7 +22,7 @@ import { DailyPrice } from '../db/entities/daily-price.entity';
       DailyPrice,
     ]),
   ],
-  controllers: [BacktestRunsController],
+  controllers: [BacktestPreviewController, BacktestRunsController],
   providers: [BacktestRunsService, BacktestRunsRepository],
   exports: [BacktestRunsService],
 })
