@@ -7,11 +7,9 @@
  * property resolves there and follows the light/dark swap for free. Nothing
  * here needs to know which theme is active.
  *
- * Up/down use their own `--color-chart-*` tokens rather than the
- * status-lime/rose-text chip tokens: a chip needs its green/red to work as
- * *text* on a pale fill, while a candle/volume bar needs its green/red to
- * work as a *fill* against the chart's own background — darker in light
- * mode, lighter in dark mode, tuned independently of chip legibility.
+ * Up/down are the site's one green and red (--color-gain/--color-loss in
+ * theme.css) at their fill shade; chips and price text use the same hue at
+ * the -text shade, which is tuned for small type.
  */
 
 export interface ChartPalette {

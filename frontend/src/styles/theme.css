@@ -328,14 +328,28 @@
   --color-notification-error-foreground:       var(--color-rose-600);
   --color-notification-center-background:      var(--color-white);
 
+  /* The one green and one red. Every gain/loss, buy/sell and success/failure
+   * colour on the site resolves to these, so a green chip, a green price
+   * change and a green candle are the same green. Each mode gets its own
+   * shades for contrast: deep on the light background, bright on the dark
+   * one. Surfaces are mixed with the page background rather than made
+   * translucent, so a chip looks the same on whatever panel it sits on. */
+  --color-gain:         var(--color-emerald-600);
+  --color-gain-text:    var(--color-emerald-800);
+  --color-gain-surface: color-mix(in srgb, var(--color-emerald-500) 32%, var(--color-background-primary-default));
+  --color-loss:         var(--color-rose-600);
+  --color-loss-text:    var(--color-rose-800);
+  --color-loss-surface: color-mix(in srgb, var(--color-rose-500) 26%, var(--color-background-primary-default));
+
   /* Table status chips. Dark mappings come from the medical dashboard table
-   * in Figma (4139:7202, 4139:7240, 4139:7278, 4139:7315). */
-  --color-status-lime-background:   var(--color-lime-200);
-  --color-status-lime-text:         var(--color-lime-800);
+   * in Figma (4139:7202, 4139:7240, 4139:7278, 4139:7315); lime and rose
+   * are the gain/loss pair above. */
+  --color-status-lime-background:   var(--color-gain-surface);
+  --color-status-lime-text:         var(--color-gain-text);
   --color-status-yellow-background: var(--color-yellow-200);
   --color-status-yellow-text:       var(--color-yellow-800);
-  --color-status-rose-background:   var(--color-rose-200);
-  --color-status-rose-text:         var(--color-rose-800);
+  --color-status-rose-background:   var(--color-loss-surface);
+  --color-status-rose-text:         var(--color-loss-text);
   --color-status-cyan-background:   var(--color-cyan-200);
   --color-status-cyan-text:         var(--color-cyan-800);
   --color-status-blue-background:   var(--color-blue-200);
@@ -349,18 +363,15 @@
   /* Ranked market bars use a restrained tint plus a dedicated high-contrast
    * foreground. This avoids the broad candy-mint/pink blocks produced by the
    * old 40% mix while preserving the magnitude encoding. */
-  --color-market-gain-bar:  color-mix(in srgb, var(--color-emerald-600) 44%, var(--color-background-primary-default));
-  --color-market-loss-bar:  color-mix(in srgb, var(--color-rose-600) 42%, var(--color-background-primary-default));
-  --color-market-gain-text: var(--color-emerald-800);
-  --color-market-loss-text: var(--color-rose-700);
+  --color-market-gain-bar:  color-mix(in srgb, var(--color-gain) 44%, var(--color-background-primary-default));
+  --color-market-loss-bar:  color-mix(in srgb, var(--color-loss) 42%, var(--color-background-primary-default));
+  --color-market-gain-text: var(--color-gain-text);
+  --color-market-loss-text: var(--color-loss-text);
 
-  /* Candle/volume bar up-down colors. Kept separate from status-lime/rose-text
-   * (chip and table text): those need to work as *text* on a chip fill, this
-   * needs to work as a *fill* against the chart's own background, so it gets
-   * its own shade — darker in light mode, lighter in dark mode, for the best
-   * contrast against each mode's chart background. */
-  --color-chart-up:   var(--color-emerald-600);
-  --color-chart-down: var(--color-rose-600);
+  /* Candle/volume bar up-down colours: the gain/loss fill shade (text uses
+   * the -text shade, which is tuned for small type). */
+  --color-chart-up:   var(--color-gain);
+  --color-chart-down: var(--color-loss);
 
   /* Data-gap band (docs/plans/data-gap-handling.md §4): the same neutral
    * grey family as --color-chart-track below (a background region standing
@@ -585,13 +596,20 @@
   --color-separator-border:        color-mix(in srgb, var(--color-white) 9%, transparent);
   --color-separator-border-strong: color-mix(in srgb, var(--color-white) 14%, transparent);
 
-  /* Figma's dark table status pairs. */
-  --color-status-lime-background:   color-mix(in srgb, var(--color-lime-950) 60%, transparent);
-  --color-status-lime-text:         var(--color-lime-500);
+  --color-gain:         var(--color-emerald-400);
+  --color-gain-text:    var(--color-emerald-300);
+  --color-gain-surface: color-mix(in srgb, var(--color-emerald-500) 30%, var(--color-background-primary-default));
+  --color-loss:         var(--color-rose-400);
+  --color-loss-text:    var(--color-rose-300);
+  --color-loss-surface: color-mix(in srgb, var(--color-rose-500) 32%, var(--color-background-primary-default));
+
+  /* Figma's dark table status pairs; lime and rose are gain/loss above. */
+  --color-status-lime-background:   var(--color-gain-surface);
+  --color-status-lime-text:         var(--color-gain-text);
   --color-status-yellow-background: color-mix(in srgb, var(--color-yellow-950) 60%, transparent);
   --color-status-yellow-text:       var(--color-yellow-500);
-  --color-status-rose-background:   color-mix(in srgb, var(--color-rose-950) 60%, transparent);
-  --color-status-rose-text:         var(--color-rose-500);
+  --color-status-rose-background:   var(--color-loss-surface);
+  --color-status-rose-text:         var(--color-loss-text);
   --color-status-cyan-background:   color-mix(in srgb, var(--color-cyan-950) 60%, transparent);
   --color-status-cyan-text:         var(--color-cyan-400);
   --color-status-blue-background:   color-mix(in srgb, var(--color-blue-950) 60%, transparent);
@@ -602,13 +620,13 @@
   --color-status-dot-yellow-halo:   color-mix(in srgb, var(--color-yellow-800) 40%, transparent);
   --color-status-dot-indigo-halo:   color-mix(in srgb, var(--color-indigo-800) 40%, transparent);
 
-  --color-market-gain-bar:  color-mix(in srgb, var(--color-emerald-400) 34%, var(--color-background-primary-default));
-  --color-market-loss-bar:  color-mix(in srgb, var(--color-rose-400) 32%, var(--color-background-primary-default));
-  --color-market-gain-text: var(--color-emerald-300);
-  --color-market-loss-text: var(--color-rose-300);
+  --color-market-gain-bar:  color-mix(in srgb, var(--color-gain) 34%, var(--color-background-primary-default));
+  --color-market-loss-bar:  color-mix(in srgb, var(--color-loss) 32%, var(--color-background-primary-default));
+  --color-market-gain-text: var(--color-gain-text);
+  --color-market-loss-text: var(--color-loss-text);
 
-  --color-chart-up:   var(--color-emerald-400);
-  --color-chart-down: var(--color-rose-400);
+  --color-chart-up:   var(--color-gain);
+  --color-chart-down: var(--color-loss);
 
   --color-chart-gap: var(--color-slate-700);
 
