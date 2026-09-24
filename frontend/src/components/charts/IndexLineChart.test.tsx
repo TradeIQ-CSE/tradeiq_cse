@@ -56,7 +56,7 @@ describe("IndexLineChart", () => {
     const table = screen.getByRole("table", { name: "ASPI history" });
     expect(
       within(table).getByRole("row", {
-        name: /No data, Jan 5, 2026 to Jan 6, 2026/,
+        name: /Data gap, Jan 5, 2026 to Jan 6, 2026/,
       }),
     ).toBeInTheDocument();
     expect(within(table).getByRole("row", { name: /Jan 2, 2026/ })).toBeInTheDocument();
@@ -80,7 +80,7 @@ describe("IndexLineChart", () => {
       />,
     );
     const table = screen.getByRole("table", { name: "ASPI history" });
-    expect(within(table).queryByText(/No data/)).not.toBeInTheDocument();
+    expect(within(table).queryByText(/Data gap/)).not.toBeInTheDocument();
   });
 
   it("draws a labelled band across a wide-enough gap run", async () => {
@@ -104,7 +104,7 @@ describe("IndexLineChart", () => {
     });
 
     expect(
-      await screen.findByText("No data · Jan 5 – Jan 6, 2026"),
+      await screen.findByText("Data gap · Jan 5 – Jan 6, 2026"),
     ).toBeInTheDocument();
   });
 
@@ -164,7 +164,7 @@ describe("IndexChartTooltip", () => {
     );
 
     expect(
-      screen.getByText("No data · Jan 5 – Jan 6, 2026"),
+      screen.getByText("Data gap · Jan 5 – Jan 6, 2026"),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Close:/)).not.toBeInTheDocument();
   });
@@ -182,6 +182,6 @@ describe("IndexChartTooltip", () => {
     );
 
     expect(screen.getByText(/Close:/)).toBeInTheDocument();
-    expect(screen.queryByText(/No data/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Data gap/)).not.toBeInTheDocument();
   });
 });

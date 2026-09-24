@@ -498,7 +498,7 @@ export interface GapKindLabels {
   marketClosed: string;
 }
 
-/** "No data · 1 Jan – 12 Jun 2026" / "Market closed · 23 Mar – 8 May 2020". */
+/** "Data gap · 1 Jan – 12 Jun 2026" / "Market closed · 23 Mar – 8 May 2020". */
 export function formatGapLabel(
   gap: DataGap,
   locale: string,

@@ -20,12 +20,12 @@ export interface GapLabels {
   /** Prefix for a `market_closed` band, tooltip, and sr-only row. */
   gapMarketClosed: string;
   /** Screen-reader-table row text for one gap, e.g.
-   * "No data, 1 Jan 2026 to 12 Jun 2026". */
+   * "Data gap, 1 Jan 2026 to 12 Jun 2026". */
   gapRow: (params: { kind: string; from: string; to: string }) => string;
 }
 
 export const DEFAULT_GAP_LABELS: GapLabels = {
-  gapMissingData: "No data",
+  gapMissingData: "Data gap",
   gapMarketClosed: "Market closed",
   gapRow: ({ kind, from, to }) => `${kind}, ${from} to ${to}`,
 };
@@ -39,7 +39,7 @@ export function gapText(gap: DataGap, locale: string, labels: GapLabels): string
 }
 
 /** The sr-only table's row text for one gap, e.g.
- * "No data, 1 Jan 2026 to 12 Jun 2026" — both boundary dates always carry
+ * "Data gap, 1 Jan 2026 to 12 Jun 2026" — both boundary dates always carry
  * their year, unlike the band label's compact "1 Jan – 12 Jun 2026". */
 export function gapRowText(gap: DataGap, locale: string, labels: GapLabels): string {
   const kind =

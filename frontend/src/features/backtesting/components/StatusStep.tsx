@@ -119,7 +119,7 @@ function findGapStraddles(
   return straddles;
 }
 
-/** A band needs roughly this many viewBox units before "No data" fits
+/** A band needs roughly this many viewBox units before "Data gap" fits
  * without spilling past its own edges — mirrors gap-band.tsx's
  * `MIN_LABEL_WIDTH`, scaled down for this chart's narrower 720-wide viewBox
  * versus a full-width Recharts panel. */
@@ -227,7 +227,7 @@ function EquityCurvePreview({
             // market_closed band reads lighter than a missing_data one,
             // the same band mechanism rather than a second colour.
             const fillOpacity = isClosure ? 0.18 : 0.4;
-            const label = isClosure ? 'Market closed' : 'No data';
+            const label = isClosure ? 'Market closed' : 'Data gap';
             const titleText = isClosure
               ? `Market closed, ${gap.from} to ${gap.to}`
               : `No market data, ${gap.from} to ${gap.to}`;

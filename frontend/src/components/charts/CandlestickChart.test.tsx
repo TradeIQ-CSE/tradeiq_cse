@@ -554,10 +554,10 @@ describe("gap slots", () => {
     );
 
     const table = screen.getByRole("table", { name: "Daily history" });
-    // One summary row for the whole gap ("No data, Jan 6, 2026 to Jan 7,
+    // One summary row for the whole gap ("Data gap, Jan 6, 2026 to Jan 7,
     // 2026") rather than a row per missing weekday.
     expect(
-      within(table).getByRole("row", { name: /No data, Jan 5, 2026 to Jan 6, 2026/ }),
+      within(table).getByRole("row", { name: /Data gap, Jan 5, 2026 to Jan 6, 2026/ }),
     ).toBeInTheDocument();
     // And the real bars either side of the gap still get their own rows.
     expect(within(table).getByRole("row", { name: /Jan 2, 2026/ })).toBeInTheDocument();
@@ -586,9 +586,9 @@ describe("gap slots", () => {
       expect(container.querySelectorAll(".recharts-wrapper")).toHaveLength(2);
     });
 
-    // The band's label reuses the same "No data · <range>" text the
+    // The band's label reuses the same "Data gap · <range>" text the
     // tooltip shows for a slot (formatGapLabel, lib/data-gaps.ts).
-    expect(await screen.findByText("No data · Jan 5 – Jan 6, 2026")).toBeInTheDocument();
+    expect(await screen.findByText("Data gap · Jan 5 – Jan 6, 2026")).toBeInTheDocument();
   });
 
   it("keeps the axis from collapsing to [0, 1] even when a window lands entirely on a gap", () => {
@@ -653,7 +653,7 @@ describe("gap slots", () => {
     expect(frame.dataset.startIndex).toBe("15");
 
     expect(
-      await screen.findByText("No data · Jan 1 – Jun 12, 2026"),
+      await screen.findByText("Data gap · Jan 1 – Jun 12, 2026"),
     ).toBeInTheDocument();
     // One band rect on the price panel, one on the volume panel below it.
     expect(
@@ -687,7 +687,7 @@ describe("CandlestickTooltip", () => {
       />,
     );
 
-    expect(screen.getByText("No data · Jan 5 – Jan 6, 2026")).toBeInTheDocument();
+    expect(screen.getByText("Data gap · Jan 5 – Jan 6, 2026")).toBeInTheDocument();
     expect(screen.queryByText(/High:/)).not.toBeInTheDocument();
   });
 
@@ -728,6 +728,6 @@ describe("CandlestickTooltip", () => {
     );
 
     expect(screen.getByText(/Close:/)).toBeInTheDocument();
-    expect(screen.queryByText(/No data/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Data gap/)).not.toBeInTheDocument();
   });
 });

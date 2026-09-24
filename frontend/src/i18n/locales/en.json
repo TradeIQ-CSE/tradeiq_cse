@@ -293,14 +293,9 @@
     "empty": "—",
     "tradingDate": "Trading date",
     "asOf": "as of {{date}}",
-    "asOfDescription": "Prices as of {{date}}",
     "viewDetails": "View {{symbol}} details",
     "notice": {
       "eod": "End-of-day data, no live feed"
-    },
-    "stats": {
-      "listed": "Listed securities",
-      "asOf": "Latest session"
     },
     "movers": {
       "title": "Top movers",
@@ -323,7 +318,6 @@
     "indices": {
       "eyebrow": "Market indices",
       "subtitle": "The exchange's headline indices, updated end of day.",
-      "changeSince": "vs {{date}}",
       "noLatest": "No index value for this date.",
       "loading": "Loading index data…",
       "unreachable": "Could not load index data.",
@@ -331,7 +325,23 @@
       "notFound": {
         "title": "Index not found",
         "description": "We couldn't find an index with that code."
-      }
+      },
+      "closeOn": "Closing value on {{date}}",
+      "closeOnVs": "Closing value on {{date}} · change from {{previous}}",
+      "windowLabel": "Chart period",
+      "since": "Since {{date}}",
+      "gapNote": "Index data is not available from {{range}}. Use the buttons to view the charts before or after this period. The closing values above are current."
+    },
+    "availability": {
+      "eyebrow": "Data coverage",
+      "subtitle": "Grey sections are data gaps.",
+      "latest": "Last updated: {{date}}",
+      "prices": "Prices",
+      "indices": "Indices",
+      "range": "{{from}} – {{to}}",
+      "missing": "Data gaps: {{ranges}}",
+      "sessions_one": "{{formattedCount}} trading day",
+      "sessions_other": "{{formattedCount}} trading days"
     }
   },
   "securityDetail": {
@@ -399,7 +409,7 @@
       "zoomIn": "Show fewer periods",
       "zoomOut": "Show more periods",
       "gap": {
-        "missingData": "No data",
+        "missingData": "Data gap",
         "marketClosed": "Market closed",
         "row": "{{kind}}, {{from}} to {{to}}"
       }
