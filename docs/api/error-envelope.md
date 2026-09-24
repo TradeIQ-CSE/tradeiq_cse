@@ -34,6 +34,7 @@ top-level `error` key:
 | `fields` | array | 400 only | One entry per offending input; non-empty on every `VALIDATION_FAILED`. Absent for all other codes |
 | `fields[].field` | string | — | The input name: query param, path param, or JSON body path (dot notation for nested body fields) |
 | `fields[].reason` | string | — | Why the value was rejected, stated in terms of the expected value only |
+| `details` | object | code-specific | Structured, code-specific payload for codes that need more than `message`; present only when non-empty. e.g. `422 DATE_IN_DATA_GAP` carries `{ field, from, to }` — the offending date field and the gap's bounds (see endpoint-catalogue-v0.md §11) |
 | `trace_id` | string | yes | Opaque correlation id matching the service's structured logs. The only diagnostic handle exposed — quote it when reporting bugs |
 
 Success responses never contain `error`; error responses never contain `data`.

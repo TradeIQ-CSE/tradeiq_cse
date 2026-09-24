@@ -6,6 +6,7 @@ import { CreateBacktestRunDto } from './dto/create-backtest-run.dto';
 import { BacktestRun } from './backtest-run.entity';
 import { BacktestResult } from './backtest-result.entity';
 import { DailyPrice } from '../db/entities/daily-price.entity';
+import { DataCoverageService } from '../data-coverage/data-coverage.service';
 import { BacktestApiError, mapEngineError } from './errors/backtest-api-error';
 import { runBacktest } from '../backtesting/engine/runBacktest';
 import { validateRule } from '../backtesting/rules/validateRule';
@@ -37,7 +38,10 @@ function validateStateTransition(
 
 @Injectable()
 export class BacktestRunsService {
-  constructor(private readonly repository: BacktestRunsRepository) {}
+  constructor(
+    private readonly repository: BacktestRunsRepository,
+    private readonly dataCoverage: DataCoverageService,
+  ) {}
 
   async submitRun(
     dto: CreateBacktestRunDto,
@@ -118,6 +122,33 @@ export class BacktestRunsService {
       throw new BacktestApiError(
         'INVALID_SYMBOL',
         `Symbol '${dto.symbol}' not found.`,
+      );
+    }
+
+    // 3.5 Data-gap validation. A start or end date that falls inside a
+    // `missing_data` gap must not silently start (or end) the
+    // simulation on the first bar the price lookup happens to find
+    // (docs/plans/data-gap-handling.md §2). A range that only crosses a gap
+    // is accepted unchanged, and `market_closed` gaps (real market history,
+    // like a weekend) never reject either end.
+    const coverage = await this.dataCoverage.get();
+    const gapContaining = (date: string) =>
+      coverage.data.prices.gaps.find(
+        (gap) =>
+          gap.kind === 'missing_data' && date >= gap.from && date <= gap.to,
+      );
+    const startGap = gapContaining(dto.startDate);
+    const dateGap = startGap ?? gapContaining(dto.endDate);
+    if (dateGap) {
+      throw new BacktestApiError(
+        'DATE_IN_DATA_GAP',
+        `No market data from ${dateGap.from} to ${dateGap.to}. Choose a date outside this period.`,
+        {
+          field: startGap ? 'startDate' : 'endDate',
+          from: dateGap.from,
+          to: dateGap.to,
+        },
+        HttpStatus.UNPROCESSABLE_ENTITY,
       );
     }
 

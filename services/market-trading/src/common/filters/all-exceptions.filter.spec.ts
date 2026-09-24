@@ -10,6 +10,7 @@ import {
   PortfolioNotFoundException,
   ValidationFailedException,
 } from '../errors/api-exception';
+import { BacktestApiError } from '../../backtest-runs/errors/backtest-api-error';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 
 interface Envelope {
@@ -17,6 +18,7 @@ interface Envelope {
     code: string;
     message: string;
     fields?: { field: string; reason: string }[];
+    details?: unknown;
     trace_id: string;
   };
 }
@@ -85,6 +87,35 @@ describe('AllExceptionsFilter', () => {
 
     expect(status).toBe(HttpStatus.SERVICE_UNAVAILABLE);
     expect(body.error.code).toBe('DEPENDENCY_UNAVAILABLE');
+  });
+
+  // docs/plans/data-gap-handling.md §2 — the caller needs the gap's bounds to
+  // show a useful message, and error-envelope.md documents `details` for
+  // exactly this.
+  it('surfaces details on DATE_IN_DATA_GAP', () => {
+    const { status, body } = render(
+      new BacktestApiError(
+        'DATE_IN_DATA_GAP',
+        'No market data from 2026-01-01 to 2026-06-12. Choose a date outside this period.',
+        { field: 'startDate', from: '2026-01-01', to: '2026-06-12' },
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      ),
+    );
+
+    expect(status).toBe(HttpStatus.UNPROCESSABLE_ENTITY);
+    expect(body.error).toMatchObject({
+      code: 'DATE_IN_DATA_GAP',
+      details: { field: 'startDate', from: '2026-01-01', to: '2026-06-12' },
+    });
+  });
+
+  it('omits details for a BacktestApiError code that carries none', () => {
+    const { body } = render(
+      new BacktestApiError('INSUFFICIENT_PRICE_HISTORY', 'No bars found.'),
+    );
+
+    expect(body.error.code).toBe('INSUFFICIENT_PRICE_HISTORY');
+    expect(body.error).not.toHaveProperty('details');
   });
 
   it('redacts a genuine 500 to INTERNAL', () => {

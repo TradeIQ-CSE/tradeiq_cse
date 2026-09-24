@@ -28,11 +28,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let code: ApiErrorCode = 'INTERNAL';
     let message = 'An unexpected error occurred.';
     let fields: { field: string; reason: string }[] | undefined;
+    let details: unknown;
 
     if (exception instanceof BacktestApiError) {
       status = exception.getStatus();
       code = exception.code as ApiErrorCode;
       message = exception.message;
+      // Every BacktestApiError that sets details carries a caller-facing
+      // payload (DATE_IN_DATA_GAP's gap bounds, INVALID_RULE_CONFIGURATION's
+      // field/reason pairs), never engine internals, so it is forwarded as-is.
+      if (hasContent(exception.details)) {
+        details = exception.details;
+      }
     } else if (exception instanceof ApiException) {
       status = exception.getStatus();
       code = exception.code;
@@ -62,6 +69,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       code = 'INTERNAL';
       message = 'An unexpected error occurred.';
       fields = undefined;
+      details = undefined;
     }
 
     response.status(status).json({
@@ -69,8 +77,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
         code,
         message,
         ...(fields ? { fields } : {}),
+        ...(details !== undefined ? { details } : {}),
         trace_id: traceId,
       },
     });
   }
+}
+
+// Treats null, undefined, an empty array, and an empty object as "no
+// details" so the response key is omitted rather than sent as `null`/`{}`.
+function hasContent(value: unknown): boolean {
+  if (value === null || value === undefined) return false;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === 'object') return Object.keys(value).length > 0;
+  return true;
 }

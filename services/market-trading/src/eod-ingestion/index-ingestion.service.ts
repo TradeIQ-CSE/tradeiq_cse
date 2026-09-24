@@ -5,6 +5,7 @@ import {
   IngestionConflictException,
   ValidationFailedException,
 } from '../common/errors/api-exception';
+import { DataCoverageService } from '../data-coverage/data-coverage.service';
 import { IndexIngestionDto } from './index-ingestion.dto';
 
 // docs/api/index-ingestion-v1.md. Each index has one close per day: the same
@@ -12,12 +13,15 @@ import { IndexIngestionDto } from './index-ingestion.dto';
 // a different close refuses the whole batch.
 @Injectable()
 export class IndexIngestionService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly dataCoverage: DataCoverageService,
+  ) {}
 
-  ingest(body: IndexIngestionDto) {
+  async ingest(body: IndexIngestionDto) {
     const date = body.trade_date;
     const codes = body.values.map((value) => value.code);
-    return this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
       // Requests for the same day take turns, so a concurrent duplicate gets
       // the unchanged or 409 answer rather than a key violation.
       await manager.query(
@@ -89,5 +93,13 @@ export class IndexIngestionService {
         },
       };
     });
+
+    // Only a write that actually stored a new value changes the index
+    // coverage window; a request that only confirmed unchanged closes has
+    // nothing for the cached gap analysis to catch up on.
+    if (result.data.stored.length > 0) {
+      this.dataCoverage.invalidate();
+    }
+    return result;
   }
 }
