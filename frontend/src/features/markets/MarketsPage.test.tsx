@@ -256,28 +256,69 @@ describe('MarketsPage', () => {
     ).toHaveAttribute('aria-current', 'false');
   });
 
-  it('toggles aria-pressed on the watch button', async () => {
+  it('follows a company through the watchlist API', async () => {
     const user = userEvent.setup();
+    const added: string[] = [];
+    server.use(
+      http.post('*/watchlist', async ({ request }) => {
+        const { symbol } = (await request.json()) as { symbol: string };
+        added.push(symbol);
+        return HttpResponse.json({
+          data: {
+            limit: 10,
+            items: [
+              {
+                symbol,
+                company_name: 'Company',
+                added_at: '2026-09-01T00:00:00.000Z',
+                trade_date: '2026-09-24',
+                close: 10,
+                change: 0,
+                change_pct: 0,
+              },
+            ],
+          },
+        });
+      }),
+    );
     renderWithProviders(<MarketsPage />);
 
-    await table().findByText(securitiesFixture[0].symbol);
-
-    // Every row starts unwatched, so the first "add to watchlist" button in
-    // document order belongs to the first fixture row.
-    const [watchButton] = screen.getAllByRole('button', {
-      name: t('markets.watch.add'),
+    const first = securitiesFixture[0];
+    await table().findByText(first.symbol);
+    const watchButton = await screen.findByRole('button', {
+      name: t('watchlistPage.watch.add', { symbol: first.symbol }),
     });
-
     expect(watchButton).toHaveAttribute('aria-pressed', 'false');
 
     await user.click(watchButton);
 
-    expect(watchButton).toHaveAttribute('aria-pressed', 'true');
-    expect(watchButton).toHaveAccessibleName(t('markets.watch.remove'));
+    expect(added).toEqual([first.symbol]);
+    expect(
+      await screen.findByRole('button', {
+        name: t('watchlistPage.watch.remove', { symbol: first.symbol }),
+      }),
+    ).toHaveAttribute('aria-pressed', 'true');
+  });
 
-    await user.click(watchButton);
+  it('sends a guest to sign in from the star', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <>
+        <MarketsPage />
+        <LocationProbe />
+      </>,
+      { initialEntries: ['/markets'], auth: { status: 'anonymous' } },
+    );
 
-    expect(watchButton).toHaveAttribute('aria-pressed', 'false');
+    const first = securitiesFixture[0];
+    await table().findByText(first.symbol);
+    await user.click(
+      screen.getByRole('button', {
+        name: t('watchlistPage.watch.add', { symbol: first.symbol }),
+      }),
+    );
+
+    expect(screen.getByTestId('location-probe')).toHaveTextContent('/login');
   });
 
   it('makes every data row a keyboard-focusable detail link without coupling the watch button', async () => {
@@ -294,8 +335,8 @@ describe('MarketsPage', () => {
     const link = await table().findByRole('link', {
       name: t('markets.viewDetails', { symbol: first.symbol }),
     });
-    const [watchButton] = screen.getAllByRole('button', {
-      name: t('markets.watch.add'),
+    const watchButton = screen.getByRole('button', {
+      name: t('watchlistPage.watch.add', { symbol: first.symbol }),
     });
 
     expect(link).toHaveAttribute('href', `/markets/${encodeURIComponent(first.symbol)}`);

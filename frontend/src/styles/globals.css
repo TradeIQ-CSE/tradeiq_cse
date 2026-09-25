@@ -890,6 +890,11 @@ input[type="search"]::-webkit-search-cancel-button {
     padding 200ms ease,
     font-size 200ms ease;
 }
+/* `.bui-table th` outranks the `text-right` utility, so number columns'
+ * headings would sit left while their figures sit right. */
+.bui-table th.text-right {
+  text-align: right;
+}
 .bui-table td {
   @apply px-3 py-2.5 align-middle text-body-medium text-text-primary outline-none;
   transition:
@@ -1121,4 +1126,19 @@ input[type="search"]::-webkit-search-cancel-button {
     border-color: var(--color-border-button-hover);
     box-shadow: inset 0 0 0 2px var(--color-border-button-hover);
   }
+}
+
+/* Backtest run intro (RunReveal.tsx): the equity line is uncovered left to
+ * right. clip-path runs on the compositor, so the line is drawn once and
+ * never re-laid out while it plays. Duration is set inline by the component. */
+@keyframes run-reveal {
+  from {
+    clip-path: inset(-10% 100% -10% 0);
+  }
+  to {
+    clip-path: inset(-10% 0 -10% 0);
+  }
+}
+.run-reveal-line {
+  animation: run-reveal linear both;
 }

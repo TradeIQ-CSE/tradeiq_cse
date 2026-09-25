@@ -81,8 +81,8 @@ describe('StatusStep Polling & Retry Behavior', () => {
     await waitFor(
       () => {
         expect(getStatusSpy).toHaveBeenCalledTimes(2);
-        expect(screen.getByText('Backtest Simulation Complete!')).toBeTruthy();
-        expect(screen.getByText('Trade count')).toBeTruthy();
+        expect(screen.getByText('Your test is done')).toBeTruthy();
+        expect(screen.getByText('Trades', { selector: 'p' })).toBeTruthy();
       },
       { timeout: 4000 },
     );
@@ -103,12 +103,12 @@ describe('StatusStep Polling & Retry Behavior', () => {
       expect(screen.getByText(/Persistent 500 error/i)).toBeTruthy();
     });
 
-    const retryBtn = screen.getByRole('button', { name: /Retry Status Check/i });
+    const retryBtn = screen.getByRole('button', { name: /Try again/i });
     fireEvent.click(retryBtn);
 
     await waitFor(() => {
       expect(getStatusSpy).toHaveBeenCalledTimes(2);
-      expect(screen.getByText('Simulation in Progress...')).toBeTruthy();
+      expect(screen.getByText('Running your test')).toBeTruthy();
     });
   });
 });
@@ -153,7 +153,7 @@ describe('StatusStep equity curve — data gaps', () => {
 
     const { container } = renderStatusStep('run-gap');
 
-    await screen.findByText('Backtest Simulation Complete!');
+    await screen.findByText('Your test is done');
     await waitFor(() => {
       expect(container.querySelectorAll('svg polyline')).toHaveLength(2);
     });
@@ -161,7 +161,7 @@ describe('StatusStep equity curve — data gaps', () => {
     expect(container.querySelector('svg rect')).toBeTruthy();
     expect(screen.getByText('Data gap')).toBeInTheDocument();
     expect(
-      screen.getByText(`Includes ${priceGap2026.sessions.toLocaleString('en-LK')} sessions without market data.`),
+      screen.getByText(`Includes ${priceGap2026.sessions.toLocaleString('en-LK')} trading days in a data gap`),
     ).toBeInTheDocument();
   });
 
@@ -170,13 +170,13 @@ describe('StatusStep equity curve — data gaps', () => {
 
     const { container } = renderStatusStep('run-gap');
 
-    await screen.findByText('Backtest Simulation Complete!');
+    await screen.findByText('Your test is done');
     await waitFor(() => {
       expect(container.querySelectorAll('svg polyline')).toHaveLength(1);
     });
 
     expect(container.querySelector('svg rect')).toBeNull();
-    expect(screen.queryByText(/sessions without market data/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/trading days in a data gap/)).not.toBeInTheDocument();
   });
 
   function mockClosureCrossingRun() {
@@ -209,7 +209,7 @@ describe('StatusStep equity curve — data gaps', () => {
 
     const { container } = renderStatusStep('run-closure');
 
-    await screen.findByText('Backtest Simulation Complete!');
+    await screen.findByText('Your test is done');
     await waitFor(() => {
       expect(container.querySelectorAll('svg rect')).toHaveLength(1);
     });
@@ -218,8 +218,8 @@ describe('StatusStep equity curve — data gaps', () => {
     expect(rect).toHaveAttribute('fill-opacity', '0.18');
     expect(screen.getByText('Market closed')).toBeInTheDocument();
     // A closure is real market history, not something the run skipped, so
-    // it never contributes to the "sessions without market data" caption.
-    expect(screen.queryByText(/sessions without market data/)).not.toBeInTheDocument();
+    // it never contributes to the "trading days in a data gap" caption.
+    expect(screen.queryByText(/trading days in a data gap/)).not.toBeInTheDocument();
   });
 
   function mockBothGapsCrossingRun() {
@@ -251,7 +251,7 @@ describe('StatusStep equity curve — data gaps', () => {
 
     const { container } = renderStatusStep('run-both-gaps');
 
-    await screen.findByText('Backtest Simulation Complete!');
+    await screen.findByText('Your test is done');
     await waitFor(() => {
       expect(container.querySelectorAll('svg rect')).toHaveLength(2);
     });
@@ -277,8 +277,8 @@ describe('StatusStep equity curve — data gaps', () => {
     // Only the missing_data gap's 117 sessions count — the closure's 33 are
     // real history, not missing data.
     expect(
-      screen.getByText(`Includes ${priceGap2026.sessions.toLocaleString('en-LK')} sessions without market data.`),
+      screen.getByText(`Includes ${priceGap2026.sessions.toLocaleString('en-LK')} trading days in a data gap`),
     ).toBeInTheDocument();
-    expect(screen.queryByText(new RegExp(`${marketClosureCovid.sessions}\\s+sessions`))).not.toBeInTheDocument();
+    expect(screen.queryByText(new RegExp(`${marketClosureCovid.sessions}\\s+trading days`))).not.toBeInTheDocument();
   });
 });

@@ -6,7 +6,7 @@
   "nav": {
     "sections": {
       "markets": "Markets",
-      "portfolio": "My Portfolio",
+      "portfolio": "My portfolio",
       "trading": "Trading",
       "analysis": "Analysis",
       "utilities": "Utilities"
@@ -17,10 +17,10 @@
       "watchlist": "Watchlist",
       "portfolio": "Portfolio",
       "trades": "Trades",
-      "paperTrading": "Paper Trading",
+      "paperTrading": "Paper trading",
       "backtesting": "Backtesting",
       "analytics": "Analytics",
-      "aiInsights": "AI Insights",
+      "aiInsights": "AI insights",
       "reports": "Reports",
       "admin": "Admin",
       "settings": "Settings"
@@ -28,12 +28,12 @@
     "language": "Language",
     "languageUnavailable": "{{language}} translation is not available yet",
     "profile": {
-      "role": "Live trader"
+      "role": "Virtual money"
     }
   },
   "topbar": {
     "searchPlaceholder": "Search symbol or company…",
-    "breadcrumbRoot": "Console"
+    "breadcrumbRoot": "Home"
   },
   "shell": {
     "skipToContent": "Skip to main content",
@@ -44,144 +44,140 @@
     "loadingDescription": "Preparing this part of TradeIQ."
   },
   "dashboardPage": {
-    "eyebrow": "Your TradeIQ workspace",
-    "title": "Dashboard",
-    "description": "A clear starting point for CSE research, historical testing and simulated portfolio activity.",
-    "dataNoticeTitle": "End-of-day and simulated data",
-    "dataNotice": "Market prices are end-of-day values. Portfolio figures come from paper trades and do not represent real money or a brokerage account.",
+    "eyebrow": "Dashboard",
+    "title": "Your overview",
+    "dataNotice": "Your practice portfolio and the market's biggest movers · Prices update after each trading day",
     "actions": {
-      "markets": "Browse markets",
       "portfolio": "Open portfolio",
-      "createPortfolio": "Create a paper portfolio",
+      "createPortfolio": "Create a portfolio",
       "retry": "Try again",
-      "viewAll": "View all markets",
-      "paperTrade": "Practise a paper trade",
-      "backtest": "Test a strategy"
+      "viewAll": "All companies",
+      "paperTrade": "Practise a trade",
+      "backtest": "Test an idea"
     },
     "portfolio": {
-      "title": "Paper portfolio snapshot",
-      "description": "Your first paper portfolio will appear here after you create it.",
-      "selected": "Latest available figures for {{name}}.",
-      "equity": "Total equity",
-      "cash": "Available cash",
-      "return": "Total P/L",
-      "pricedAt": "Valued at {{date}}",
-      "noPriceDate": "No priced CSE session is available yet",
-      "simulatedFunds": "Simulated funds",
+      "title": "Your portfolio",
+      "selected": "{{name}} · Closing prices from {{date}}",
+      "equity": "Total value",
+      "cash": "Cash",
+      "return": "Profit or loss",
       "emptyTitle": "Create a portfolio to start practising",
-      "emptyDescription": "Choose a starting amount of virtual money, then place practice trades without sending an order to the CSE.",
-      "errorTitle": "Portfolios are unavailable",
-      "errorDescription": "TradeIQ could not load your paper portfolios. Your market research tools are still available.",
-      "summaryErrorTitle": "Portfolio figures are unavailable",
-      "summaryErrorDescription": "TradeIQ could not value this portfolio for the latest available session."
+      "emptyDescription": "Pick how much virtual money to start with, then buy and sell with real CSE prices",
+      "errorTitle": "Couldn't load your portfolios",
+      "errorDescription": "Everything else still works · Please try again later",
+      "summaryErrorTitle": "Couldn't value your portfolio",
+      "summaryErrorDescription": "Please try again in a moment"
     },
     "market": {
-      "title": "Latest market leaders",
-      "description": "The strongest price moves for the latest available CSE session.",
-      "asOf": "Top gainers for {{date}}.",
-      "gainers": "Top gaining CSE securities",
-      "mostActive": "Most active: {{symbol}}, {{volume}} shares traded.",
-      "emptyTitle": "No ranked market data",
-      "emptyDescription": "The latest session does not contain enough complete price data to rank securities.",
-      "errorTitle": "Market summary is unavailable",
-      "errorDescription": "TradeIQ could not reach the market data service."
+      "title": "Biggest risers",
+      "asOf": "On {{date}}",
+      "gainers": "Companies whose price rose the most",
+      "mostActive": "Most traded: {{symbol}} · {{volume}} shares",
+      "emptyTitle": "No risers to show",
+      "emptyDescription": "There aren't enough prices for this day yet",
+      "errorTitle": "Couldn't load market movers",
+      "errorDescription": "Please try again in a moment",
+      "closedAt": "Closed at LKR {{price}}"
     },
     "next": {
-      "eyebrow": "Continue learning",
-      "title": "Put an idea into practice",
-      "description": "Use a historical backtest to examine rules on past prices, or use a paper trade to learn what an order changes."
+      "title": "Try an idea",
+      "description": "Test a rule on past prices, or practise buying and selling"
     }
   },
   "watchlistPage": {
-    "eyebrow": "Saved market research",
-    "title": "Watchlist",
-    "description": "A watchlist will keep selected CSE securities together once account-backed saving is available.",
-    "browse": "Browse markets",
-    "emptyTitle": "Saved watchlists are not available yet",
-    "emptyDescription": "The star controls in Markets currently help you mark rows during that visit only. TradeIQ does not save or sync those choices to your account yet.",
-    "findSecurity": "Find a security",
-    "noticeTitle": "Nothing is being saved silently",
-    "notice": "Persistent watchlists require an account API that is not part of the current product contract. Until that is built, this page will not invent saved securities or imply cross-device sync."
-  },
-  "analyticsPage": {
-    "eyebrow": "Historical strategy research",
-    "title": "Backtesting guide",
-    "description": "Learn how TradeIQ applies a clear set of buy and sell rules to past CSE prices, then open the guided workflow when you are ready.",
-    "start": "Start a backtest",
-    "noticeTitle": "Historical simulation, not a forecast",
-    "notice": "A backtest describes how selected rules would have behaved on available past data. It does not predict future returns or recommend a security.",
-    "guideEyebrow": "How it works",
-    "guideTitle": "From an idea to a reviewable result",
-    "guideDescription": "The full workflow contains seven guided steps. These three ideas are the important parts to understand before you begin.",
-    "step": "Step {{number}}",
-    "steps": {
-      "security": {
-        "title": "Choose the evidence",
-        "description": "Select a CSE security and a historical date range with available end-of-day prices."
-      },
-      "rules": {
-        "title": "Define the rules",
-        "description": "State when the simulation can buy or sell and review its execution and fee assumptions."
-      },
-      "review": {
-        "title": "Read the result",
-        "description": "Review persisted results with their dates and assumptions, without treating past performance as a promise."
-      }
+    "eyebrow": "Watchlist",
+    "title": "Companies you follow",
+    "description": "Follow up to {{limit}} companies and see their latest prices in one place",
+    "loading": "Updating your watchlist",
+    "list": {
+      "title": "Your list",
+      "count_one": "{{count}} of {{limit}} company",
+      "count_other": "{{count}} of {{limit}} companies",
+      "pricesFrom": "Closing prices from {{date}}",
+      "on": "on {{date}}",
+      "full": "Your list is full · Remove a company to add another"
     },
-    "openWizard": "Open the 7-step workflow",
-    "plannedTitle": "Broader portfolio analytics are planned",
-    "plannedDescription": "TradeIQ does not currently provide API-backed benchmark, risk, attribution or prediction metrics. Those figures will appear only after their product and data contracts exist."
+    "add": {
+      "label": "Add a company"
+    },
+    "columns": {
+      "company": "Company",
+      "close": "Latest close",
+      "change": "Since the day before",
+      "follow": "Follow"
+    },
+    "dataGap": "Data gap",
+    "noChange": "No earlier price to compare",
+    "empty": "No companies yet · Search above or tap the star on the Markets page",
+    "browse": "Browse companies",
+    "errors": {
+      "load": "Couldn’t load your watchlist",
+      "retry": "Try again",
+      "add": "Couldn’t add that company · Try again",
+      "full": "Your list is full · Remove a company first"
+    },
+    "watch": {
+      "follow": "Follow",
+      "following": "Following",
+      "add": "Add {{symbol}} to your watchlist",
+      "remove": "Remove {{symbol}} from your watchlist",
+      "full": "Your watchlist is full",
+      "failed": "Couldn’t update your watchlist · Try again"
+    }
   },
   "plannedFeatures": {
-    "eyebrow": "Planned capability",
-    "unavailableTitle": "Not available in this build",
-    "noticeTitle": "No data is being generated",
-    "notice": "TradeIQ will not display placeholder results, predictions or account figures for a capability that has no supporting product and API contract.",
+    "comingSoon": "Coming soon",
+    "analytics": {
+      "eyebrow": "Analytics",
+      "title": "See how your practice is going",
+      "description": "Charts of your portfolio's value and returns over time",
+      "meanwhile": "For now, your portfolio shows today's value and profit or loss",
+      "alternative": "Open your portfolio"
+    },
     "aiInsights": {
-      "title": "AI insights",
-      "description": "This direct link is retained for product planning, but AI-generated market analysis is not part of the current TradeIQ build.",
-      "unavailableDescription": "There is no model endpoint, recommendation service or validated explanation contract behind this page. Use the historical backtesting guide to evaluate explicit rules against past data.",
-      "alternative": "Open the backtesting guide"
+      "eyebrow": "AI insights",
+      "title": "Plain-language notes on companies",
+      "description": "Short explanations of what's moving and why",
+      "meanwhile": "For now, you can test your own ideas on past prices",
+      "alternative": "Test an idea"
     },
     "reports": {
-      "title": "Reports",
-      "description": "This direct link is retained for product planning, but downloadable or scheduled account reports are not part of the current TradeIQ build.",
-      "unavailableDescription": "There is no report-generation or delivery endpoint behind this page. Your API-backed paper portfolio remains the current source for simulated account figures.",
-      "alternative": "Open your portfolio"
+      "eyebrow": "Reports",
+      "title": "Summaries of your practice",
+      "description": "Download a summary of your portfolio and trades",
+      "meanwhile": "For now, your order history lists every trade",
+      "alternative": "See order history"
     }
   },
   "adminPage": {
-    "eyebrow": "Restricted workspace",
-    "title": "Administration",
-    "description": "A role-protected overview of operational capabilities planned for TradeIQ administrators.",
-    "noticeTitle": "Administrative actions are not connected",
-    "notice": "The current backend exposes no audited admin operation endpoints. These controls remain disabled so this screen cannot imply that a maintenance task has run.",
-    "operationsTitle": "Operational controls",
-    "operationsDescription": "Each capability stays unavailable until it has an authenticated endpoint, an audit trail and a clear result state.",
+    "eyebrow": "Admin",
+    "title": "Admin tools",
+    "description": "Only admins can see this page",
+    "noticeTitle": "Not connected yet",
+    "notice": "These tools stay switched off until each one is connected and every action it takes is recorded",
+    "operationsTitle": "Tools",
     "capabilities": {
       "data": {
-        "title": "Market data operations",
-        "description": "Review or trigger ingestion only after a protected administration contract is available.",
-        "action": "Data controls unavailable"
+        "title": "Market data",
+        "description": "Check and refresh the price data",
+        "action": "Refresh data"
       },
       "access": {
-        "title": "Access verification",
-        "description": "Verify service credentials and signatures only through an auditable server-side workflow.",
-        "action": "Verification unavailable"
+        "title": "Access checks",
+        "description": "Check the keys other services use to connect",
+        "action": "Run checks"
       },
       "diagnostics": {
-        "title": "System diagnostics",
-        "description": "Expose service health and logs only after sensitive operational details can be handled safely.",
-        "action": "Diagnostics unavailable"
+        "title": "System health",
+        "description": "See whether each service is running",
+        "action": "View health"
       }
-    },
-    "accessTitle": "Role protection is active",
-    "accessDescription": "The application restricts this route to authenticated admin users. That access check does not create or simulate administrative backend capabilities."
+    }
   },
   "marketTerms": {
     "explain": "Explain {{term}}",
     "security": {
-      "label": "Security",
+      "label": "Company",
       "description": "A tradable investment, such as shares in a company listed on the CSE."
     },
     "sector": {
@@ -194,15 +190,15 @@
     },
     "change": {
       "label": "Change",
-      "description": "How much the closing price moved compared with the previous trading session."
+      "description": "How much the closing price moved since the day before"
     },
     "changePercent": {
       "label": "Percentage change",
-      "description": "The price change shown as a percentage of the previous session’s closing price."
+      "description": "The same change as a percentage of the day before's closing price"
     },
     "volume": {
       "label": "Volume",
-      "description": "The number of shares traded during a market session or chart period."
+      "description": "How many shares were bought and sold that day or chart period"
     },
     "peRatio": {
       "label": "P/E ratio",
@@ -234,37 +230,35 @@
     }
   },
   "markets": {
-    "eyebrow": "CSE market research",
-    "title": "Browse Securities",
-    "subtitle_one": "{{formattedCount}} security listed on CSE",
-    "subtitle_other": "{{formattedCount}} securities listed on CSE",
+    "eyebrow": "Markets",
+    "title": "CSE companies",
+    "subtitle_one": "{{formattedCount}} listing on the CSE",
+    "subtitle_other": "{{formattedCount}} listings on the CSE",
     "filters": {
       "label": "Market filters",
       "all": "All",
       "gainers": "Gainers",
       "losers": "Losers",
-      "mostActive": "Most Active",
+      "mostActive": "Most active",
       "sector": "Sector",
-      "marketCap": "Market capitalisation",
       "allSectors": "All sectors",
       "sectorUnavailable": "Sector data unavailable",
-      "sectorUnavailableHelp": "Company sector classifications are not available in this dataset.",
-      "selectSegment": "Select Segment",
-      "selectMarketCap": "Select Market Cap"
+      "sectorUnavailableHelp": "Sectors aren’t available right now.",
+      "selectSegment": "Sector"
     },
     "columns": {
-      "symbol": "Symbol",
+      "symbol": "Company",
       "sector": "Sector",
-      "cap": "Cap",
+      "cap": "Size",
       "price": "Price",
       "change": "Change",
-      "changePct": "%",
+      "changePct": "Change %",
       "volume": "Volume",
       "peRatio": "P/E",
       "watch": "Watch"
     },
     "table": {
-      "scrollHint": "Swipe horizontally to compare all market fields. Security names stay visible."
+      "scrollHint": "Swipe to see more columns"
     },
     "cap": {
       "large": "Large",
@@ -272,40 +266,34 @@
       "small": "Small"
     },
     "states": {
-      "loading": "Loading securities…",
-      "emptyTitle": "No matching securities",
-      "errorTitle": "Market data is unavailable",
-      "empty": "No securities match your filters.",
-      "unreachable": "Could not reach the market-trading API."
-    },
-    "watch": {
-      "add": "Add to watchlist",
-      "remove": "Remove from watchlist"
+      "loading": "Loading companies…",
+      "emptyTitle": "No matching companies",
+      "errorTitle": "Couldn’t load companies",
+      "empty": "Try a different search, sector or date.",
+      "unreachable": "Please try again in a moment."
     },
     "pagination": {
       "page": "Page {{page}} of {{lastPage}}",
       "previous": "Previous",
       "next": "Next"
     },
-    "unavailable": {
-      "marketCap": "Market-cap filtering is not supported by the securities endpoint"
-    },
     "empty": "—",
     "tradingDate": "Trading date",
     "asOf": "as of {{date}}",
     "viewDetails": "View {{symbol}} details",
     "notice": {
-      "eod": "End-of-day data, no live feed"
+      "eod": "Closing prices, updated daily"
     },
     "movers": {
       "title": "Top movers",
-      "subtitle": "Biggest gainers, losers and most traded for the session.",
+      "subtitle": "Biggest moves on the latest trading day",
+      "on": "On {{date}}",
       "loading": "Loading top movers",
-      "empty": "No ranked movers for this session.",
-      "unreachable": "Could not load top movers.",
+      "empty": "No moves to show for this day.",
+      "unreachable": "Couldn’t load top movers.",
       "columns": {
-        "security": "Security",
-        "close": "Close (LKR)",
+        "security": "Company",
+        "close": "Price",
         "change": "Change",
         "volume": "Volume"
       },
@@ -317,10 +305,9 @@
     },
     "indices": {
       "eyebrow": "Market indices",
-      "subtitle": "The exchange's headline indices, updated end of day.",
-      "noLatest": "No index value for this date.",
+      "noLatest": "No value yet",
       "loading": "Loading index data…",
-      "unreachable": "Could not load index data.",
+      "unreachable": "Couldn’t load index data.",
       "chartLabel": "{{name}} daily close history",
       "notFound": {
         "title": "Index not found",
@@ -330,22 +317,24 @@
       "closeOnVs": "Closing value on {{date}} · change from {{previous}}",
       "windowLabel": "Chart period",
       "since": "Since {{date}}",
-      "gapNote": "Index data is not available from {{range}}. Use the buttons to view the charts before or after this period. The closing values above are current."
+      "gapNote": "Pick a period to see the charts",
+      "whatIsIndex": "An index tracks a group of companies as one number, so you can see how the market is doing overall"
     },
     "availability": {
       "eyebrow": "Data coverage",
-      "subtitle": "Grey sections are data gaps.",
+      "subtitle": "Grey sections are data gaps",
       "latest": "Last updated: {{date}}",
       "prices": "Prices",
       "indices": "Indices",
       "range": "{{from}} – {{to}}",
       "missing": "Data gaps: {{ranges}}",
+      "missingBoth": "Data gaps in both: {{ranges}}",
       "sessions_one": "{{formattedCount}} trading day",
       "sessions_other": "{{formattedCount}} trading days"
     }
   },
   "securityDetail": {
-    "eyebrow": "CSE security research",
+    "eyebrow": "Company",
     "back": "Back to markets",
     "currency": "LKR",
     "listingStatus": {
@@ -361,12 +350,12 @@
     "actions": {
       "apply": "Apply range",
       "cancel": "Cancel",
-      "reset": "Default range",
+      "reset": "Reset dates",
       "retry": "Try again"
     },
     "range": {
-      "label": "Historical date range",
-      "placeholder": "Select date range",
+      "label": "Dates",
+      "placeholder": "Pick dates",
       "from": "From",
       "to": "To",
       "selectedDays_one": "{{count}} day selected",
@@ -376,18 +365,18 @@
     },
     "chart": {
       "title": "Price history",
-      "range": "{{from}} – {{to}} · end-of-day data",
-      "rangeUnavailable": "No coverage dates available",
+      "range": "{{from}} to {{to}}",
+      "rangeUnavailable": "No dates yet",
       "timeframeLabel": "Chart timeframe",
       "termsLabel": "Stock-market chart terms",
       "legend": {
-        "up": "Price moved up",
-        "down": "Price moved down",
-        "help": "Color compares the close with the period open, or with the previous close when opening data is unavailable. Volume appears below.",
-        "closePrice": "Daily close price",
-        "closeOnlyHelp": "This source does not provide distinct daily opening prices. Volume appears below."
+        "up": "Went up",
+        "down": "Went down",
+        "help": "Green means the price closed higher than it opened, red means lower. Shares traded each day are shown below the chart.",
+        "closePrice": "Closing price each day",
+        "closeOnlyHelp": "Each point is the price at the end of the trading day. Shares traded each day are shown below the chart."
       },
-      "accessibleLabel": "{{timeframe}} OHLCV history for {{symbol}}",
+      "accessibleLabel": "{{timeframe}} price and volume history for {{symbol}}",
       "accessibleRangeLabel": "{{timeframe}} high, low, close and volume history for {{symbol}}",
       "accessibleCloseLabel": "{{timeframe}} close-price and volume history for {{symbol}}",
       "values": {
@@ -399,12 +388,12 @@
         "adjustedClose": "Adjusted close",
         "volume": "Volume"
       },
-      "loading": "Loading price history…",
-      "validationFailed": "Check the selected range and try again.",
-      "unavailable": "Price history is temporarily unavailable.",
+      "loading": "Loading prices…",
+      "validationFailed": "Check the dates and try again.",
+      "unavailable": "Couldn't load prices. Please try again.",
       "empty": {
-        "title": "Data not available",
-        "description": "There's no trading data for the selected dates. Try a different range."
+        "title": "No prices for these dates",
+        "description": "Try different dates"
       },
       "zoomIn": "Show fewer periods",
       "zoomOut": "Show more periods",
@@ -415,32 +404,35 @@
       }
     },
     "info": {
-      "title": "Security information",
+      "title": "Key facts",
       "sector": "Sector",
       "cseCode": "CSE code",
       "listingStatus": "Listing status",
-      "lastTrade": "Last trade",
-      "volume": "Latest volume",
-      "sharesOutstanding": "Shares outstanding",
-      "coverage": "Data coverage",
-      "coverageValue": "{{from}} – {{to}}",
+      "lastTrade": "Last traded",
+      "volume": "Shares traded that day",
+      "sharesOutstanding": "Total shares",
+      "coverage": "Prices from",
+      "coverageValue": "{{from}} to {{to}}",
       "peRatio": "P/E ratio",
       "pbRatio": "P/B ratio",
-      "ratioDate": "Ratio effective date"
+      "ratioDate": "Ratios as of"
     },
     "states": {
-      "loading": "Loading security…",
-      "noLatestPrice": "No latest price available",
+      "loading": "Loading company…",
+      "noLatestPrice": "No price yet",
       "notFound": {
         "title": "{{symbol}} was not found",
-        "fallbackSymbol": "Security",
-        "description": "This symbol is not available in the CSE securities dataset."
+        "fallbackSymbol": "This company",
+        "description": "Check the code and try again, or browse all companies."
       },
       "unavailable": {
-        "title": "Security details are unavailable",
-        "description": "The market data service could not load this security. Try again in a moment."
+        "title": "Couldn't load this company",
+        "description": "Please try again in a moment."
       }
-    }
+    },
+    "latestClose": "Latest close",
+    "sincePrevious": "since the day before",
+    "practiseTrade": "Practise a trade"
   },
   "landing": {
     "nav": {
@@ -495,8 +487,8 @@
       "explore": "Browse companies",
       "cardTitle": "CSE companies",
       "descriptionCounted": "A selection from {{formattedCount}} listed securities. Explore the full market with search and historical charts.",
-      "sample": "Sample data",
-      "sampleNote": "Sample prices, for illustration only."
+      "sample": "Example prices",
+      "sampleNote": "Example only. These aren’t live prices."
     },
     "insights": {
       "eyebrow": "What you can do",
@@ -518,7 +510,7 @@
           "description": "Plain answers to common questions.",
           "cta": "Read the guide"
         },
-      "signals": {
+        "signals": {
           "title": "Model-driven signals",
           "description": "Direction probabilities from a statistical model. This is not built yet, so no signal is shown anywhere until it is."
         }
@@ -526,8 +518,8 @@
     },
     "backtesting": {
       "eyebrow": "Test an idea",
-      "headingLine1": "What if you had",
-      "headingLine2": "invested back then?",
+      "headingLine1": "What if I invested",
+      "headingLine2": "back then?",
       "facts": {
         "noAccount": "No account needed",
         "fees": "Fees included"
@@ -557,8 +549,8 @@
     },
     "paperTrading": {
       "eyebrow": "Practise with virtual money",
-      "headingLine1": "What if you started",
-      "headingLine2": "investing today?",
+      "headingLine1": "What if I invest",
+      "headingLine2": "now?",
       "facts": {
         "virtualMoney": "Virtual money, real CSE prices",
         "nothingReal": "Nothing real is bought or sold",
@@ -738,27 +730,12 @@
   "auth": {
     "trust": {
       "label": "Why use TradeIQ",
-      "eyebrow": "CSE research and practice",
-      "title": "Build confidence before you risk real money.",
-      "description": "TradeIQ brings market research, historical strategy testing and paper trading into one clear learning workspace.",
-      "points": {
-        "market": {
-          "title": "Read the market clearly",
-          "description": "Browse available CSE end-of-day prices with the session date shown."
-        },
-        "practice": {
-          "title": "Practise without real funds",
-          "description": "Paper orders use virtual money and are never sent to an exchange."
-        },
-        "history": {
-          "title": "Test rules on past prices",
-          "description": "Backtests are historical simulations, not forecasts or investment advice."
-        }
-      }
+      "title": "Build confidence before you invest",
+      "description": "Look up CSE companies, test ideas on past prices and practise with virtual money"
     },
     "login": {
       "title": "Sign in",
-      "subtitle": "Continue to your TradeIQ CSE research and practice workspace.",
+      "subtitle": "Welcome back",
       "submit": "Sign in",
       "noAccount": "No account yet?",
       "createOne": "Create one",
@@ -766,7 +743,7 @@
     },
     "signup": {
       "title": "Create an account",
-      "subtitle": "Save your paper portfolios, practise orders and run historical backtests.",
+      "subtitle": "Save your portfolios and tests in one place",
       "submit": "Create account",
       "haveAccount": "Already have an account?",
       "signIn": "Sign in",
@@ -792,154 +769,156 @@
     "signedOut": "Not signed in"
   },
   "portfolio": {
-    "eyebrow": "Paper portfolio",
-    "title": "My Portfolio",
-    "asOfLabel": "Valuation date",
-    "asOfHelp": "The service uses the nearest available CSE session on or before this date.",
-    "practiceTrade": "Practice a trade",
+    "eyebrow": "Portfolio",
+    "title": "Your portfolio",
+    "asOfLabel": "Value on",
+    "asOfHelp": "Uses closing prices from the last trading day on or before this date",
+    "practiceTrade": "Practise a trade",
     "selector": {
       "label": "Portfolio",
       "new": "New portfolio",
-      "paperLabel": "Simulated funds",
+      "paperLabel": "Virtual money",
       "toolbarLabel": "Select a paper portfolio"
     },
     "scope": {
       "loading": "Loading portfolios…",
-      "empty": "You do not have a portfolio yet. Create one to start paper trading.",
-      "unavailable": "None of your portfolios could be loaded. Create a new one to continue.",
-      "unreachable": "Could not reach the identity-auth API."
+      "empty": "Create a portfolio to start practising",
+      "unavailable": "Your portfolios couldn’t be loaded. Create a new one to continue",
+      "unreachable": "Couldn’t load your portfolios. Please try again."
     },
     "create": {
       "title": "Create a portfolio",
       "name": "Name",
-      "startingCapital": "Starting capital (LKR)",
-      "startingCapitalHint": "Choose between LKR 100,000 and LKR 100,000,000. This is simulated money.",
+      "startingCapital": "Starting cash (LKR)",
+      "startingCapitalHint": "Between LKR 100,000 and LKR 100,000,000 of virtual money",
       "submit": "Create portfolio",
       "errors": {
-        "idempotencyReused": "This portfolio was already submitted with different details. Try again.",
-        "unreachable": "Could not reach the identity-auth API."
+        "idempotencyReused": "Something changed while creating this portfolio. Please try again.",
+        "unreachable": "Couldn’t create the portfolio. Please try again."
       }
     },
     "summary": {
-      "totalEquity": "Total equity",
+      "totalEquity": "Total value",
       "cashBalance": "Cash",
-      "holdingsValue": "Holdings value",
-      "totalPnl": "Total P/L",
-      "realizedPnl": "Realized P/L",
-      "unrealizedPnl": "Unrealized P/L",
-      "asOf": "Priced at {{date}}",
-      "noSession": "No priced session available yet.",
-      "latestSession": "the latest session",
+      "holdingsValue": "Value of shares",
+      "totalPnl": "Profit or loss",
+      "realizedPnl": "From sales",
+      "unrealizedPnl": "On shares you hold",
+      "asOf": "Closing prices from {{date}}",
+      "noSession": "No closing prices yet",
+      "latestSession": "the latest trading day",
       "loading": "Loading portfolio summary…",
-      "priceUnavailable": "No closing price for {{date}}, so the portfolio cannot be valued. Pick another date.",
-      "unreachable": "Could not reach the identity-auth API."
+      "priceUnavailable": "No closing price for {{date}}, so your portfolio can't be valued · Pick another date",
+      "unreachable": "Couldn't load your summary. Please try again.",
+      "title": "Summary",
+      "help": "Profit or loss is split into what you made from sales and what you'd make if you sold the shares you still hold today"
     },
     "positions": {
-      "title": "Positions",
+      "title": "Shares you own",
       "columns": {
-        "symbol": "Symbol",
-        "quantity": "Qty",
-        "averageCost": "Avg cost",
-        "price": "Price",
+        "symbol": "Company",
+        "quantity": "Shares",
+        "averageCost": "Average price paid",
+        "price": "Latest close",
         "marketValue": "Value",
-        "unrealizedPnl": "Unrealized P/L",
+        "unrealizedPnl": "Profit or loss",
         "unrealizedReturnPct": "Return"
       },
-      "empty": "No open positions.",
-      "scrollHint": "Scroll horizontally to see valuation and return details.",
+      "empty": "You don't own any shares yet",
+      "scrollHint": "Scroll sideways to see more",
       "loading": "Loading positions…",
-      "priceUnavailable": "No closing price for {{date}}, so positions cannot be valued. Pick another date.",
-      "unreachable": "Could not reach the identity-auth API."
+      "priceUnavailable": "No closing price for {{date}}, so your shares can't be valued · Pick another date",
+      "unreachable": "Couldn't load your shares. Please try again."
     },
     "cashLedger": {
-      "title": "Cash movements",
+      "title": "Cash history",
       "columns": {
-        "type": "Type",
+        "type": "What happened",
         "amount": "Amount",
-        "balanceAfter": "Balance after",
+        "balanceAfter": "Cash after",
         "effectiveDate": "Date"
       },
       "types": {
-        "initial_capital": "Opening capital",
-        "buy_debit": "Buy",
-        "sell_credit": "Sell"
+        "initial_capital": "Starting cash",
+        "buy_debit": "Bought shares",
+        "sell_credit": "Sold shares"
       },
-      "empty": "No cash movements yet.",
-      "scrollHint": "Scroll horizontally to see balances and effective dates.",
+      "empty": "No cash movements yet",
+      "scrollHint": "Scroll sideways to see more",
       "loading": "Loading cash movements…",
       "pagination": {
         "page": "Page {{page}} of {{lastPage}}",
         "previous": "Previous",
         "next": "Next"
       },
-      "unreachable": "Could not reach the identity-auth API."
+      "unreachable": "Couldn't load your cash history. Please try again."
     },
-    "subtitle": "Holdings, cash and performance for the selected paper portfolio."
+    "subtitle": "See what you own and how it's doing · Virtual money only"
   },
   "orders": {
     "codes": {
-      "insufficientCash": "This order needs more cash than the portfolio currently holds.",
-      "insufficientHoldings": "This order needs more shares than the portfolio currently holds.",
-      "transactionLimitExceeded": "This order's value exceeds the maximum allowed per transaction.",
-      "securityNotFound": "No security was found for this symbol.",
-      "securityNotTradable": "This security is suspended or delisted and cannot be traded.",
-      "priceUnavailable": "No usable closing price is available for this security.",
-      "stalePrice": "The latest available price for this security is older than the current market session.",
-      "validationFailed": "The order details are invalid. Check the symbol, side and quantity.",
-      "portfolioNotFound": "This portfolio could not be found.",
-      "orderNotFound": "This order could not be found.",
-      "idempotencyKeyReused": "This submission could not be matched to a previous attempt. A new attempt has been prepared. Try again.",
-      "dependencyUnavailable": "The market-data service is temporarily unavailable. You can safely retry.",
-      "internal": "Something went wrong while processing this order.",
-      "unknown": "This order could not be processed for an unknown reason."
+      "insufficientCash": "Not enough cash in this portfolio",
+      "insufficientHoldings": "You don't own enough shares to sell that many",
+      "transactionLimitExceeded": "This order is bigger than the limit for one trade",
+      "securityNotFound": "Couldn't find that company",
+      "securityNotTradable": "This company's shares can't be traded right now",
+      "priceUnavailable": "There's no closing price for this company yet",
+      "stalePrice": "This company's latest price is out of date",
+      "validationFailed": "Check the company, buy or sell, and number of shares",
+      "portfolioNotFound": "Couldn't find this portfolio",
+      "orderNotFound": "Couldn't find this order",
+      "idempotencyKeyReused": "Something changed while sending this order · Please try again",
+      "dependencyUnavailable": "Prices are unavailable right now · It's safe to try again",
+      "internal": "Something went wrong with this order",
+      "unknown": "This order couldn't be completed"
     },
     "page": {
-      "eyebrow": "Paper trading activity",
+      "eyebrow": "Trades",
       "title": "Order history",
-      "subtitle": "Review every simulated order submitted for this portfolio, including why an order filled or was rejected.",
-      "placeTrade": "Place a paper trade"
+      "subtitle": "Every practice order and what happened to it",
+      "placeTrade": "Practise a trade"
     },
-    "tableTitle": "Orders",
+    "tableTitle": "Your orders",
     "status": {
-      "filled": "Filled",
-      "rejected": "Rejected"
+      "filled": "Done",
+      "rejected": "Didn't go through"
     },
     "filter": {
-      "label": "Status",
+      "label": "Show",
       "all": "All orders"
     },
     "columns": {
-      "placedAt": "Placed",
-      "symbol": "Symbol",
-      "side": "Side",
-      "quantity": "Quantity",
-      "status": "Status",
+      "placedAt": "Placed on",
+      "symbol": "Company",
+      "side": "Buy or sell",
+      "quantity": "Shares",
+      "status": "Result",
       "actions": "Details"
     },
     "quantityPartial": "{{filled}} of {{quantity}}",
-    "expand": "View details",
+    "expand": "Details",
     "collapse": "Close details",
-    "scrollHint": "Scroll horizontally to see quantities, outcomes and order details.",
+    "scrollHint": "Scroll sideways to see more",
     "detail": {
-      "close": "Close order details",
-      "summary": "{{side}} {{quantity}} shares, submitted {{date}}",
-      "executionTitle": "Execution details",
-      "executionHelp": "These figures are the recorded result of the simulated order. No real trade was sent to the exchange.",
-      "loading": "Loading order details…",
-      "unreachable": "Could not load order details.",
-      "noFill": "This order was not executed.",
-      "price": "Execution price",
-      "fillDate": "Fill date",
-      "settlementDate": "Settlement date",
-      "grossConsideration": "Gross consideration",
-      "feeTotal": "Total fees",
-      "cashEffect": "Cash effect",
-      "realizedPnl": "Realized P/L"
+      "close": "Close details",
+      "summary": "{{side}} {{quantity}} shares · {{date}}",
+      "executionTitle": "What happened",
+      "executionHelp": "This is a practice order, so nothing was sent to the stock exchange",
+      "loading": "Loading…",
+      "unreachable": "Couldn't load the details. Please try again.",
+      "noFill": "No shares were bought or sold",
+      "price": "Price per share",
+      "fillDate": "Traded on",
+      "settlementDate": "Completes on",
+      "grossConsideration": "Shares cost",
+      "feeTotal": "Fees",
+      "cashEffect": "Cash change",
+      "realizedPnl": "Profit or loss from this sale"
     },
-    "empty": "No orders yet.",
-    "emptyFiltered": "No orders match this filter.",
+    "empty": "No orders yet",
+    "emptyFiltered": "No orders here yet",
     "loading": "Loading orders…",
-    "unreachable": "Could not reach the identity-auth API.",
+    "unreachable": "Couldn't load your orders. Please try again.",
     "pagination": {
       "page": "Page {{page}} of {{lastPage}}",
       "previous": "Previous",
@@ -948,32 +927,27 @@
   },
   "paperTrading": {
     "page": {
-      "eyebrow": "Practice with simulated funds",
-      "title": "Place an order",
-      "subtitle": "Learn the mechanics of a CSE trade with a quote, fee estimate and recorded outcome before risking real money.",
-      "viewOrders": "View order history",
-      "defaultPortfolioName": "Practice portfolio",
-      "noticeTitle": "Simulation only",
-      "notice": "Paper trades use the latest eligible end-of-day closing price. No real money is used, no order is sent to the CSE and this is not a live market feed."
+      "eyebrow": "Paper trading",
+      "title": "Practise with virtual money",
+      "subtitle": "Buy and sell CSE shares at the latest closing price · Nothing real is bought or sold",
+      "viewOrders": "Order history",
+      "defaultPortfolioName": "Practice portfolio"
     },
     "workflow": {
       "label": "Paper trading workflow",
       "simple": "Simple",
       "advanced": "Advanced",
-      "simpleHelp": "Choose a company and share count, review the cost, then confirm your practice trade.",
-      "advancedHelp": "The same practice trade with account controls and the full estimate breakdown visible.",
-      "availableCash": "Available virtual cash: {{cash}}",
-      "manageAccounts": "Manage practice accounts",
-      "configureAccount": "Configure practice account",
-      "nameHint": "Choose an account name between 1 and 100 characters.",
-      "createAccount": "Create practice account",
-      "setupCash": "Starting virtual cash: {{cash}}",
-      "setupHelp": "This is simulated money. Create this account to start practising, or configure its name and starting cash first.",
-      "action": "What would you like to do?",
+      "simpleHelp": "Simple walks you through one trade in three steps. Advanced shows every charge and lets you manage portfolios.",
+      "availableCash": "{{cash}} virtual cash available",
+      "manageAccounts": "Manage portfolios",
+      "configureAccount": "Change name or amount",
+      "nameHint": "Use a name between 1 and 100 characters.",
+      "createAccount": "Create portfolio",
+      "setupCash": "{{cash}} virtual cash to start",
+      "setupHelp": "Virtual money only. You can change the name or amount first",
+      "action": "Buy or sell",
       "shareCount": "Number of shares",
       "company": "Company",
-      "choosePrompt": "Choose a company to begin. You will review the cost before confirming.",
-      "tradePrompt": "Choose Buy or Sell and a share count. Review the cost before confirming.",
       "steps": {
         "label": "Practice trade steps",
         "choose": "Choose",
@@ -981,65 +955,67 @@
         "confirm": "Confirm"
       },
       "guidance": {
-        "missingBoth": "Select a company and enter the number of shares to enable Review.",
-        "missingCompany": "Select a company to enable Review.",
-        "missingShares": "Enter a whole number of shares, at least 1, to enable Review.",
-        "readyToReview": "Ready to review. This checks the estimated price and charges without placing a trade.",
-        "reviewing": "Checking the estimated price and charges. No trade has been placed.",
-        "readyToConfirm": "Review the cost, then confirm when you are ready. Editing the trade requires a new review.",
-        "confirming": "Confirming your practice trade. Please wait for the recorded result."
+        "missingBoth": "Pick a company and enter a number of shares",
+        "missingCompany": "Pick a company",
+        "missingShares": "Enter a whole number of shares, at least 1",
+        "readyToReview": "Check the cost before anything is placed",
+        "reviewing": "Checking the price and charges",
+        "readyToConfirm": "Check the cost, then confirm. Any change needs a new check",
+        "confirming": "Placing your practice trade"
       },
-      "tradeReview": "Practice trade review",
-      "howTradesWork": "How practice trades work",
-      "reviewTrade": "Review practice trade",
+      "tradeReview": "Cost of this trade",
+      "reviewTrade": "Check the cost",
       "reviewSummary": "{{side}} {{quantity}} shares of {{symbol}}",
-      "shareValue": "Share value before charges",
-      "totalCharges": "Total charges",
-      "chargeBreakdown": "Charge breakdown",
-      "settlementDetails": "Settlement details",
-      "settlementHelp": "The simulated trade completes on {{date}}. No real funds or shares are transferred.",
-      "previewWarning": "This is an estimate, not a guaranteed fill. Confirmation checks the current eligible price, cash and holdings again.",
-      "cashEffect": { "buy": "Virtual cash removed", "sell": "Virtual cash added" },
-      "confirm": { "buy": "Confirm practice buy", "sell": "Confirm practice sell" }
+      "shareValue": "Shares",
+      "totalCharges": "Charges",
+      "chargeBreakdown": "See each charge",
+      "settlementHelp": "The practice trade completes on {{date}}. No real money or shares move.",
+      "previewWarning": "An estimate. Confirming checks the price, cash and shares again",
+      "cashEffect": {
+        "buy": "Total from virtual cash",
+        "sell": "Total to virtual cash"
+      },
+      "confirm": {
+        "buy": "Confirm practice buy",
+        "sell": "Confirm practice sell"
+      }
     },
     "ticket": {
-      "title": "Order ticket",
-      "symbol": "Symbol",
+      "title": "Your order",
+      "symbol": "Company",
       "symbolPlaceholder": "Search by symbol or company",
       "symbolSearching": "Searching…",
-      "symbolNoMatches": "No securities match this search.",
-      "symbolError": "Could not search securities. Check your connection and try again.",
-      "side": "Side",
+      "symbolNoMatches": "No companies match this search.",
+      "symbolError": "Couldn’t search companies. Please try again.",
+      "side": "Buy or sell",
       "sides": {
         "buy": "Buy",
         "sell": "Sell"
       },
       "sideHelp": {
-        "buy": "Buy adds shares to this paper portfolio and reduces its simulated cash.",
-        "sell": "Sell removes shares already held and adds the proceeds to simulated cash."
+        "buy": "Buying adds shares to this portfolio and uses virtual cash.",
+        "sell": "Selling removes shares you hold and adds the money to virtual cash."
       },
-      "quantity": "Quantity",
-      "quantityHint": "Enter a whole number of shares.",
+      "quantity": "Number of shares",
       "guide": {
-        "title": "How this order works",
-        "body": "Choose a listed security, select Buy or Sell and enter the number of shares. Preview is required before confirmation so you can review the price, fees and cash impact."
+        "body": "Pick a company, buy or sell, and a number of shares. Check the cost first, then confirm. Orders fill at the latest closing price."
       },
-      "preview": "Preview order",
+      "preview": "Check the cost",
       "confirm": "Confirm order",
       "estimate": {
-        "title": "Estimate",
-        "waiting": "A clear cost breakdown before you confirm",
-        "loading": "Getting an estimate…",
-        "empty": "Enter a symbol and quantity, then preview to see an estimate.",
-        "stale": "Order details or practice account changed since this estimate. Review again before confirming.",
+        "title": "Cost",
+        "waiting": "Shown before you confirm",
+        "loading": "Checking the cost…",
+        "empty": "Pick a company and a number of shares, then check the cost",
+        "stale": "Your order changed. Check the cost again before confirming.",
         "price": "Price",
-        "priceAsOf": "Price as of",
-        "settlementDate": "Settlement date",
-        "grossConsideration": "Gross consideration",
-        "feeTotal": "Total fees",
-        "cashEffect": "Cash effect",
+        "priceAsOf": "Price date",
+        "settlementDate": "Completes on",
+        "grossConsideration": "Shares",
+        "feeTotal": "Total charges",
+        "cashEffect": "Cash change",
         "feeColumns": {
-          "type": "Fee",
+          "type": "Charge",
           "rate": "Rate",
           "amount": "Amount"
         },
@@ -1050,18 +1026,24 @@
           "sec_cess": "SEC cess",
           "stl": "Share transaction levy"
         },
-        "subtitle": "Indicative figures for this order, quoted from the last close.",
-        "explanation": "Gross consideration is the share value before fees. Cash effect is the total simulated cash added or removed. Settlement is the date the simulated trade completes."
+        "subtitle": "Based on the latest closing price",
+        "explanation": "Shares is the value before charges. Cash change is what leaves or joins your virtual cash. The trade completes two trading days later."
       },
       "result": {
-        "filledTitle": "{{side}} order filled: {{quantity}} {{symbol}}",
-        "filledDetail": "Executed at {{price}}. Cash effect {{cashEffect}}. Settles {{date}}.",
-        "rejectedTitle": "Order for {{symbol}} was not filled",
-        "recorded": "This order was recorded and appears in your order history."
+        "filledTitle": "Order done: {{side}} {{quantity}} {{symbol}}",
+        "filledDetail": "{{price}} a share · Cash change {{cashEffect}} · Completes {{date}}",
+        "rejectedTitle": "Your {{symbol}} order didn’t go through",
+        "recorded": "It’s saved in your order history."
       },
       "errors": {
-        "unreachable": "Could not get a response from the trading service. Check your connection and try again."
+        "unreachable": "Couldn’t reach the trading service. Please try again."
       }
     }
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
   }
 }

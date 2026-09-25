@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Button } from "../../components/base/buttons/button";
 import { AppNotice } from "../../components/application/layout/application-layout";
+import { InfoTip } from "../../components/domain/info-tip";
 import { cx } from "../../utils/cx";
 
 /**
@@ -25,7 +26,7 @@ export function Field({
 }) {
   return (
     <label className={cx("flex w-full flex-col items-start gap-1", className)}>
-      <span className="text-body-medium text-text-secondary">{label}</span>
+      <span className="text-body-medium text-text-primary">{label}</span>
       {children}
     </label>
   );
@@ -73,18 +74,24 @@ export function CardProgress({ label }: { label: string }) {
 export function CardHeading({
   title,
   subtitle,
+  info,
   actions,
 }: {
-  title: ReactNode;
+  title: string;
   subtitle?: ReactNode;
+  /** Short explanation shown in the "i" tooltip next to the title. */
+  info?: ReactNode;
   actions?: ReactNode;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-4 pb-3 sm:px-5 sm:pt-5">
       <div className="flex min-w-0 flex-col gap-0.5">
-        <h2 className="text-headline-medium text-text-primary">{title}</h2>
+        <div className="flex items-center gap-1">
+          <h2 className="text-headline-medium text-text-primary">{title}</h2>
+          {info && <InfoTip label={title}>{info}</InfoTip>}
+        </div>
         {subtitle && (
-          <span className="text-body-2-medium text-text-tertiary">
+          <span className="text-body-2-regular text-text-secondary">
             {subtitle}
           </span>
         )}
@@ -159,7 +166,7 @@ export function Pager({
 }) {
   return (
     <footer className="flex flex-col gap-3 border-t border-separator-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <span className="text-body-medium text-text-secondary">{label}</span>
+      <span className="text-body-medium text-text-primary">{label}</span>
       <div className="flex items-center gap-2">
         <Button
           variant="secondary"

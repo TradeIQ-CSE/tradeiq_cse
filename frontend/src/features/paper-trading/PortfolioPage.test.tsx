@@ -16,6 +16,7 @@ import {
   positionsFixture,
   summaryFixture,
 } from "../../test/fixtures/paper-trading";
+import { formatDay } from "./format";
 import { PortfolioPage } from "./PortfolioPage";
 
 const t = i18n.t.bind(i18n);
@@ -89,12 +90,14 @@ describe("PortfolioPage", () => {
     for (const position of positionsFixture) {
       expect(screen.getByText(position.symbol)).toBeInTheDocument();
     }
-    // Both the summary and the positions card state the priced session.
+    // The priced session is stated once, in the summary card.
     expect(
-      screen.getAllByText(
-        t("portfolio.summary.asOf", { date: summaryFixture.as_of }),
-      ).length,
-    ).toBeGreaterThan(0);
+      await screen.findByText(
+        t("portfolio.summary.asOf", {
+          date: formatDay(summaryFixture.as_of!, "en-LK"),
+        }),
+      ),
+    ).toBeInTheDocument();
   });
 
   // CashLedger isn't remounted when the selector switches portfolios (no
@@ -185,7 +188,7 @@ describe("PortfolioPage", () => {
     renderPage(); // Defaults to portfolioFixture (A).
 
     expect(
-      await screen.findByText(cashTransactionsFixture[0].effective_date),
+      await screen.findByText(formatDay(cashTransactionsFixture[0].effective_date, "en-LK")),
     ).toBeInTheDocument();
 
     await user.click(
@@ -201,14 +204,14 @@ describe("PortfolioPage", () => {
     // on screen under B's heading while it's in flight.
     await waitFor(() =>
       expect(
-        screen.queryByText(cashTransactionsFixture[0].effective_date),
+        screen.queryByText(formatDay(cashTransactionsFixture[0].effective_date, "en-LK")),
       ).not.toBeInTheDocument(),
     );
 
     releaseB?.();
 
     expect(
-      await screen.findByText(cashTransactionsB[0].effective_date),
+      await screen.findByText(formatDay(cashTransactionsB[0].effective_date, "en-LK")),
     ).toBeInTheDocument();
   });
 
@@ -280,14 +283,14 @@ describe("PortfolioPage", () => {
 
     // (b) what's displayed is the response's effective date, not the requested one.
     expect(
-      (
-        await screen.findAllByText(
-          t("portfolio.summary.asOf", { date: effective }),
-        )
-      ).length,
-    ).toBeGreaterThan(0);
+      await screen.findByText(
+        t("portfolio.summary.asOf", { date: formatDay(effective, "en-LK") }),
+      ),
+    ).toBeInTheDocument();
     expect(
-      screen.queryByText(t("portfolio.summary.asOf", { date: requested })),
+      screen.queryByText(
+        t("portfolio.summary.asOf", { date: formatDay(requested, "en-LK") }),
+      ),
     ).not.toBeInTheDocument();
   });
 

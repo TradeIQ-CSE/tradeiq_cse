@@ -15,6 +15,8 @@ interface PortfolioScopeProps {
   mode?: 'simple' | 'advanced';
   busy?: boolean;
   onBusyChange?: (busy: boolean) => void;
+  /** Extra control for the selector row, e.g. the portfolio page's date. */
+  toolbarExtra?: ReactNode;
 }
 
 /**
@@ -24,7 +26,7 @@ interface PortfolioScopeProps {
  * anything specific to the portfolio overview page itself (summary cards,
  * positions, ledger).
  */
-export function PortfolioScope({ children, creationDefaults, mode = 'advanced', busy, onBusyChange }: PortfolioScopeProps) {
+export function PortfolioScope({ children, creationDefaults, mode = 'advanced', busy, onBusyChange, toolbarExtra }: PortfolioScopeProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const portfoliosQuery = usePortfolios();
@@ -101,6 +103,7 @@ export function PortfolioScope({ children, creationDefaults, mode = 'advanced', 
             setCreating(false);
           }}
           onCreateNew={() => setCreating(true)}
+          extra={toolbarExtra}
         />
       )}
 

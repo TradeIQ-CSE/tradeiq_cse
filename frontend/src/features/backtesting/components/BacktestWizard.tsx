@@ -2,8 +2,8 @@ import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react";
 import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { Button } from "@/components/base/buttons/button";
+import { InfoTip } from "@/components/domain/info-tip";
 import {
-  AppNotice,
   AppPage,
   AppPanel,
   PageIntro,
@@ -68,29 +68,25 @@ function WizardContent() {
   return (
     <AppPage className="max-w-5xl">
       <PageIntro
-        eyebrow="Historical simulation"
-        title="Test a strategy against the past"
-        description="Build simple price-based rules, choose realistic execution assumptions, and see how they would have behaved on available CSE end-of-day data."
+        eyebrow="Backtesting"
+        title="Test an idea on past prices"
+        description="See how a buy and sell rule would have done on real CSE prices · Past results don’t promise future ones"
+        actions={
+          <div className="flex items-center gap-1">
+            <SegmentedControl aria-label="Backtest workflow" selectedKeys={[mode]} isDisabled={isSubmitting}
+              onSelectionChange={(keys) => {
+                const selected = Array.from(keys)[0];
+                if (selected === "simple" || selected === "advanced") setMode(selected);
+              }}>
+              <SegmentedControlItem id="simple">Simple</SegmentedControlItem>
+              <SegmentedControlItem id="advanced">Advanced</SegmentedControlItem>
+            </SegmentedControl>
+            <InfoTip label="Simple and Advanced">
+              Simple has 3 steps with settings filled in for you. Advanced walks through all 7.
+            </InfoTip>
+          </div>
+        }
       />
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <SegmentedControl aria-label="Backtest workflow" selectedKeys={[mode]} isDisabled={isSubmitting}
-          onSelectionChange={(keys) => {
-            const selected = Array.from(keys)[0];
-            if (selected === "simple" || selected === "advanced") setMode(selected);
-          }}>
-          <SegmentedControlItem id="simple">Simple</SegmentedControlItem>
-          <SegmentedControlItem id="advanced">Advanced</SegmentedControlItem>
-        </SegmentedControl>
-        <p className="text-body-2-regular text-text-secondary">
-          {mode === "simple" ? "Three steps, with settings you can change." : "Seven steps through every available setting."}
-        </p>
-      </div>
-
-      <AppNotice title="A backtest is evidence, not a forecast">
-        Historical results can help you understand a rule&apos;s behaviour, but
-        they do not predict future prices or guarantee future returns.
-      </AppNotice>
 
       <StepIndicator />
       <ValidationSummary />
@@ -111,7 +107,7 @@ function WizardContent() {
               {stepIndex === 0 ? "Back to markets" : "Back"}
             </Button>
 
-            <p className="text-center text-body-2-medium text-text-tertiary">
+            <p className="text-center text-body-2-regular text-text-secondary">
               Step {stepIndex + 1} of {totalSteps}
             </p>
 

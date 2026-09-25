@@ -13,8 +13,12 @@ import {
  * until trading resumes, so the notice names exactly when that is — the
  * first session after the gap.
  */
-export function crossingNoticeText(gap: DataGap, locale: string): string {
+export function crossingNoticeLines(gap: DataGap, locale: string): string[] {
   const range = formatGapProseRange(gap, locale);
   const resumes = formatGapBoundary(firstSessionAfterGap(gap), locale);
-  return `No market data from ${range} in this range. The backtest skips it: an open position is held through it, and stop-loss and take-profit rules can't act until ${resumes}.`;
+  return [
+    range,
+    'Shares you hold are kept through it',
+    `Sell rules wait until ${resumes}`,
+  ];
 }

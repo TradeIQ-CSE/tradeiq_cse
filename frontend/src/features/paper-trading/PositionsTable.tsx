@@ -6,6 +6,7 @@ import { readErrorText } from "./error-text";
 import { localeFor } from "../../i18n";
 import {
   changeDirection,
+  formatDay,
   formatMoney,
   formatPercent,
   formatQuantity,
@@ -60,7 +61,9 @@ export function PositionsTable({ portfolioId, asOf }: PositionsTableProps) {
       return (
         <NoticeCard>
           {t("portfolio.positions.priceUnavailable", {
-            date: asOf || t("portfolio.summary.latestSession"),
+            date: asOf
+              ? formatDay(asOf, locale)
+              : t("portfolio.summary.latestSession"),
           })}
         </NoticeCard>
       );
@@ -73,20 +76,13 @@ export function PositionsTable({ portfolioId, asOf }: PositionsTableProps) {
   }
 
   const rows = data?.data ?? [];
-  const resolvedAsOf = data?.meta?.as_of ?? null;
 
   return (
     <Card busy={isFetching}>
       {isFetching && <CardProgress label={t("portfolio.positions.loading")} />}
 
-      <CardHeading
-        title={t("portfolio.positions.title")}
-        subtitle={
-          resolvedAsOf
-            ? t("portfolio.summary.asOf", { date: resolvedAsOf })
-            : undefined
-        }
-      />
+      {/* The priced day is stated once, in the summary card above. */}
+      <CardHeading title={t("portfolio.positions.title")} />
 
       {!isPending && rows.length === 0 ? (
         <StateMessage>{t("portfolio.positions.empty")}</StateMessage>
@@ -156,16 +152,22 @@ export function PositionsTable({ portfolioId, asOf }: PositionsTableProps) {
                           <td className="text-right tabular-nums">
                             {formatMoney(position.market_value, locale)}
                           </td>
-                          <td className={`text-right tabular-nums ${tone}`}>
-                            <FinancialDirectionGlyph direction={direction} />
-                            {formatSignedMoney(position.unrealized_pnl, locale)}
+                          {/* The tone sits inside the cell: `.bui-table td`
+                              sets its own colour, which outranks a utility. */}
+                          <td className="text-right tabular-nums">
+                            <span className={tone}>
+                              <FinancialDirectionGlyph direction={direction} />
+                              {formatSignedMoney(position.unrealized_pnl, locale)}
+                            </span>
                           </td>
-                          <td className={`text-right tabular-nums ${tone}`}>
-                            <FinancialDirectionGlyph direction={direction} />
-                            {formatPercent(
-                              position.unrealized_return_pct,
-                              locale,
-                            )}
+                          <td className="text-right tabular-nums">
+                            <span className={tone}>
+                              <FinancialDirectionGlyph direction={direction} />
+                              {formatPercent(
+                                position.unrealized_return_pct,
+                                locale,
+                              )}
+                            </span>
                           </td>
                         </tr>
                       );

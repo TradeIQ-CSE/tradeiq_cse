@@ -52,7 +52,7 @@ describe('RulesStep Event & Toggle Behavior', () => {
     renderRulesStep(<TestConsumer onConfigChange={(c) => (latestConfig = c)} />);
 
     // Target Exit Price card starts unselected
-    const targetPriceCard = screen.getByRole('checkbox', { name: /Target Exit Price/i });
+    const targetPriceCard = screen.getByRole('checkbox', { name: /^Target price/i });
     expect(targetPriceCard).toBeTruthy();
 
     const getTargetPriceSells = () =>
@@ -74,7 +74,7 @@ describe('RulesStep Event & Toggle Behavior', () => {
 
     renderRulesStep(<TestConsumer onConfigChange={(c) => (latestConfig = c)} />);
 
-    const targetPriceCard = screen.getByRole('checkbox', { name: /Target Exit Price/i });
+    const targetPriceCard = screen.getByRole('checkbox', { name: /^Target price/i });
     const user = userEvent.setup({ delay: null });
 
     const getTargetPriceSells = () =>

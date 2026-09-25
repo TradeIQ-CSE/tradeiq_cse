@@ -33,7 +33,7 @@ describe('AppRoutes', () => {
     expect(
       await screen.findByRole('heading', { name: t('plannedFeatures.aiInsights.title') }),
     ).toBeInTheDocument();
-    expect(screen.getByText(t('plannedFeatures.notice'))).toBeInTheDocument();
+    expect(screen.getByText(t('plannedFeatures.comingSoon'))).toBeInTheDocument();
   });
 
   it('renders the restricted administration overview for an admin', async () => {

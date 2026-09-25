@@ -89,7 +89,7 @@ describe('validateBacktestConfig', () => {
           expect.objectContaining({
             step: 'period',
             field: 'startDate',
-            message: 'Start date must be strictly before end date.',
+            message: 'The start date must be before the end date',
           }),
         ]),
       );
@@ -102,7 +102,7 @@ describe('validateBacktestConfig', () => {
 
       const result = validateBacktestConfig(config, 'period');
       expect(result.isValid).toBe(false);
-      expect(result.errors[0].message).toBe('Start date must be strictly before end date.');
+      expect(result.errors[0].message).toBe('The start date must be before the end date');
     });
 
     it('should reject start date before 2017 dataset boundary', () => {
@@ -115,7 +115,7 @@ describe('validateBacktestConfig', () => {
         expect.arrayContaining([
           expect.objectContaining({
             field: 'startDate',
-            message: expect.stringContaining('cannot precede the available dataset coverage (2017-01-01)'),
+            message: expect.stringContaining('Prices start on Jan 1, 2017'),
           }),
         ]),
       );
@@ -233,7 +233,7 @@ describe('validateBacktestConfig', () => {
 
       const result = validateBacktestConfig(config, 'rules');
       expect(result.isValid).toBe(false);
-      expect(result.errors[0].message).toContain('Indicator strategies are not supported in v1 DSL');
+      expect(result.errors[0].message).toContain("isn't available");
     });
 
     it('should reject price_falls_to with missing or non-positive price', () => {
@@ -243,7 +243,7 @@ describe('validateBacktestConfig', () => {
       const result = validateBacktestConfig(config, 'rules');
       expect(result.isValid).toBe(false);
       expect(result.errors[0].field).toBe('buy.value');
-      expect(result.errors[0].message).toContain('positive number greater than 0 LKR');
+      expect(result.errors[0].message).toContain('above LKR 0');
     });
 
     it('should reject price_falls_pct_from_period_start with invalid percentage', () => {
@@ -253,7 +253,7 @@ describe('validateBacktestConfig', () => {
       const result = validateBacktestConfig(config, 'rules');
       expect(result.isValid).toBe(false);
       expect(result.errors[0].field).toBe('buy.value');
-      expect(result.errors[0].message).toContain('less than 100%');
+      expect(result.errors[0].message).toContain('smaller than 100%');
     });
 
     it('should reject empty sell conditions array', () => {
@@ -264,7 +264,7 @@ describe('validateBacktestConfig', () => {
       expect(result.isValid).toBe(false);
       expect(result.errors).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ step: 'rules', field: 'sells', message: 'At least one sell condition is required.' }),
+          expect.objectContaining({ step: 'rules', field: 'sells', message: 'Pick at least one sell rule' }),
         ]),
       );
     });
@@ -278,7 +278,7 @@ describe('validateBacktestConfig', () => {
 
       const result = validateBacktestConfig(config, 'rules');
       expect(result.isValid).toBe(false);
-      expect(result.errors[0].message).toContain('Duplicate sell condition');
+      expect(result.errors[0].message).toContain('can only be added once');
     });
 
     it('should reject invalid take profit percentages (> 1000% or <= 0)', () => {
@@ -287,7 +287,7 @@ describe('validateBacktestConfig', () => {
 
       const result = validateBacktestConfig(config, 'rules');
       expect(result.isValid).toBe(false);
-      expect(result.errors[0].message).toContain('cannot exceed 1000%');
+      expect(result.errors[0].message).toContain('1000% or less');
     });
 
     it('should reject invalid stop loss percentage (>= 100%)', () => {
@@ -296,7 +296,7 @@ describe('validateBacktestConfig', () => {
 
       const result = validateBacktestConfig(config, 'rules');
       expect(result.isValid).toBe(false);
-      expect(result.errors[0].message).toContain('less than 100%');
+      expect(result.errors[0].message).toContain('smaller than 100%');
     });
 
     it('should reject incompatible price target combinations where exit <= entry', () => {
@@ -306,7 +306,7 @@ describe('validateBacktestConfig', () => {
 
       const result = validateBacktestConfig(config, 'rules');
       expect(result.isValid).toBe(false);
-      expect(result.errors[0].message).toContain('Incompatible rules: Target exit price (95 LKR) must be higher than buy price (100 LKR)');
+      expect(result.errors[0].message).toContain('The sell price (LKR 95) must be higher than the buy price (LKR 100)');
     });
   });
 
@@ -327,7 +327,7 @@ describe('validateBacktestConfig', () => {
 
       const result = validateBacktestConfig(config, 'execution');
       expect(result.isValid).toBe(false);
-      expect(result.errors[0].message).toContain('positive integer whole number');
+      expect(result.errors[0].message).toContain('whole number of shares');
     });
 
     it('should reject negative fee rates', () => {
@@ -360,7 +360,7 @@ describe('validateBacktestConfig', () => {
 
       const result = validateBacktestConfig(config, 'portfolio');
       expect(result.isValid).toBe(false);
-      expect(result.errors[0].message).toContain('greater than 0 LKR');
+      expect(result.errors[0].message).toContain('above LKR 0');
     });
   });
 

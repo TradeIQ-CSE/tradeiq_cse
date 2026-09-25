@@ -3,10 +3,8 @@ import {
   RiDatabase2Line,
   RiPulseLine,
   RiShieldCheckLine,
-  RiShieldUserLine,
 } from '@remixicon/react';
 import {
-  AppNotice,
   AppPage,
   AppPanel,
   PageIntro,
@@ -30,23 +28,14 @@ export function AdminHome() {
         description={t('adminPage.description')}
       />
 
-      <AppNotice tone="warning" title={t('adminPage.noticeTitle')}>
-        {t('adminPage.notice')}
-      </AppNotice>
-
       <AppPanel className="flex flex-col gap-5">
-        <div className="flex items-start gap-3">
-          <span className="flex shrink-0 rounded-2xl bg-stat-card-icon-background p-2.5">
-            <RiShieldUserLine className="size-5 text-foreground-icon-primary" aria-hidden />
-          </span>
-          <div>
-            <h2 className="text-title-2-medium text-text-primary">
-              {t('adminPage.operationsTitle')}
-            </h2>
-            <p className="mt-1 max-w-2xl text-body-regular text-text-secondary">
-              {t('adminPage.operationsDescription')}
-            </p>
-          </div>
+        <div>
+          <h2 className="text-headline-medium text-text-primary">
+            {t('adminPage.operationsTitle')}
+          </h2>
+          <p className="mt-0.5 text-body-2-regular text-text-secondary">
+            {t('adminPage.notice')}
+          </p>
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
@@ -78,17 +67,6 @@ export function AdminHome() {
         </div>
       </AppPanel>
 
-      <AppPanel tone="subtle" className="flex items-start gap-3">
-        <RiShieldCheckLine className="mt-0.5 size-5 shrink-0 text-foreground-icon-secondary" aria-hidden />
-        <div>
-          <h2 className="text-headline-medium text-text-primary">
-            {t('adminPage.accessTitle')}
-          </h2>
-          <p className="mt-1 text-body-regular text-text-secondary">
-            {t('adminPage.accessDescription')}
-          </p>
-        </div>
-      </AppPanel>
     </AppPage>
   );
 }

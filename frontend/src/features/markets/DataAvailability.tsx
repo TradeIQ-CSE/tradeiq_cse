@@ -7,6 +7,7 @@ import {
   formatGapDateRange,
 } from "../../lib/data-gaps";
 import { formatCount } from "./format";
+import { MarketSectionHeader } from "./MarketSectionHeader";
 import { CoverageWindow, useDataCoverage } from "./useDataCoverage";
 
 const DAY_MS = 86_400_000;
@@ -48,53 +49,62 @@ function CoverageBar({ window }: { window: CoverageWindow }) {
   );
 }
 
+const missingGaps = (window: CoverageWindow): DataGap[] =>
+  window.gaps.filter((gap) => gap.kind === "missing_data");
+
+const gapKey = (gap: DataGap) => `${gap.from}:${gap.to}`;
+
+/** "Jan 1 – Sep 8, 2026 (179 trading days) · …", or null with none. */
+function useGapList(gaps: DataGap[], locale: string): string | null {
+  const { t } = useTranslation();
+  if (gaps.length === 0) return null;
+  return gaps
+    .map(
+      (gap) =>
+        `${formatGapDateRange(gap, locale)} (${t(
+          "markets.availability.sessions",
+          {
+            count: gap.sessions,
+            formattedCount: formatCount(gap.sessions, locale),
+          },
+        )})`,
+    )
+    .join(" · ");
+}
+
 function CoverageRow({
   label,
   window,
   locale,
+  gapText,
 }: {
   label: string;
   window: CoverageWindow;
   locale: string;
+  gapText: string | null;
 }) {
   const { t } = useTranslation();
   if (!window.from || !window.to) return null;
-  const missing: DataGap[] = window.gaps.filter(
-    (gap) => gap.kind === "missing_data",
-  );
 
   return (
-    <div className="grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-[6rem_1fr]">
-      <span className="text-body-2-semibold text-text-primary">{label}</span>
-      <div className="flex min-w-0 flex-col gap-1.5">
-        <CoverageBar window={window} />
-        <div className="flex flex-wrap justify-between gap-x-3 gap-y-0.5 text-caption-1-regular text-text-tertiary">
-          <span>
-            {t("markets.availability.range", {
-              from: formatGapBoundary(window.from, locale),
-              to: formatGapBoundary(window.to, locale),
-            })}
-          </span>
-          {missing.length > 0 && (
-            <span>
-              {t("markets.availability.missing", {
-                ranges: missing
-                  .map(
-                    (gap) =>
-                      `${formatGapDateRange(gap, locale)} (${t(
-                        "markets.availability.sessions",
-                        {
-                          count: gap.sessions,
-                          formattedCount: formatCount(gap.sessions, locale),
-                        },
-                      )})`,
-                  )
-                  .join(" · "),
-              })}
-            </span>
-          )}
-        </div>
+    // Label and date range on one line, the bar, then the gaps: compact
+    // enough that two of these sit side by side on a wide screen.
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+        <span className="text-body-2-medium text-text-primary">{label}</span>
+        <span className="text-caption-1-regular text-text-secondary">
+          {t("markets.availability.range", {
+            from: formatGapBoundary(window.from, locale),
+            to: formatGapBoundary(window.to, locale),
+          })}
+        </span>
       </div>
+      <CoverageBar window={window} />
+      {gapText && (
+        <span className="text-caption-1-regular text-text-secondary">
+          {gapText}
+        </span>
+      )}
     </div>
   );
 }
@@ -111,40 +121,73 @@ export function DataAvailability() {
   const { t, i18n } = useTranslation();
   const locale = localeFor(i18n.resolvedLanguage ?? i18n.language);
   const coverage = useDataCoverage().data;
+  // A gap both datasets share is listed once under both bars; each bar
+  // only lists the gaps that are its own.
+  const priceMissing = coverage ? missingGaps(coverage.prices) : [];
+  const indexMissing = coverage ? missingGaps(coverage.indices) : [];
+  const indexKeys = new Set(indexMissing.map(gapKey));
+  const shared = priceMissing.filter((gap) => indexKeys.has(gapKey(gap)));
+  const sharedKeys = new Set(shared.map(gapKey));
+  const priceGaps = useGapList(
+    priceMissing.filter((gap) => !sharedKeys.has(gapKey(gap))),
+    locale,
+  );
+  const indexGaps = useGapList(
+    indexMissing.filter((gap) => !sharedKeys.has(gapKey(gap))),
+    locale,
+  );
+  const sharedGaps = useGapList(shared, locale);
   if (!coverage) return null;
   // The latest price session, from coverage rather than the securities
   // list: that list follows the date picked in the table, this must not.
   const latestSession = coverage.prices.to;
 
   return (
-    <AppPanel className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <p className="text-caption-1-semibold text-status-blue-text">
-            {t("markets.availability.eyebrow")}
+    <AppPanel className="flex flex-col gap-3">
+      {/* The legend rides on the date line rather than getting a row of its
+          own: this panel should stay short enough that the index charts
+          below still land on the first screen. */}
+      <MarketSectionHeader
+        title={t("markets.availability.eyebrow")}
+        aside={
+          <p className="flex flex-wrap gap-x-2 text-body-2-regular text-text-secondary">
+            {latestSession && (
+              <span>
+                {t("markets.availability.latest", {
+                  date: formatGapBoundary(latestSession, locale),
+                })}
+              </span>
+            )}
+            <span aria-hidden className="hidden text-text-tertiary sm:inline">
+              ·
+            </span>
+            <span>{t("markets.availability.subtitle")}</span>
           </p>
-          <p className="text-body-2-medium text-text-tertiary">
-            {t("markets.availability.subtitle")}
-          </p>
-        </div>
-        {latestSession && (
-          <p className="text-body-2-medium text-text-secondary">
-            {t("markets.availability.latest", {
-              date: formatGapBoundary(latestSession, locale),
-            })}
-          </p>
-        )}
+        }
+      />
+      <div className="grid grid-cols-1 gap-x-8 gap-y-3 lg:grid-cols-2">
+        <CoverageRow
+          label={t("markets.availability.prices")}
+          window={coverage.prices}
+          locale={locale}
+          gapText={
+            priceGaps && t("markets.availability.missing", { ranges: priceGaps })
+          }
+        />
+        <CoverageRow
+          label={t("markets.availability.indices")}
+          window={coverage.indices}
+          locale={locale}
+          gapText={
+            indexGaps && t("markets.availability.missing", { ranges: indexGaps })
+          }
+        />
       </div>
-      <CoverageRow
-        label={t("markets.availability.prices")}
-        window={coverage.prices}
-        locale={locale}
-      />
-      <CoverageRow
-        label={t("markets.availability.indices")}
-        window={coverage.indices}
-        locale={locale}
-      />
+      {sharedGaps && (
+        <p className="text-caption-1-regular text-text-secondary">
+          {t("markets.availability.missingBoth", { ranges: sharedGaps })}
+        </p>
+      )}
     </AppPanel>
   );
 }

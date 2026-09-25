@@ -22,6 +22,7 @@ export type ApiErrorCode =
   | 'SECURITY_NOT_TRADABLE'
   | 'PRICE_UNAVAILABLE'
   | 'STALE_PRICE'
+  | 'WATCHLIST_FULL'
   | 'INTERNAL';
 
 // docs/api/paper-trading-v1.md §6.2 — the seven outcomes that a submitted
@@ -150,6 +151,18 @@ export class DependencyUnavailableException extends ApiException {
       HttpStatus.SERVICE_UNAVAILABLE,
       'DEPENDENCY_UNAVAILABLE',
       'A required service is temporarily unavailable.',
+    );
+  }
+}
+
+// docs/api/watchlist-v1.md §3.2 — the list already holds the most securities
+// an investor may follow.
+export class WatchlistFullException extends ApiException {
+  constructor(limit: number) {
+    super(
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      'WATCHLIST_FULL',
+      `A watchlist holds at most ${limit} securities.`,
     );
   }
 }

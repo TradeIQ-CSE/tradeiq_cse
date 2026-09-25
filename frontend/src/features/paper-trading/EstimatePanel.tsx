@@ -1,18 +1,18 @@
 import { useTranslation } from "react-i18next";
 import { ReactNode } from 'react';
 import { localeFor } from "../../i18n";
-import { formatMoney, formatSignedMoney } from "./format";
+import { formatDay, formatMoney, formatSignedMoney } from "./format";
 import { OrderEstimate } from "./types";
 import {
   Card,
   CardHeading,
   CardProgress,
   ErrorCard,
-  NoticeCard,
   StateMessage,
 } from "./ui";
 import { financialToneClass } from "../../components/application/financial-data";
 import { TradingDetails } from './TradingDetails';
+import { DetailList, DetailRow } from '../../components/application/detail-list';
 import { cx } from '@/utils/cx';
 
 interface EstimatePanelProps {
@@ -52,7 +52,7 @@ export function EstimatePanel({
 
   if (isPending) {
     return (
-      <Card busy className="min-h-80">
+      <Card busy className="h-full min-h-80">
         <CardHeading title={t("paperTrading.ticket.estimate.title")} />
         <CardProgress label={t("paperTrading.ticket.estimate.loading")} />
         <StateMessage>{t("paperTrading.ticket.estimate.loading")}</StateMessage>
@@ -66,7 +66,7 @@ export function EstimatePanel({
   // different things about, say, INSUFFICIENT_CASH.
   if (errorKey) {
     return (
-      <Card className="min-h-80">
+      <Card className="h-full min-h-80">
         <CardHeading title={t("paperTrading.ticket.estimate.title")} />
         <div className="px-4 pb-4 sm:px-5 sm:pb-5">
           <ErrorCard role="alert">{t(errorKey)}</ErrorCard>
@@ -78,24 +78,27 @@ export function EstimatePanel({
   if (!estimate) {
     if (simple) return null;
     return (
-      <Card className="min-h-80">
+      <Card className="h-full min-h-80">
         <CardHeading
           title={t("paperTrading.ticket.estimate.title")}
           subtitle={t("paperTrading.ticket.estimate.waiting")}
         />
-        <div className="px-4 pb-4 sm:px-5 sm:pb-5">
-          <NoticeCard>{t("paperTrading.ticket.estimate.empty")}</NoticeCard>
-        </div>
+        <StateMessage>{t("paperTrading.ticket.estimate.empty")}</StateMessage>
       </Card>
     );
   }
 
   return (
-    <Card>
+    <Card className="flex h-full flex-col">
       <CardHeading
         title={t("paperTrading.ticket.estimate.title")}
         subtitle={
           isStale ? undefined : t("paperTrading.ticket.estimate.subtitle")
+        }
+        info={
+          simple
+            ? t('paperTrading.workflow.settlementHelp', { date: formatDay(estimate.settlement_date, locale) })
+            : t("paperTrading.ticket.estimate.explanation")
         }
       />
 
@@ -115,44 +118,34 @@ export function EstimatePanel({
         })}
       </p>}
 
-      <dl className="grid grid-cols-1 gap-3 px-4 pb-4 sm:grid-cols-2 sm:px-5 sm:pb-5">
-        <div className="flex flex-col gap-0.5 rounded-2xl bg-background-secondary-default p-3">
-          <dt className="text-body-medium text-text-secondary">
-            {t("paperTrading.ticket.estimate.price")}
-          </dt>
-          <dd className="text-headline-medium tabular-nums text-text-primary">
-            {formatMoney(estimate.price, locale)}
-          </dd>
-        </div>
-        <div className="flex flex-col gap-0.5 rounded-2xl bg-background-secondary-default p-3">
-          <dt className="text-body-medium text-text-secondary">
-            {t("paperTrading.ticket.estimate.priceAsOf")}
-          </dt>
-          <dd className="text-headline-medium tabular-nums text-text-primary">
-            {estimate.price_as_of}
-          </dd>
-        </div>
-        {!simple && <div className="flex flex-col gap-0.5 rounded-2xl bg-background-secondary-default p-3">
-          <dt className="text-body-medium text-text-secondary">
-            {t("paperTrading.ticket.estimate.settlementDate")}
-          </dt>
-          <dd className="text-headline-medium tabular-nums text-text-primary">
-            {estimate.settlement_date}
-          </dd>
-        </div>}
-        <div className="flex flex-col gap-0.5 rounded-2xl bg-background-secondary-default p-3">
-          <dt className="text-body-medium text-text-secondary">
-            {t(simple ? 'paperTrading.workflow.shareValue' : "paperTrading.ticket.estimate.grossConsideration")}
-          </dt>
-          <dd className="text-headline-medium tabular-nums text-text-primary">
-            {formatMoney(estimate.gross_consideration, locale)}
-          </dd>
-        </div>
-        {simple && <div className="flex flex-col gap-0.5 rounded-2xl bg-background-secondary-default p-3">
-          <dt className="text-body-medium text-text-secondary">{t('paperTrading.workflow.totalCharges')}</dt>
-          <dd className="text-headline-medium tabular-nums text-text-primary">{formatMoney(estimate.fee_total, locale)}</dd>
-        </div>}
-      </dl>
+      <div className="px-4 pb-4 sm:px-5">
+        <DetailList>
+          <DetailRow
+            label={t("paperTrading.ticket.estimate.price")}
+            value={formatMoney(estimate.price, locale)}
+          />
+          <DetailRow
+            label={t("paperTrading.ticket.estimate.priceAsOf")}
+            value={formatDay(estimate.price_as_of, locale)}
+          />
+          {!simple && (
+            <DetailRow
+              label={t("paperTrading.ticket.estimate.settlementDate")}
+              value={formatDay(estimate.settlement_date, locale)}
+            />
+          )}
+          <DetailRow
+            label={t(simple ? 'paperTrading.workflow.shareValue' : "paperTrading.ticket.estimate.grossConsideration")}
+            value={formatMoney(estimate.gross_consideration, locale)}
+          />
+          {simple && (
+            <DetailRow
+              label={t('paperTrading.workflow.totalCharges')}
+              value={formatMoney(estimate.fee_total, locale)}
+            />
+          )}
+        </DetailList>
+      </div>
 
       <div className="px-4 pb-4 sm:px-5">
       <TradingDetails title={t('paperTrading.workflow.chargeBreakdown')} expanded={!simple}>
@@ -209,15 +202,7 @@ export function EstimatePanel({
       </TradingDetails>
       </div>
 
-      {simple && <div className="px-4 pb-4 sm:px-5">
-        <TradingDetails title={t('paperTrading.workflow.settlementDetails')}>
-          <p className="text-body-2-regular text-text-secondary">
-            {t('paperTrading.workflow.settlementHelp', { date: estimate.settlement_date })}
-          </p>
-        </TradingDetails>
-      </div>}
-
-      <div className="flex flex-col gap-1 border-t border-separator-border px-4 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+      <div className="mt-auto flex flex-col gap-1 border-t border-separator-border px-4 py-3 sm:flex-row sm:px-5 sm:items-baseline sm:justify-between sm:gap-3">
         <span className="text-body-medium text-text-secondary">
           {t(simple ? `paperTrading.workflow.cashEffect.${estimate.side}` : "paperTrading.ticket.estimate.cashEffect")}
         </span>
@@ -228,9 +213,11 @@ export function EstimatePanel({
         </span>
       </div>
 
-      <p className="border-t border-separator-border px-4 py-3 text-body-2-regular text-text-tertiary sm:px-5">
-        {t(simple ? 'paperTrading.workflow.previewWarning' : "paperTrading.ticket.estimate.explanation")}
-      </p>
+      {simple && (
+        <p className="border-t border-separator-border px-4 py-3 text-body-2-regular text-text-secondary sm:px-5">
+          {t('paperTrading.workflow.previewWarning')}
+        </p>
+      )}
       {confirmation && <div className="px-4 pb-4 sm:px-5 sm:pb-5">{confirmation}</div>}
     </Card>
   );

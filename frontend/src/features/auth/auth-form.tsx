@@ -5,11 +5,7 @@ import { TradeIqLogo } from '../../components/foundations/brand/tradeiq-logo';
 import { AppBackdrop } from '../../components/layout/AppBackdrop';
 import { ThemeModeControl } from '../../theme/ThemeModeControl';
 import { cx } from '../../utils/cx';
-import {
-  RiBarChartBoxLine,
-  RiHistoryLine,
-  RiShieldCheckLine,
-} from '@remixicon/react';
+import { LandingPromises } from '../landing/LandingPromises';
 
 /**
  * Shared frame for the two auth pages.
@@ -36,12 +32,6 @@ export function AuthCard({
 }) {
   const { t } = useTranslation();
 
-  const trustPoints = [
-    { key: 'market', Icon: RiBarChartBoxLine },
-    { key: 'practice', Icon: RiShieldCheckLine },
-    { key: 'history', Icon: RiHistoryLine },
-  ] as const;
-
   return (
     <div className="app-shell relative min-h-dvh overflow-hidden bg-background-full p-4 sm:p-6">
       <AppBackdrop />
@@ -59,28 +49,15 @@ export function AuthCard({
             <TradeIqLogo size="lg" />
             <span className="text-title-2-medium text-text-primary">{t('app.name')}</span>
           </Link>
-          <div>
-            <p className="text-caption-1-semibold text-status-blue-text">{t('auth.trust.eyebrow')}</p>
-            <h2 className="mt-2 max-w-lg text-display-3-medium text-text-primary">
+          <div className="flex flex-col gap-4">
+            <h2 className="max-w-lg text-display-3-medium text-text-primary">
               {t('auth.trust.title')}
             </h2>
-            <p className="mt-3 max-w-lg text-body-regular text-text-secondary">
+            <p className="max-w-lg text-body-regular text-text-secondary">
               {t('auth.trust.description')}
             </p>
+            <LandingPromises className="justify-start" />
           </div>
-          <ul className="grid gap-3">
-            {trustPoints.map(({ key, Icon }) => (
-              <li key={key} className="app-panel-glass flex items-start gap-3 rounded-2xl border p-3.5">
-                <span className="flex shrink-0 rounded-xl bg-stat-card-icon-background p-2">
-                  <Icon className="size-5 text-foreground-icon-primary" aria-hidden />
-                </span>
-                <div>
-                  <p className="text-body-medium text-text-primary">{t(`auth.trust.points.${key}.title`)}</p>
-                  <p className="text-body-2-regular text-text-secondary">{t(`auth.trust.points.${key}.description`)}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
         </section>
 
         <div

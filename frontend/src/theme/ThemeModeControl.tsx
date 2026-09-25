@@ -1,11 +1,12 @@
+import { useTranslation } from 'react-i18next';
 import { RiComputerLine, RiMoonLine, RiSunLine } from '@remixicon/react';
 import { cx } from '../utils/cx';
 import { ThemePreference, useTheme } from './useTheme';
 
-const OPTIONS: { preference: ThemePreference; label: string; Icon: typeof RiSunLine }[] = [
-  { preference: 'light', label: 'Light', Icon: RiSunLine },
-  { preference: 'dark', label: 'Dark', Icon: RiMoonLine },
-  { preference: 'system', label: 'System', Icon: RiComputerLine },
+const OPTIONS: { preference: ThemePreference; Icon: typeof RiSunLine }[] = [
+  { preference: 'light', Icon: RiSunLine },
+  { preference: 'dark', Icon: RiMoonLine },
+  { preference: 'system', Icon: RiComputerLine },
 ];
 
 export interface ThemeModeControlProps {
@@ -15,19 +16,21 @@ export interface ThemeModeControlProps {
 
 /** Light, dark, and system segmented theme picker. */
 export function ThemeModeControl({ className, compact = false }: ThemeModeControlProps) {
+  const { t } = useTranslation();
   const { preference, setPreference } = useTheme();
 
   return (
     <div
       role="radiogroup"
-      aria-label="Theme"
+      aria-label={t('theme.label')}
       className={cx(
         'inline-grid grid-cols-3 items-center gap-1 rounded-2lg bg-background-secondary-default p-1',
         className,
       )}
     >
-      {OPTIONS.map(({ preference: optionPreference, label, Icon }) => {
+      {OPTIONS.map(({ preference: optionPreference, Icon }) => {
         const selected = preference === optionPreference;
+        const label = t(`theme.${optionPreference}`);
         return (
           <button
             key={optionPreference}

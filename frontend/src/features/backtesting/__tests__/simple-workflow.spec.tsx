@@ -59,9 +59,9 @@ beforeEach(() => {
 describe('Simple backtesting workflow', () => {
   it('starts with three pages and hides the detailed calendar until requested', () => {
     renderWorkflow();
-    expect(screen.getByRole('heading', { name: 'Choose a company and period' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Choose a company and dates' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Simple' })).toHaveAttribute('aria-checked', 'true');
-    expect(screen.getByRole('button', { name: 'Configure historical period' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: 'Change dates' })).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('button', { name: '1 year' })).not.toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Backtest configuration steps' }).querySelectorAll('li')).toHaveLength(3);
     expect(screen.queryByText('Step 1 of 7')).not.toBeInTheDocument();
@@ -72,15 +72,15 @@ describe('Simple backtesting workflow', () => {
     renderWorkflow();
     fireEvent.click(await screen.findByRole('button', { name: /SAMP.N0000.*Sampath Bank PLC/i }));
     fireEvent.click(screen.getByRole('button', { name: /advance to next step/i }));
-    expect(screen.getByRole('heading', { name: 'Describe your investing idea' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'When to buy and sell' })).toBeInTheDocument();
     expect(screen.getByRole('spinbutton', { name: 'Virtual starting cash (LKR)' })).toHaveValue(1_000_000);
     expect(screen.queryByRole('radio', { name: /Buy|Price/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/Take profit after a 10% gain/)).toBeInTheDocument();
+    expect(screen.getByText(/Take profit after a 10% rise/)).toBeInTheDocument();
     expect(screen.getByText(/Stop loss after a 5% fall/)).toBeInTheDocument();
-    expect(screen.getByText(/Combined simulation charge: 1.120%/)).toBeInTheDocument();
+    expect(screen.getByText(/1.120% charges per buy or sell/)).toBeInTheDocument();
     expect(submit).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: /advance to next step/i }));
-    expect(screen.getAllByText('Step 3 of 3')).toHaveLength(2);
+    expect(screen.getByText('Step 3 of 3')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Run backtest' }));
     await screen.findByRole('heading', { name: 'Simulation status' });
     expect(submit).toHaveBeenCalledTimes(1);
@@ -94,12 +94,12 @@ describe('Simple backtesting workflow', () => {
     seedDraft((config) => { config.period.startDate = '2016-01-01'; });
     renderWorkflow();
     fireEvent.click(screen.getByRole('button', { name: /advance to next step/i }));
-    expect(screen.getByRole('heading', { name: 'Choose a company and period' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Hide historical period' })).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getAllByText(/Start date cannot precede/).length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: 'Choose a company and dates' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hide dates' })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getAllByText(/Prices start on .* · Pick a later start date/).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button', { name: '1 year' }));
     fireEvent.click(screen.getByRole('button', { name: /advance to next step/i }));
-    expect(screen.getByRole('heading', { name: 'Describe your investing idea' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'When to buy and sell' })).toBeInTheDocument();
   });
 
   it('validates rules, execution and capital together and reveals invalid hidden settings', () => {
@@ -108,8 +108,8 @@ describe('Simple backtesting workflow', () => {
     fireEvent.click(screen.getByRole('button', { name: /advance to next step/i }));
     expect(screen.getByRole('button', { name: 'Hide buy and sell rules' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('button', { name: 'Hide trade settings' })).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('heading', { name: 'Describe your investing idea' })).toBeInTheDocument();
-    expect(screen.getAllByText(/At least one sell condition/).length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: 'When to buy and sell' })).toBeInTheDocument();
+    expect(screen.getAllByText(/Pick at least one sell rule/).length).toBeGreaterThan(0);
   });
 
   it('preserves custom settings and identical payloads through mode changes and reload', async () => {
@@ -124,9 +124,9 @@ describe('Simple backtesting workflow', () => {
     const view = renderWorkflow('/backtests/new/execution');
     await user.click(screen.getByRole('radio', { name: 'Simple' }));
     expect(screen.getByTestId('location')).toHaveTextContent('/backtests/new/rules?mode=simple');
-    expect(screen.getAllByText('Custom')).toHaveLength(2);
-    expect(screen.getByText('Buy at or below LKR 100.00.')).toBeInTheDocument();
-    expect(screen.getByText('30 whole shares per entry.')).toBeInTheDocument();
+    expect(screen.getAllByText('Edited')).toHaveLength(2);
+    expect(screen.getByText('Buy at or below LKR 100.00')).toBeInTheDocument();
+    expect(screen.getByText(/30 shares per trade/)).toBeInTheDocument();
     expect(mapToBacktestRequest(JSON.parse(sessionStorage.getItem(storageKey)!))).toEqual(mapToBacktestRequest(config));
     await user.click(screen.getByRole('radio', { name: 'Advanced' }));
     expect(screen.getByTestId('location')).toHaveTextContent('/backtests/new/rules?mode=advanced');
@@ -149,16 +149,16 @@ describe('Simple backtesting workflow', () => {
     seedDraft();
     renderWorkflow('/backtests/new/rules?mode=simple');
     const user = userEvent.setup();
-    const configure = screen.getByRole('button', { name: 'Configure buy and sell rules' });
+    const configure = screen.getByRole('button', { name: 'Change buy and sell rules' });
     configure.focus();
     await user.keyboard('[Enter]');
     expect(configure).toHaveAttribute('aria-expanded', 'true');
-    await user.click(screen.getByRole('checkbox', { name: /Target Exit Price/i }));
+    await user.click(screen.getByRole('checkbox', { name: /^Target price/i }));
     await user.click(screen.getByRole('button', { name: 'Hide buy and sell rules' }));
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     expect(screen.getByText(/Sell at or above LKR/)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Configure buy and sell rules' }));
-    expect(screen.getByRole('checkbox', { name: /Target Exit Price/i })).toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Change buy and sell rules' }));
+    expect(screen.getByRole('checkbox', { name: /^Target price/i })).toBeChecked();
   });
 
   it('restores the mode and page through browser back and forward without resetting cash', async () => {
@@ -169,14 +169,14 @@ describe('Simple backtesting workflow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Browser back' }));
     expect(screen.getByRole('spinbutton', { name: 'Virtual starting cash (LKR)' })).toHaveValue(250_000);
     fireEvent.click(screen.getByRole('button', { name: 'Browser forward' }));
-    expect(screen.getByRole('heading', { name: 'Define entry and exit rules' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'When to buy and sell' })).toBeInTheDocument();
     expect(JSON.parse(sessionStorage.getItem(storageKey)!).portfolio.startingCapital).toBe(250_000);
   });
 
   it('review edits open the relevant Simple configuration panel', () => {
     seedDraft();
     renderWorkflow('/backtests/new/review?mode=simple');
-    const execution = screen.getByText('Execution').closest('section')!;
+    const execution = screen.getByText('Trade size', { selector: 'h3' }).closest('section')!;
     fireEvent.click(execution.querySelector('button')!);
     expect(screen.getByTestId('location')).toHaveTextContent('/backtests/new/rules?mode=simple#execution');
     expect(screen.getByRole('button', { name: 'Hide trade settings' })).toHaveAttribute('aria-expanded', 'true');
@@ -186,7 +186,7 @@ describe('Simple backtesting workflow', () => {
     seedDraft((config) => { config.metrics.selected = []; });
     renderWorkflow('/backtests/new/review?mode=simple');
     expect(screen.getByRole('button', { name: 'Run backtest' })).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: 'Open metrics' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Go to analysis focus' }));
     expect(screen.getByRole('button', { name: 'Hide analysis focus' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('button', { name: 'Select all' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Select all' }));

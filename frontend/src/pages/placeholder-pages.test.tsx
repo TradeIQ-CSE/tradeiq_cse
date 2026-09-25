@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { renderWithProviders, screen } from '../test/render';
-import { Watchlist } from './investor/Watchlist';
 import { Analytics } from './investor/Analytics';
 import { AdminHome } from './admin/AdminHome';
 import { PlannedFeaturePage } from './PlannedFeaturePage';
@@ -9,22 +8,16 @@ import i18n from '../i18n';
 const t = i18n.t.bind(i18n);
 
 describe('Stage 5 capability pages', () => {
-  it('makes the watchlist persistence boundary explicit', () => {
-    renderWithProviders(<Watchlist />);
-
-    expect(screen.getByRole('heading', { name: t('watchlistPage.title') })).toBeInTheDocument();
-    expect(screen.getByText(t('watchlistPage.emptyTitle'))).toBeInTheDocument();
-    expect(screen.getByText(t('watchlistPage.notice'))).toBeInTheDocument();
-    expect(screen.queryByText(/manage watchlist/i)).not.toBeInTheDocument();
-  });
-
-  it('explains backtesting without claiming unsupported analytics', () => {
+  it('says analytics is coming soon and points at the portfolio instead', () => {
     renderWithProviders(<Analytics />);
 
-    expect(screen.getByRole('heading', { name: t('analyticsPage.title') })).toBeInTheDocument();
-    expect(screen.getByText(t('analyticsPage.notice'))).toBeInTheDocument();
-    expect(screen.getByText(t('analyticsPage.plannedDescription'))).toBeInTheDocument();
-    expect(screen.queryByText(/complex risk analytics models/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: t('plannedFeatures.analytics.title') }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(t('plannedFeatures.comingSoon'))).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: t('plannedFeatures.analytics.alternative') }),
+    ).toBeEnabled();
   });
 });
 
@@ -51,7 +44,7 @@ describe('Stage 6 capability pages', () => {
     expect(
       screen.getByRole('heading', { name: t('plannedFeatures.aiInsights.title') }),
     ).toBeInTheDocument();
-    expect(screen.getByText(t('plannedFeatures.notice'))).toBeInTheDocument();
+    expect(screen.getByText(t('plannedFeatures.comingSoon'))).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: t('plannedFeatures.aiInsights.alternative') }),
     ).toBeEnabled();

@@ -78,7 +78,7 @@ describe("SecurityDetailPage", () => {
     renderPage("/markets/%20");
 
     expect(
-      screen.getByRole("heading", { name: "Security was not found" }),
+      screen.getByRole("heading", { name: "This company was not found" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("heading", {
@@ -167,8 +167,11 @@ describe("SecurityDetailPage", () => {
     expect(
       await screen.findByText(t("securityDetail.chart.legend.closePrice")),
     ).toBeInTheDocument();
+    // The explanation sits in the "i" next to the legend.
     expect(
-      screen.getByText(t("securityDetail.chart.legend.closeOnlyHelp")),
+      screen.getByRole("button", {
+        name: `More about ${t("securityDetail.chart.legend.closePrice")}`,
+      }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("table", {

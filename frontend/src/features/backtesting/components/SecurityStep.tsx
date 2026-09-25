@@ -6,12 +6,13 @@ import {
   RiSearchLine,
 } from "@remixicon/react";
 import { Button } from "@/components/base/buttons/button";
-import { Chip } from "@/components/base/badges/chip";
 import { Input } from "@/components/base/input/input";
 import { SecuritySectorIcon } from "@/features/markets/SecuritySectorIcon";
+import { SelectedCompany } from "@/features/markets/SelectedCompany";
 import { formatPrice } from "@/features/markets/format";
 import { cx } from "@/utils/cx";
 import { useBacktestWizard } from "../hooks/useBacktestWizard";
+import { formatDay } from "../domain/descriptions";
 import { getSecuritiesUniverse } from "../api/backtestApi";
 import type { SecurityListItem } from "../../markets/types";
 import {
@@ -45,7 +46,7 @@ export function SecurityStep({ embedded = false }: { embedded?: boolean }) {
         .catch(() => {
           if (!isCurrent) return;
           setSecurities([]);
-          setLoadError("CSE securities could not be loaded right now.");
+          setLoadError("Couldn’t load companies. Please try again.");
           setIsLoading(false);
         });
     }, 200);
@@ -80,57 +81,24 @@ export function SecurityStep({ embedded = false }: { embedded?: boolean }) {
     <div className="flex flex-col gap-6">
       <BacktestStepHeader
         embedded={embedded}
-        step={1}
-        title="Choose a CSE security"
-        description="A backtest applies one set of rules to one listed security. Choose from the API-backed CSE universe and check its available historical coverage before continuing."
+        title="Choose a company"
+        description="Pick the company to test your idea on"
       />
 
       {config.security.symbol && (
-        <section className="flex flex-col gap-4 rounded-2xl border border-border-button-active bg-status-blue-background p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            <SecuritySectorIcon sector={selectedSector} />
-            <div className="flex min-w-0 flex-col gap-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <Chip color="blue" variant="subtle">
-                  {config.security.symbol}
-                </Chip>
-                <p className="text-body-medium text-text-primary">
-                  {config.security.companyName || "CSE listed security"}
-                </p>
-              </div>
-              <p className="text-body-2-regular text-text-secondary">
-                {config.security.sector || "Sector unavailable"}
-              </p>
-            </div>
-          </div>
-          {config.security.price !== null &&
-            config.security.price !== undefined && (
-              <div className="flex shrink-0 flex-col sm:items-end">
-                <span className="text-caption-1-medium text-text-tertiary">
-                  Latest available close
-                </span>
-                <strong className="text-title-3-semibold tabular-nums text-text-primary">
-                  LKR {formatPrice(config.security.price, "en-LK")}
-                </strong>
-              </div>
-            )}
-          <div className="flex items-start gap-2 border-t border-separator-border pt-3 text-body-2-regular text-status-blue-text sm:hidden">
-            <RiCheckboxCircleLine className="mt-0.5 size-4 shrink-0" aria-hidden />
-            <span>
-              Coverage: {config.security.dataFrom || "not reported"} to{" "}
-              {config.security.dataTo || "not reported"}
-            </span>
-          </div>
-        </section>
+        <SelectedCompany
+          symbol={config.security.symbol}
+          companyName={config.security.companyName}
+          sector={selectedSector}
+          price={config.security.price}
+          historyFrom={config.security.dataFrom}
+          historyTo={config.security.dataTo}
+        />
       )}
 
       <div className="flex flex-col gap-2">
         <Input
-          label="Search CSE securities"
-          hint={
-            symbolError?.message ||
-            "Search by ticker symbol or company name. Results come from the Markets API."
-          }
+          label="Search companies"
           value={search}
           onChange={setSearch}
           placeholder="For example, COMB or Commercial Bank"
@@ -144,11 +112,11 @@ export function SecurityStep({ embedded = false }: { embedded?: boolean }) {
 
       <section className="flex flex-col gap-3">
         <BacktestSectionHeader
-          title={search.trim() ? "Matching securities" : "Available securities"}
+          title={search.trim() ? "Matching companies" : "Companies"}
           description={
             isLoading
-              ? "Loading the latest available security list."
-              : `${securities.length} ${securities.length === 1 ? "security" : "securities"} available`
+              ? "Loading"
+              : `${securities.length} ${securities.length === 1 ? "company" : "companies"}`
           }
         />
 
@@ -159,7 +127,7 @@ export function SecurityStep({ embedded = false }: { embedded?: boolean }) {
               role="status"
             >
               <RiLoader4Line className="size-5 animate-spin" aria-hidden />
-              Loading CSE securities
+              Loading companies
             </div>
           ) : loadError ? (
             <div className="flex flex-col items-center gap-3 p-8 text-center" role="alert">
@@ -175,7 +143,7 @@ export function SecurityStep({ embedded = false }: { embedded?: boolean }) {
             </div>
           ) : securities.length === 0 ? (
             <p className="p-8 text-center text-body-regular text-text-secondary">
-              No securities match “{search}”. Try a ticker or a shorter company name.
+              No companies match “{search}”. Try a symbol or a shorter name.
             </p>
           ) : (
             <ul className="divide-y divide-separator-border">
@@ -190,7 +158,7 @@ export function SecurityStep({ embedded = false }: { embedded?: boolean }) {
                       className={cx(
                         "flex w-full items-center gap-3 px-3 py-3 text-left outline-none transition-colors sm:px-4",
                         "hover:bg-background-primary-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-border-focus-ring",
-                        isSelected && "bg-status-blue-background",
+                        isSelected && "bg-background-secondary-default",
                       )}
                     >
                       <SecuritySectorIcon sector={security.sector} />
@@ -203,16 +171,16 @@ export function SecurityStep({ embedded = false }: { embedded?: boolean }) {
                         </span>
                       </span>
                       <span className="hidden shrink-0 flex-col items-end sm:flex">
-                        <span className="text-body-medium tabular-nums text-text-primary">
+                        <span className="text-body-2-regular tabular-nums text-text-primary">
                           {security.price === null
-                            ? "Price unavailable"
+                            ? "No price yet"
                             : `LKR ${formatPrice(security.price, "en-LK")}`}
                         </span>
-                        <span className="text-caption-1-medium text-text-tertiary">
-                          {security.data_from && security.data_to
-                            ? `${security.data_from} to ${security.data_to}`
-                            : "Coverage not reported"}
-                        </span>
+                        {security.data_from && security.data_to && (
+                          <span className="text-caption-1-regular text-text-secondary">
+                            History from {formatDay(security.data_from)}
+                          </span>
+                        )}
                       </span>
                       {isSelected && (
                         <RiCheckboxCircleLine

@@ -59,8 +59,8 @@ describe('BacktestWizard Workflow Integration', () => {
       { initialEntries: ['/backtests/new/security'] },
     );
 
-    expect(screen.getByRole('heading', { name: 'Test a strategy against the past' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Choose a CSE security' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Test an idea on past prices' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Choose a company' })).toBeTruthy();
   });
 
   it('does not present an incomplete direct review as ready to submit', () => {
@@ -71,7 +71,7 @@ describe('BacktestWizard Workflow Integration', () => {
       { initialEntries: ['/backtests/new/review'] },
     );
 
-    expect(screen.getByText('Configuration requires attention')).toBeTruthy();
+    expect(screen.getByText(/^Fix \d+ things? before running$/)).toBeTruthy();
     expect(screen.getByRole('button', { name: /run backtest/i })).toBeDisabled();
   });
 
@@ -98,7 +98,7 @@ describe('BacktestWizard Workflow Integration', () => {
 
     // Now on Period step
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Choose the historical period' })).toBeTruthy();
+      expect(screen.getByRole('heading', { name: 'Choose dates' })).toBeTruthy();
     });
 
     // A fresh draft already follows the selected company's latest coverage.
@@ -110,7 +110,7 @@ describe('BacktestWizard Workflow Integration', () => {
     // Advance to Rules step
     fireEvent.click(screen.getByRole('button', { name: /advance to next step/i }));
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Define entry and exit rules' })).toBeTruthy();
+      expect(screen.getByRole('heading', { name: 'When to buy and sell' })).toBeTruthy();
     });
 
     // Click Back
@@ -119,14 +119,14 @@ describe('BacktestWizard Workflow Integration', () => {
 
     // Returned to Period step and preserved the selected range.
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Choose the historical period' })).toBeTruthy();
+      expect(screen.getByRole('heading', { name: 'Choose dates' })).toBeTruthy();
       expect(screen.getByText('Selected: 2025-01-01 to 2025-12-31')).toBeTruthy();
     });
 
     // Click Back again to return to Security step
     fireEvent.click(screen.getByRole('button', { name: /navigate to previous step/i }));
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Choose a CSE security' })).toBeTruthy();
+      expect(screen.getByRole('heading', { name: 'Choose a company' })).toBeTruthy();
       expect(screen.getAllByText('SAMP.N0000').length).toBeGreaterThanOrEqual(1);
     });
   });
@@ -152,8 +152,7 @@ describe('BacktestWizard Workflow Integration', () => {
       { initialEntries: ['/backtests/new/review'] },
     );
 
-    expect(screen.getByRole('heading', { name: 'Review simulation assumptions' })).toBeTruthy();
-    expect(screen.getByText('Everything looks valid.')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Check and run' })).toBeTruthy();
 
     // Click Run Backtest button
     const runBtn = screen.getByRole('button', { name: /run backtest/i });
@@ -264,10 +263,10 @@ describe('BacktestWizard Workflow Integration', () => {
     fireEvent.click(runBtn);
 
     await waitFor(() => {
-      expect(screen.getByText('Submission Failed')).toBeTruthy();
+      expect(screen.getByText('Couldn’t run the test')).toBeTruthy();
       expect(screen.getByText('Request validation failed.')).toBeTruthy();
       expect(screen.getByText('corr-id-998877')).toBeTruthy();
-      expect(screen.getByText(/Your parameters have been retained/)).toBeTruthy();
+      expect(screen.getByText(/Your settings are kept/)).toBeTruthy();
     });
   });
 
@@ -293,7 +292,7 @@ describe('BacktestWizard Workflow Integration', () => {
 
     // Surfaced immediately on the review page, like any other API error —
     // ValidationSummary lists every current validation error regardless of
-    // which step is showing (and the "Submission Failed" notice repeats the
+    // which step is showing (and the "Couldn’t run the test" notice repeats the
     // same message on its own, hence >0 rather than exactly one match).
     await waitFor(() => {
       expect(
@@ -303,9 +302,9 @@ describe('BacktestWizard Workflow Integration', () => {
 
     // Following it opens the period step, where the same message anchors
     // the start-date field, exactly like a client-caught gap error would.
-    fireEvent.click(screen.getByRole('button', { name: 'Open period' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Go to dates' }));
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Choose the historical period' })).toBeTruthy();
+      expect(screen.getByRole('heading', { name: 'Choose dates' })).toBeTruthy();
     });
     expect(
       screen.getAllByText('No market data from 2026-01-01 to 2026-06-12. Choose a date outside this period.').length,

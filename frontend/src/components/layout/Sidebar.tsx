@@ -167,7 +167,7 @@ export function Sidebar({ isMobile = false, className, onClose }: SidebarProps) 
               <Avatar size="md" color="blue" initials={initialOf(user.display_name)} />
               <span className="flex min-w-0 flex-1 flex-col items-start">
                 <span className="truncate text-body-medium text-text-primary">{user.display_name}</span>
-                <span className="truncate text-body-regular text-text-secondary">{t('nav.profile.role')}</span>
+                <span className="truncate text-body-regular text-text-secondary">{isAdmin ? t('nav.items.admin') : t('nav.profile.role')}</span>
               </span>
             </DropdownTrigger>
             <DropdownPopover aria-label={user.display_name} placement="top start" className="w-[236px]">

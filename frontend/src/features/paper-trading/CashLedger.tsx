@@ -3,7 +3,12 @@ import { useTranslation } from "react-i18next";
 import { ApiError } from "../../lib/api";
 import { readErrorText } from "./error-text";
 import { localeFor } from "../../i18n";
-import { formatMoney, formatQuantity, formatSignedMoney } from "./format";
+import {
+  formatDay,
+  formatMoney,
+  formatQuantity,
+  formatSignedMoney,
+} from "./format";
 import { useCashTransactions } from "./usePortfolios";
 import {
   Card,
@@ -101,16 +106,17 @@ export function CashLedger({ portfolioId }: CashLedgerProps) {
                         <td>
                           {t(`portfolio.cashLedger.types.${transaction.type}`)}
                         </td>
-                        <td
-                          className={`text-right tabular-nums ${financialToneClass(transaction.amount)}`}
-                        >
-                          {formatSignedMoney(transaction.amount, locale)}
+                        {/* Toned inside the cell: `.bui-table td` sets its own colour. */}
+                        <td className="text-right tabular-nums">
+                          <span className={financialToneClass(transaction.amount)}>
+                            {formatSignedMoney(transaction.amount, locale)}
+                          </span>
                         </td>
                         <td className="text-right tabular-nums">
                           {formatMoney(transaction.balance_after, locale)}
                         </td>
                         <td className="tabular-nums">
-                          {transaction.effective_date}
+                          {formatDay(transaction.effective_date, locale)}
                         </td>
                       </tr>
                     ))}

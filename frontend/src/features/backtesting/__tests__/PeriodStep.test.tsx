@@ -135,7 +135,7 @@ describe('PeriodStep — data gaps', () => {
     seedDraft({ startDate: '2026-06-13', endDate: '2026-08-01' });
     renderPeriodStep();
 
-    await screen.findByRole('heading', { name: 'Choose the historical period' });
+    await screen.findByRole('heading', { name: 'Choose dates' });
     expect(
       screen.queryByText(
         'No market data from 2026-01-01 to 2026-06-12. Choose a date outside this period.',
@@ -181,9 +181,7 @@ describe('PeriodStep — data gaps', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(
-          "No market data from Jan 1 to Jun 12, 2026 in this range. The backtest skips it: an open position is held through it, and stop-loss and take-profit rules can't act until Jun 15, 2026.",
-        ),
+        screen.getByText("Sell rules wait until Jun 15, 2026"),
       ).toBeInTheDocument();
     });
   });
@@ -193,8 +191,8 @@ describe('PeriodStep — data gaps', () => {
     seedDraft({ startDate: '2024-01-01', endDate: '2024-12-31' });
     renderPeriodStep();
 
-    await screen.findByRole('heading', { name: 'Choose the historical period' });
-    expect(screen.queryByText(/No market data from/)).not.toBeInTheDocument();
+    await screen.findByRole('heading', { name: 'Choose dates' });
+    expect(screen.queryByText(/Shares you hold are kept through it/)).not.toBeInTheDocument();
   });
 
   it('does not restrict the calendar when coverage has no gaps', async () => {

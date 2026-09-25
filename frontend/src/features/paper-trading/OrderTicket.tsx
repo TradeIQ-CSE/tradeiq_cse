@@ -14,15 +14,17 @@ import {
   SegmentedControl,
   SegmentedControlItem,
 } from "../../components/base/segmented-control/segmented-control";
-import { AppNotice } from "../../components/application/layout/application-layout";
+import { InfoTip } from "../../components/domain/info-tip";
+import { Stepper } from "../../components/application/stepper";
 import { Card, CardHeading } from "./ui";
-import { TradingDetails } from './TradingDetails';
 import { cx } from '@/utils/cx';
 
 interface OrderTicketProps {
   portfolioId: string;
   mode?: 'simple' | 'advanced';
   onBusyChange?: (busy: boolean) => void;
+  /** Company to start with, e.g. from a company page's "Practise a trade". */
+  initialSymbol?: string;
 }
 
 interface StoredEstimate {
@@ -47,11 +49,11 @@ function buildHash(
   return JSON.stringify([portfolioId, symbol, side, quantityText]);
 }
 
-export function OrderTicket({ portfolioId, mode = 'advanced', onBusyChange }: OrderTicketProps) {
+export function OrderTicket({ portfolioId, mode = 'advanced', onBusyChange, initialSymbol }: OrderTicketProps) {
   const { t } = useTranslation();
   const simple = mode === 'simple';
   const guidanceId = useId();
-  const [symbol, setSymbol] = useState("");
+  const [symbol, setSymbol] = useState(initialSymbol ?? "");
   const [side, setSide] = useState<OrderSide>("buy");
   const [quantityText, setQuantityText] = useState("");
 
@@ -258,34 +260,32 @@ export function OrderTicket({ portfolioId, mode = 'advanced', onBusyChange }: Or
   // the cost review beside it on desktop (stacked on smaller screens).
   return (
     <form
-      className={cx('grid w-full grid-cols-1 items-start gap-5',
+      className={cx('grid w-full grid-cols-1 items-stretch gap-5',
         simple && 'mx-auto max-w-2xl',
         simple && hasReview && 'max-w-6xl',
         (!simple || hasReview) && 'lg:grid-cols-2')}
       onSubmit={handleSubmit}
     >
-      <ol hidden={!simple} aria-label={t('paperTrading.workflow.steps.label')}
-        className="col-span-full grid grid-cols-3 gap-2">
-        {(['choose', 'review', 'confirm'] as const).map((step, index) => (
-          <li key={step} aria-current={currentStep === index + 1 ? 'step' : undefined}
-            className={cx('flex min-w-0 items-center gap-2 border-b-2 border-separator-border pb-3',
-              currentStep === index + 1 && 'border-border-focus-ring')}>
-            <span aria-hidden="true" className={cx('flex size-7 shrink-0 items-center justify-center rounded-full bg-background-secondary-default text-body-2-medium text-text-secondary',
-              currentStep === index + 1 && 'bg-button-primary bui-on-accent')}>{index + 1}</span>
-            <span className="text-body-2-medium text-text-primary">{t(`paperTrading.workflow.steps.${step}`)}</span>
-          </li>
-        ))}
-      </ol>
-      <Card className="min-w-0">
+      <div hidden={!simple} className="col-span-full">
+        <Stepper
+          label={t('paperTrading.workflow.steps.label')}
+          steps={(['choose', 'review', 'confirm'] as const).map((step, index) => ({
+            key: step,
+            label: t(`paperTrading.workflow.steps.${step}`),
+            state: currentStep === index + 1 ? 'current' : currentStep > index + 1 ? 'complete' : 'upcoming',
+          }))}
+        />
+      </div>
+      <Card className="flex min-w-0 flex-col">
         <CardHeading title={t("paperTrading.ticket.title")}
-          subtitle={simple ? t(trimmedSymbol ? 'paperTrading.workflow.tradePrompt' : 'paperTrading.workflow.choosePrompt') : undefined} />
+          info={t("paperTrading.ticket.guide.body")} />
 
-        <div className="flex flex-col gap-5 px-4 pb-4 sm:px-5 sm:pb-5">
+        <div className="flex flex-1 flex-col gap-5 px-4 pb-4 sm:px-5 sm:pb-5">
           {outcome && <div ref={resultRef} tabIndex={-1} className="outline-none"><ResultBanner outcome={outcome} /></div>}
 
           <SymbolPicker
             label={simple ? t('paperTrading.workflow.company') : undefined}
-            showCompanyName={simple}
+            showCompanyName
             value={symbol}
             onChange={(next) => {
               setSymbol(next);
@@ -295,8 +295,11 @@ export function OrderTicket({ portfolioId, mode = 'advanced', onBusyChange }: Or
           />
 
           <div className="flex flex-col gap-1">
-            <span className="text-body-medium text-text-secondary">
+            <span className="flex items-center gap-1 text-body-medium text-text-primary">
               {t(simple ? 'paperTrading.workflow.action' : "paperTrading.ticket.side")}
+              <InfoTip label={t("paperTrading.ticket.side")}>
+                {t(`paperTrading.ticket.sideHelp.${side}`)}
+              </InfoTip>
             </span>
             <SegmentedControl
               aria-label={t("paperTrading.ticket.side")}
@@ -317,14 +320,10 @@ export function OrderTicket({ portfolioId, mode = 'advanced', onBusyChange }: Or
                 {t("paperTrading.ticket.sides.sell")}
               </SegmentedControlItem>
             </SegmentedControl>
-            <span className="text-caption-1-medium text-text-tertiary">
-              {t(`paperTrading.ticket.sideHelp.${side}`)}
-            </span>
           </div>
 
           <Input
             label={t(simple ? 'paperTrading.workflow.shareCount' : "paperTrading.ticket.quantity")}
-            hint={t("paperTrading.ticket.quantityHint")}
             type="number"
             min={1}
             step={1}
@@ -338,7 +337,8 @@ export function OrderTicket({ portfolioId, mode = 'advanced', onBusyChange }: Or
             }}
           />
 
-          <div className="flex flex-col gap-2">
+          {/* Pinned to the bottom so it lines up with Confirm in the cost card. */}
+          <div className="mt-auto flex flex-col gap-2">
           <p id={guidanceId} hidden={!simple} aria-live="polite"
             className="text-body-2-regular text-text-secondary">
             {t(`paperTrading.workflow.guidance.${guidanceKey}`)}
@@ -346,7 +346,8 @@ export function OrderTicket({ portfolioId, mode = 'advanced', onBusyChange }: Or
           <div className={cx('grid grid-cols-1 gap-2', !simple && 'sm:grid-cols-2')}>
             <Button
               type={simple && !matchesEstimate ? 'submit' : 'button'}
-              variant={simple ? 'primary' : 'secondary'}
+              // Once the cost is shown, Confirm is the one primary action.
+              variant={simple && !matchesEstimate ? 'primary' : 'secondary'}
               leadingIcon={RiFileList3Line}
               onClick={simple && !matchesEstimate ? undefined : handlePreview}
               disabled={!canPreview}
@@ -366,16 +367,10 @@ export function OrderTicket({ portfolioId, mode = 'advanced', onBusyChange }: Or
           </div>
           </div>
 
-          <TradingDetails title={t('paperTrading.workflow.howTradesWork')} expanded={!simple}
-            className={!simple ? 'order-first' : undefined}>
-            <AppNotice title={t("paperTrading.ticket.guide.title")}>
-              {t("paperTrading.ticket.guide.body")}
-            </AppNotice>
-          </TradingDetails>
         </div>
       </Card>
 
-      <div ref={reviewRef} tabIndex={-1} className="min-w-0 scroll-mt-24 outline-none"
+      <div ref={reviewRef} tabIndex={-1} className="min-w-0 scroll-mt-24 outline-none [&>section]:h-full"
         role="region" aria-label={t('paperTrading.workflow.tradeReview')}
         hidden={simple && !storedEstimate && !estimateMutation.isPending && !estimateErrorKey}>
       <EstimatePanel

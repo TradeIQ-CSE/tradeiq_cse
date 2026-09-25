@@ -1,13 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import {
-  RiStarFill,
-  RiStarLine,
-} from "@remixicon/react";
 import { parseDate } from "@internationalized/date";
-import { Button } from "../../components/base/buttons/button";
-import { Chip } from "../../components/base/badges/chip";
+import { cx } from "../../utils/cx";
 import { DatePicker } from "../../components/base/date-picker/date-picker";
 import { Pagination } from "../../components/base/pagination/pagination";
 import { Select, SelectItem } from "../../components/base/select/select";
@@ -32,6 +27,7 @@ import { useSectorOptions } from "./useSectorOptions";
 import { IndexOverview } from "./IndexOverview";
 import { DataAvailability } from "./DataAvailability";
 import { TopMovers } from "./TopMovers";
+import { WatchButton } from "../watchlist/WatchButton";
 import { SecuritySectorIcon } from "./SecuritySectorIcon";
 import {
   formatCount,
@@ -52,7 +48,6 @@ export function MarketsPage() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [selectedTradingDate, setSelectedTradingDate] = useState<string>("");
   const [selectedSector, setSelectedSector] = useState<string>("");
-  const [watchedSymbols, setWatchedSymbols] = useState<Set<string>>(new Set());
 
   const {
     data: sectorOptions,
@@ -79,6 +74,10 @@ export function MarketsPage() {
   const availableFrom = data?.meta?.available_from ?? undefined;
   const availableTo = data?.meta?.available_to ?? undefined;
   const tradingDate = selectedTradingDate || resolvedAsOf;
+  // Most listings carry no P/E yet; a column of dashes is noise, so it only
+  // appears when a row on this page has one.
+  const showPe = (data?.data ?? []).some((security) => security.pe_ratio !== null);
+  const columnCount = showPe ? 9 : 8;
   const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const dash = t("markets.empty");
   const pageDescription = [
@@ -90,15 +89,6 @@ export function MarketsPage() {
   ]
     .filter(Boolean)
     .join(" · ");
-
-  function toggleWatch(symbol: string) {
-    setWatchedSymbols((prev) => {
-      const next = new Set(prev);
-      if (next.has(symbol)) next.delete(symbol);
-      else next.add(symbol);
-      return next;
-    });
-  }
 
   function toggleSort(next: SecuritiesSort) {
     setSecuritySort(next);
@@ -175,28 +165,6 @@ export function MarketsPage() {
               {t("markets.filters.sectorUnavailableHelp")}
             </span>
           )}
-        </div>
-
-        <div
-          className="flex min-w-0 flex-1 flex-col gap-1 sm:max-w-56"
-          title={t("markets.unavailable.marketCap")}
-        >
-          <span className="text-body-2-medium text-text-secondary">
-            {t("markets.filters.marketCap")}
-          </span>
-          <Select
-            aria-label={t("markets.filters.selectMarketCap")}
-            className="w-full"
-            selectedKey="unavailable"
-            isDisabled
-          >
-            <SelectItem
-              id="unavailable"
-              textValue={t("markets.filters.selectMarketCap")}
-            >
-              {t("markets.filters.selectMarketCap")}
-            </SelectItem>
-          </Select>
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col gap-1 sm:ml-auto sm:max-w-56 sm:items-end">
@@ -308,12 +276,14 @@ export function MarketsPage() {
                         label={t("markets.columns.volume")}
                       />
                     </th>
-                    <th scope="col" className="market-numeric-heading">
-                      <MarketTerm
-                        term="peRatio"
-                        label={t("markets.columns.peRatio")}
-                      />
-                    </th>
+                    {showPe && (
+                      <th scope="col" className="market-numeric-heading">
+                        <MarketTerm
+                          term="peRatio"
+                          label={t("markets.columns.peRatio")}
+                        />
+                      </th>
+                    )}
                     <th scope="col" className="market-watch-heading">
                       {t("markets.columns.watch")}
                     </th>
@@ -323,7 +293,7 @@ export function MarketsPage() {
                   {isPending && !data
                     ? Array.from({ length: 8 }).map((_, i) => (
                         <tr key={i}>
-                          <td colSpan={9}>
+                          <td colSpan={columnCount}>
                             <div className="h-5 w-full animate-pulse rounded bg-background-tertiary-default" />
                           </td>
                         </tr>
@@ -333,8 +303,14 @@ export function MarketsPage() {
                           security.shares_outstanding,
                           security.price,
                         );
-                        const positive = (security.change ?? 0) >= 0;
-                        const isWatched = watchedSymbols.has(security.symbol);
+                        const changeTone = cx(
+                          "text-body-medium",
+                          !security.change
+                            ? "text-text-secondary"
+                            : security.change > 0
+                              ? "text-status-lime-text"
+                              : "text-status-rose-text",
+                        );
                         return (
                           <tr key={security.symbol}>
                             <td>
@@ -350,29 +326,21 @@ export function MarketsPage() {
                                   <span className="text-body-medium text-text-primary">
                                     {security.symbol}
                                   </span>
-                                  <span className="max-w-52 truncate text-body-2-medium text-text-tertiary">
+                                  <span className="max-w-52 truncate text-body-2-regular text-text-secondary">
                                     {security.company_name}
                                   </span>
                                 </Link>
                               </div>
                             </td>
                             <td>
-                              {security.sector ? (
-                                <Chip variant="subtle" color="soft">
-                                  {security.sector.name}
-                                </Chip>
-                              ) : (
-                                dash
-                              )}
+                              <span className="text-body-2-regular text-text-secondary">
+                                {security.sector ? security.sector.name : dash}
+                              </span>
                             </td>
                             <td>
-                              {band ? (
-                                <Chip variant="subtle" color="neutral">
-                                  {t(`markets.cap.${band}`)}
-                                </Chip>
-                              ) : (
-                                dash
-                              )}
+                              <span className="text-body-2-regular text-text-secondary">
+                                {band ? t(`markets.cap.${band}`) : dash}
+                              </span>
                             </td>
                             <td className="text-right tabular-nums">
                               {security.price !== null
@@ -381,24 +349,18 @@ export function MarketsPage() {
                             </td>
                             <td className="text-right tabular-nums">
                               {security.change !== null ? (
-                                <Chip
-                                  variant="bold"
-                                  color={positive ? "lime" : "rose"}
-                                >
+                                <span className={changeTone}>
                                   {formatSigned(security.change, 2, locale)}
-                                </Chip>
+                                </span>
                               ) : (
                                 dash
                               )}
                             </td>
                             <td className="text-right tabular-nums">
                               {security.change_pct !== null ? (
-                                <Chip
-                                  variant="bold"
-                                  color={positive ? "lime" : "rose"}
-                                >
+                                <span className={changeTone}>
                                   {`${formatSigned(security.change_pct, 2, locale)}%`}
-                                </Chip>
+                                </span>
                               ) : (
                                 dash
                               )}
@@ -408,37 +370,15 @@ export function MarketsPage() {
                                 ? formatVolume(security.volume, locale)
                                 : dash}
                             </td>
-                            <td className="text-right tabular-nums">
-                              {security.pe_ratio !== null
-                                ? formatPrice(security.pe_ratio, locale)
-                                : dash}
-                            </td>
+                            {showPe && (
+                              <td className="text-right tabular-nums">
+                                {security.pe_ratio !== null
+                                  ? formatPrice(security.pe_ratio, locale)
+                                  : dash}
+                              </td>
+                            )}
                             <td className="market-watch-cell">
-                              <Button
-                                variant="secondary"
-                                size="small"
-                                iconOnly
-                                leadingIcon={
-                                  isWatched ? RiStarFill : RiStarLine
-                                }
-                                onClick={() => toggleWatch(security.symbol)}
-                                aria-pressed={isWatched}
-                                aria-label={t(
-                                  isWatched
-                                    ? "markets.watch.remove"
-                                    : "markets.watch.add",
-                                )}
-                                title={t(
-                                  isWatched
-                                    ? "markets.watch.remove"
-                                    : "markets.watch.add",
-                                )}
-                                className={
-                                  isWatched
-                                    ? "border-status-yellow-text text-status-yellow-text"
-                                    : undefined
-                                }
-                              />
+                              <WatchButton symbol={security.symbol} />
                             </td>
                           </tr>
                         );

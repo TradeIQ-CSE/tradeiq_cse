@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { RiAddLine } from "@remixicon/react";
 import { Button } from "../../components/base/buttons/button";
@@ -15,6 +16,8 @@ interface PortfolioSelectorProps {
   onCreateNew: () => void;
   compact?: boolean;
   disabled?: boolean;
+  /** Page-specific control shown in the same row, e.g. the valuation date. */
+  extra?: ReactNode;
 }
 
 // Native <select> + <button>, not a styled <div onClick> menu — the paper
@@ -27,6 +30,7 @@ export function PortfolioSelector({
   onCreateNew,
   compact = false,
   disabled = false,
+  extra,
 }: PortfolioSelectorProps) {
   const { t, i18n } = useTranslation();
   const selected = portfolios.find((portfolio) => portfolio.portfolio_id === selectedId);
@@ -72,6 +76,7 @@ export function PortfolioSelector({
           </span>
         )}
       </div>
+      {extra}
       <TradingDetails className="sm:ml-auto" title={t('paperTrading.workflow.manageAccounts')} expanded={!compact} disabled={disabled}>
         <Button
         className="sm:ml-auto"

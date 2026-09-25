@@ -23,6 +23,34 @@ import {
 // (`{ data, meta }`), a failure body is `{ error: { code, message, trace_id } }`
 // because `getEnvelope` throws `new ApiError(body.error)`.
 export const handlers = [
+  // docs/api/watchlist-v1.md. Stateless: a test that needs a populated or
+  // changing list overrides these with server.use(...).
+  http.get('*/watchlist', () => {
+    return HttpResponse.json({ data: { limit: 10, items: [] } });
+  }),
+
+  http.post('*/watchlist', async ({ request }) => {
+    const { symbol } = (await request.json()) as { symbol: string };
+    return HttpResponse.json({
+      data: {
+        limit: 10,
+        items: [
+          {
+            symbol,
+            company_name: `${symbol} PLC`,
+            added_at: '2026-09-01T00:00:00.000Z',
+            trade_date: '2026-09-24',
+            close: 10,
+            change: 0,
+            change_pct: 0,
+          },
+        ],
+      },
+    });
+  }),
+
+  http.delete('*/watchlist/:symbol', () => new HttpResponse(null, { status: 204 })),
+
   http.get('*/market/overview', () => {
     return HttpResponse.json({ data: marketOverviewFixture });
   }),
