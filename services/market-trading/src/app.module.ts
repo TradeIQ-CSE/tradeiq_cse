@@ -18,6 +18,7 @@ import { SecuritiesModule } from './securities/securities.module';
 import { BacktestRunsModule } from './backtest-runs/backtest-runs.module';
 import { EodIngestionModule } from './eod-ingestion/eod-ingestion.module';
 import { WatchlistModule } from './watchlist/watchlist.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { WatchlistModule } from './watchlist/watchlist.module';
     BacktestRunsModule,
     EodIngestionModule,
     WatchlistModule,
+    AnalyticsModule,
   ],
 })
 export class AppModule {}

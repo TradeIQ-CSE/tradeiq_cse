@@ -125,15 +125,80 @@
       "failed": "Couldn’t update your watchlist · Try again"
     }
   },
+  "analyticsPage": {
+    "eyebrow": "Analytics",
+    "title": "How your practice is going",
+    "description": "Your practice portfolio and backtests next to the market",
+    "detailToggle": "More detail",
+    "loading": "Updating",
+    "portfolio": {
+      "title": "Your practice portfolio",
+      "help": "Its value each day, from the shares you held and their closing prices, next to the market over the same days",
+      "pick": "Portfolio",
+      "since": "Since {{date}}",
+      "pricesFrom": "Closing prices from {{date}}",
+      "yours": "Your portfolio",
+      "yourReturn": "Your return",
+      "marketReturn": "The market (ASPI)",
+      "difference": "Difference",
+      "verdict": {
+        "ahead": "You're ahead of the market by {{gap}}%",
+        "behind": "You're behind the market by {{gap}}%",
+        "level": "You're level with the market"
+      },
+      "oneDay": "The chart starts after your next trading day",
+      "noPrices": "No closing prices yet to value your portfolio",
+      "empty": "Practise buying and selling to see how you do against the market",
+      "startTrading": "Practise a trade",
+      "unreachable": "Couldn’t load your portfolio’s performance · Try again"
+    },
+    "backtests": {
+      "title": "Your backtests",
+      "count_one": "{{count}} test",
+      "count_other": "{{count}} tests",
+      "new": "Run a backtest",
+      "tally": "Beat the market in {{beat}} of {{count}} tests",
+      "empty": "No saved backtests yet · Run one to see it here",
+      "running": "Running",
+      "failed": "Didn’t finish",
+      "range": "{{from}} to {{to}}",
+      "openLabel": "See the {{symbol}} backtest",
+      "page": "Page {{page}} of {{lastPage}}",
+      "previous": "Previous",
+      "next": "Next",
+      "unreachable": "Couldn’t load your backtests · Try again",
+      "columns": {
+        "company": "Company",
+        "dates": "Dates",
+        "result": "Your result",
+        "market": "The market",
+        "trades": "Trades",
+        "finalValue": "Final value",
+        "open": "See"
+      }
+    },
+    "detail": {
+      "biggestDrop": "Biggest drop",
+      "swings": "Ups and downs",
+      "bestWorst": "Best · worst day"
+    },
+    "terms": {
+      "aspi": "ASPI follows the prices of every company on the CSE, so it shows how the whole market did",
+      "sl20": "The S&P Sri Lanka 20 follows the 20 largest companies on the CSE",
+      "difference": "Your return minus the market’s · Above zero means you did better",
+      "sameDates": "How ASPI changed over the same dates as the test",
+      "drawdown": "The largest fall from a high point before it recovered · Smaller is calmer",
+      "volatility": "How much the value typically swings in a year · Higher means a bumpier ride",
+      "bestWorst": "The biggest one-day rise and the biggest one-day fall"
+    },
+    "chart": {
+      "label": "Your return and the market’s each day",
+      "date": "Date"
+    },
+    "dataGap": "Data gap"
+  },
   "plannedFeatures": {
     "comingSoon": "Coming soon",
-    "analytics": {
-      "eyebrow": "Analytics",
-      "title": "See how your practice is going",
-      "description": "Charts of your portfolio's value and returns over time",
-      "meanwhile": "For now, your portfolio shows today's value and profit or loss",
-      "alternative": "Open your portfolio"
-    },
     "aiInsights": {
       "eyebrow": "AI insights",
       "title": "Plain-language notes on companies",
