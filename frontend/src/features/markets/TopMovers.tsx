@@ -9,7 +9,9 @@ import { MarketTerm } from "../../components/domain/market-term";
 import { cx } from "../../utils/cx";
 import { localeFor } from "../../i18n";
 import { ApiError } from "../../lib/api";
+import { formatGapBoundary } from "../../lib/data-gaps";
 import { formatPrice, formatSigned, formatVolume } from "./format";
+import { MarketSectionHeader } from "./MarketSectionHeader";
 import { MarketRanking, RankingList } from "./types";
 import { useMarketOverview } from "./useMarketOverview";
 
@@ -55,7 +57,7 @@ export function TopMovers({ asOf, sector }: TopMoversProps) {
 
   return (
     <section
-      className="relative overflow-hidden rounded-3xl border border-border-table bg-background-primary-default shadow-xs"
+      className="relative flex flex-col gap-4 overflow-hidden rounded-3xl border border-border-table bg-background-primary-default p-4 shadow-xs sm:p-5"
       aria-busy={isFetching}
     >
       {isFetching && (
@@ -66,19 +68,16 @@ export function TopMovers({ asOf, sector }: TopMoversProps) {
         />
       )}
 
-      <div className="flex flex-col gap-3 px-4 pt-4 pb-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:pt-5">
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <h2 className="text-headline-medium text-text-primary">
-            {t("markets.movers.title")}
-          </h2>
-          <p className="text-body-2-medium text-text-tertiary">
-            {data?.data?.as_of
-              ? t("markets.asOf", { date: data.data.as_of })
-              : t("markets.movers.subtitle")}
-          </p>
-        </div>
-
-        <div className="max-w-full overflow-x-auto pb-0.5">
+      <MarketSectionHeader
+        title={t("markets.movers.title")}
+        subtitle={
+          data?.data?.as_of
+            ? t("markets.movers.on", {
+                date: formatGapBoundary(data.data.as_of, locale),
+              })
+            : t("markets.movers.subtitle")
+        }
+        aside={
           <SegmentedControl
             aria-label={t("markets.movers.title")}
             selectedKeys={new Set([list])}
@@ -93,17 +92,17 @@ export function TopMovers({ asOf, sector }: TopMoversProps) {
               </SegmentedControlItem>
             ))}
           </SegmentedControl>
-        </div>
-      </div>
+        }
+      />
 
       {isError ? (
-        <p className="px-4 py-8 text-center text-body-medium text-status-rose-text">
+        <p className="py-8 text-center text-body-medium text-status-rose-text">
           {error instanceof ApiError
             ? error.body.message
             : t("markets.movers.unreachable")}
         </p>
       ) : isPending ? (
-        <ul className="flex flex-col gap-2 px-4 pb-4">
+        <ul className="flex flex-col gap-2">
           {Array.from({ length: ROW_COUNT }).map((_, index) => (
             <li
               key={index}
@@ -112,12 +111,12 @@ export function TopMovers({ asOf, sector }: TopMoversProps) {
           ))}
         </ul>
       ) : rows.length === 0 ? (
-        <p className="px-4 py-8 text-center text-body-medium text-text-secondary">
+        <p className="py-8 text-center text-body-medium text-text-secondary">
           {t("markets.movers.empty")}
         </p>
       ) : (
-        <div className="flex flex-col gap-1 px-2 pb-3 sm:px-3 sm:pb-4">
-          <div className="grid grid-cols-[minmax(0,1fr)_5rem] items-center gap-2 px-2 text-caption-1-semibold text-text-tertiary sm:grid-cols-[minmax(0,1fr)_6rem_5rem] sm:gap-3">
+        <div className="-mx-2 flex flex-col gap-1">
+          <div className="grid grid-cols-[minmax(0,1fr)_5rem] items-center gap-2 px-2 text-caption-1-medium text-text-secondary sm:grid-cols-[minmax(0,1fr)_6rem_5rem] sm:gap-3">
             <MarketTerm
               term="security"
               label={t("markets.movers.columns.security")}

@@ -1,3 +1,4 @@
+import { formatDay } from './descriptions';
 import { BacktestConfig, StepKey, ValidationError, ValidationResult } from './types';
 import { CSE_DATASET_MIN_DATE } from './defaults';
 import { backtestDateGap, dateInGapMessage, DataGap } from '../../../lib/data-gaps';
@@ -29,7 +30,7 @@ export function validateBacktestConfig(
       errors.push({
         step: 'security',
         field: 'symbol',
-        message: 'Security selection is required.',
+        message: 'Pick a company',
       });
     }
   }
@@ -42,13 +43,13 @@ export function validateBacktestConfig(
       errors.push({
         step: 'period',
         field: 'startDate',
-        message: 'Start date is required.',
+        message: 'Pick a start date',
       });
     } else if (!ISO_DATE_REGEX.test(startDate) || isNaN(Date.parse(startDate))) {
       errors.push({
         step: 'period',
         field: 'startDate',
-        message: 'Start date must be a valid calendar date in YYYY-MM-DD format.',
+        message: 'Pick a real start date',
       });
     }
 
@@ -56,13 +57,13 @@ export function validateBacktestConfig(
       errors.push({
         step: 'period',
         field: 'endDate',
-        message: 'End date is required.',
+        message: 'Pick an end date',
       });
     } else if (!ISO_DATE_REGEX.test(endDate) || isNaN(Date.parse(endDate))) {
       errors.push({
         step: 'period',
         field: 'endDate',
-        message: 'End date must be a valid calendar date in YYYY-MM-DD format.',
+        message: 'Pick a real end date',
       });
     }
 
@@ -74,7 +75,7 @@ export function validateBacktestConfig(
         errors.push({
           step: 'period',
           field: 'startDate',
-          message: 'Start date must be strictly before end date.',
+          message: 'The start date must be before the end date',
         });
       }
 
@@ -85,7 +86,7 @@ export function validateBacktestConfig(
         errors.push({
           step: 'period',
           field: 'startDate',
-          message: `Start date cannot precede the available dataset coverage (${CSE_DATASET_MIN_DATE}).`,
+          message: `Prices start on ${formatDay(CSE_DATASET_MIN_DATE)} · Pick a later start date`,
         });
       }
 
@@ -94,7 +95,7 @@ export function validateBacktestConfig(
         errors.push({
           step: 'period',
           field: 'startDate',
-          message: `Start date precedes historical price coverage for ${config.security.symbol} (${config.security.dataFrom}).`,
+          message: `${config.security.symbol} prices start on ${formatDay(config.security.dataFrom)} · Pick a later start date`,
         });
       }
 
@@ -102,7 +103,7 @@ export function validateBacktestConfig(
         errors.push({
           step: 'period',
           field: 'endDate',
-          message: `End date exceeds historical price coverage for ${config.security.symbol} (${config.security.dataTo}).`,
+          message: `${config.security.symbol} prices end on ${formatDay(config.security.dataTo)} · Pick an earlier end date`,
         });
       }
 
@@ -141,7 +142,7 @@ export function validateBacktestConfig(
       errors.push({
         step: 'rules',
         field: 'buy',
-        message: 'Exactly one buy condition is required.',
+        message: 'Pick one buy rule',
       });
     } else {
       const validBuyTypes = ['period_start', 'price_falls_to', 'price_falls_pct_from_period_start'];
@@ -149,7 +150,7 @@ export function validateBacktestConfig(
         errors.push({
           step: 'rules',
           field: 'buy.type',
-          message: `Unsupported buy condition type '${buy.type}'. Indicator strategies are not supported in v1 DSL.`,
+          message: `That buy rule isn't available · Pick another one`,
         });
       } else {
         if (buy.type === 'price_falls_to') {
@@ -157,7 +158,7 @@ export function validateBacktestConfig(
             errors.push({
               step: 'rules',
               field: 'buy.value',
-              message: 'Target buy price must be a positive number greater than 0 LKR.',
+              message: 'Enter a buy price above LKR 0',
             });
           }
         } else if (buy.type === 'price_falls_pct_from_period_start') {
@@ -165,13 +166,13 @@ export function validateBacktestConfig(
             errors.push({
               step: 'rules',
               field: 'buy.value',
-              message: 'Price drop percentage must be greater than 0%.',
+              message: 'Enter a fall bigger than 0%',
             });
           } else if (buy.value >= 100) {
             errors.push({
               step: 'rules',
               field: 'buy.value',
-              message: 'Price drop percentage must be less than 100%.',
+              message: 'Enter a fall smaller than 100%',
             });
           }
         }
@@ -183,7 +184,7 @@ export function validateBacktestConfig(
       errors.push({
         step: 'rules',
         field: 'sells',
-        message: 'At least one sell condition is required.',
+        message: 'Pick at least one sell rule',
       });
     } else {
       const validSellTypes = ['target_price', 'take_profit_pct', 'stop_loss_pct', 'end_of_period'];
@@ -196,7 +197,7 @@ export function validateBacktestConfig(
           errors.push({
             step: 'rules',
             field: `${fieldName}.type`,
-            message: `Unsupported sell condition type '${sell.type}'. Indicator strategies are not supported in v1 DSL.`,
+            message: `That sell rule isn't available · Pick another one`,
           });
           return;
         }
@@ -205,7 +206,7 @@ export function validateBacktestConfig(
           errors.push({
             step: 'rules',
             field: `${fieldName}.type`,
-            message: `Duplicate sell condition type '${sell.type}'. Each exit rule type can only be added once.`,
+            message: `Each sell rule can only be added once`,
           });
         }
         seenTypes.add(sell.type);
@@ -215,7 +216,7 @@ export function validateBacktestConfig(
             errors.push({
               step: 'rules',
               field: `${fieldName}.value`,
-              message: 'Target exit price must be a positive number greater than 0 LKR.',
+              message: 'Enter a sell price above LKR 0',
             });
           }
         } else if (sell.type === 'take_profit_pct') {
@@ -223,13 +224,13 @@ export function validateBacktestConfig(
             errors.push({
               step: 'rules',
               field: `${fieldName}.value`,
-              message: 'Take profit percentage must be greater than 0%.',
+              message: 'Enter a rise bigger than 0%',
             });
           } else if (sell.value > 1000) {
             errors.push({
               step: 'rules',
               field: `${fieldName}.value`,
-              message: 'Take profit percentage cannot exceed 1000%.',
+              message: 'Enter a rise of 1000% or less',
             });
           }
         } else if (sell.type === 'stop_loss_pct') {
@@ -237,13 +238,13 @@ export function validateBacktestConfig(
             errors.push({
               step: 'rules',
               field: `${fieldName}.value`,
-              message: 'Stop loss percentage must be greater than 0%.',
+              message: 'Enter a fall bigger than 0%',
             });
           } else if (sell.value >= 100) {
             errors.push({
               step: 'rules',
               field: `${fieldName}.value`,
-              message: 'Stop loss percentage must be less than 100%.',
+              message: 'Enter a fall smaller than 100%',
             });
           }
         }
@@ -257,7 +258,7 @@ export function validateBacktestConfig(
             errors.push({
               step: 'rules',
               field: 'sells',
-              message: `Incompatible rules: Target exit price (${targetPriceSell.value} LKR) must be higher than buy price (${buy.value} LKR).`,
+              message: `The sell price (LKR ${targetPriceSell.value}) must be higher than the buy price (LKR ${buy.value})`,
             });
           }
         }
@@ -274,7 +275,7 @@ export function validateBacktestConfig(
       errors.push({
         step: 'execution',
         field: 'positionSizing.type',
-        message: 'Position sizing strategy is required.',
+        message: 'Pick how much each buy uses',
       });
     } else {
       if (sizing.type === 'percentage') {
@@ -282,7 +283,7 @@ export function validateBacktestConfig(
           errors.push({
             step: 'execution',
             field: 'positionSizing.value',
-            message: 'Position sizing percentage must be between 1% and 100%.',
+            message: 'Enter a share of your portfolio between 1% and 100%',
           });
         }
       } else if (sizing.type === 'absolute') {
@@ -290,7 +291,7 @@ export function validateBacktestConfig(
           errors.push({
             step: 'execution',
             field: 'positionSizing.value',
-            message: 'Absolute allocation amount must be greater than 0 LKR.',
+            message: 'Enter an amount above LKR 0',
           });
         }
       } else if (sizing.type === 'fixed_quantity') {
@@ -298,7 +299,7 @@ export function validateBacktestConfig(
           errors.push({
             step: 'execution',
             field: 'positionSizing.value',
-            message: 'Fixed share quantity must be a positive integer whole number.',
+            message: 'Enter a whole number of shares above 0',
           });
         }
       }
@@ -312,7 +313,7 @@ export function validateBacktestConfig(
           errors.push({
             step: 'execution',
             field: `fees.${feeKey}`,
-            message: `${feeKey} fee rate cannot be negative.`,
+            message: `Charges can't be below 0%`,
           });
         }
       }
@@ -326,19 +327,19 @@ export function validateBacktestConfig(
       errors.push({
         step: 'portfolio',
         field: 'startingCapital',
-        message: 'Starting capital is required.',
+        message: 'Enter your starting cash',
       });
     } else if (capital <= 0) {
       errors.push({
         step: 'portfolio',
         field: 'startingCapital',
-        message: 'Starting capital must be greater than 0 LKR.',
+        message: 'Enter starting cash above LKR 0',
       });
     } else if (!Number.isFinite(capital)) {
       errors.push({
         step: 'portfolio',
         field: 'startingCapital',
-        message: 'Starting capital must be a finite number.',
+        message: 'Enter your starting cash as a number',
       });
     }
   }
@@ -349,7 +350,7 @@ export function validateBacktestConfig(
       errors.push({
         step: 'metrics',
         field: 'selected',
-        message: 'Please select at least one metric to track.',
+        message: 'Pick at least one result to show',
       });
     }
   }

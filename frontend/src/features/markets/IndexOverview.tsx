@@ -1,10 +1,8 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { RiInformationLine } from "@remixicon/react";
 import { IndexLineChart } from "../../components/charts/IndexLineChart";
 import { AppPanel } from "../../components/application/layout/application-layout";
-import { Chip } from "../../components/base/badges/chip";
 import {
   SegmentedControl,
   SegmentedControlItem,
@@ -13,14 +11,11 @@ import { cx } from "../../utils/cx";
 import { localeFor } from "../../i18n";
 import { ApiError } from "../../lib/api";
 import { formatPrice, formatSigned } from "./format";
-import {
-  DataGap,
-  formatGapBoundary,
-  formatGapProseRange,
-} from "../../lib/data-gaps";
+import { DataGap, formatGapBoundary } from "../../lib/data-gaps";
 import { Index, OhlcvRange } from "./types";
 import { useIndexValues, useIndices } from "./useIndices";
 import { useDataCoverage } from "./useDataCoverage";
+import { MarketSectionHeader } from "./MarketSectionHeader";
 import { OverviewView, overviewWindows, windowLabel } from "./overview-windows";
 
 // The user asked for these two specifically; /indices also carries the two
@@ -53,10 +48,10 @@ function IndexBlock({
         className="flex min-w-0 flex-col self-start hover:underline"
         aria-label={t("markets.viewDetails", { symbol: index.code })}
       >
-        <span className="text-title-2-semibold text-text-primary">
+        <span className="text-headline-semibold text-text-primary">
           {index.code}
         </span>
-        <span className="truncate text-body-2-medium text-text-tertiary">
+        <span className="truncate text-body-2-regular text-text-secondary">
           {index.name}
         </span>
       </Link>
@@ -68,13 +63,22 @@ function IndexBlock({
               {formatPrice(latest.close, locale)}
             </strong>
             {latest.change !== null && latest.change_pct !== null && (
-              <Chip variant="bold" color={positive ? "lime" : "rose"}>
+              <span
+                className={cx(
+                  "text-body-medium tabular-nums",
+                  latest.change === 0
+                    ? "text-text-secondary"
+                    : positive
+                      ? "text-status-lime-text"
+                      : "text-status-rose-text",
+                )}
+              >
                 {formatSigned(latest.change, 2, locale)} (
                 {formatSigned(latest.change_pct, 2, locale)}%)
-              </Chip>
+              </span>
             )}
           </div>
-          <span className="text-caption-1-regular text-text-tertiary">
+          <span className="text-caption-1-regular text-text-secondary">
             {latest.previous_date
               ? t("markets.indices.closeOnVs", {
                   date: formatGapBoundary(latest.date, locale),
@@ -118,11 +122,9 @@ function IndexBlock({
 }
 
 /**
- * The exchange's headline indices, given a heavier visual weight than a
- * security row — `AppPanel tone="glass"` is the same elevated surface
- * `PageIntro` uses, and the close values sit at page-title scale
- * (`text-title-1-medium`), not the smaller `StatSurface`/table scale used for
- * dataset counts and individual securities.
+ * The exchange's headline indices. The close values sit at page-title scale
+ * (`text-title-1-medium`), larger than the table below; the panel itself is
+ * the same plain surface as every other Markets section.
  *
  * The headline value is always the latest close. The charts never open on a
  * window that is mostly gap band: when the trailing year crosses a
@@ -169,18 +171,13 @@ export function IndexOverview() {
     );
 
   return (
-    <AppPanel tone="glass" className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <p className="text-caption-1-semibold text-status-blue-text">
-            {t("markets.indices.eyebrow")}
-          </p>
-          <p className="text-body-2-medium text-text-tertiary">
-            {t("markets.indices.subtitle")}
-          </p>
-        </div>
-        {windows && (
-          <div className="max-w-full overflow-x-auto pb-0.5">
+    <AppPanel className="flex flex-col gap-4">
+      <MarketSectionHeader
+        title={t("markets.indices.eyebrow")}
+        // The gap's dates are already listed once in Data coverage above.
+        subtitle={windows && t("markets.indices.gapNote")}
+        aside={
+          windows && (
             <SegmentedControl
               aria-label={t("markets.indices.windowLabel")}
               selectedKeys={new Set([view])}
@@ -198,23 +195,9 @@ export function IndexOverview() {
                 })}
               </SegmentedControlItem>
             </SegmentedControl>
-          </div>
-        )}
-      </div>
-
-      {windows && (
-        <p className="flex items-start gap-2 rounded-2xl bg-background-secondary-default px-3 py-2 text-body-2-medium text-text-secondary">
-          <RiInformationLine
-            aria-hidden
-            className="mt-0.5 size-4 shrink-0 text-foreground-icon-tertiary"
-          />
-          <span>
-            {t("markets.indices.gapNote", {
-              range: formatGapProseRange(windows.gap, locale),
-            })}
-          </span>
-        </p>
-      )}
+          )
+        }
+      />
 
       {isError ? (
         <p className="py-4 text-body-medium text-status-rose-text">

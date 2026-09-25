@@ -2,7 +2,6 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { RiArrowRightLine } from '@remixicon/react';
 import {
-  AppNotice,
   AppPage,
   AppPanel,
   PageIntro,
@@ -10,13 +9,19 @@ import {
 } from '../components/application/layout/application-layout';
 import { Button } from '../components/base/buttons/button';
 
-export type PlannedFeatureKey = 'aiInsights' | 'reports';
+export type PlannedFeatureKey = 'analytics' | 'aiInsights' | 'reports';
 
 const alternatives: Record<PlannedFeatureKey, string> = {
-  aiInsights: '/analytics',
-  reports: '/portfolio',
+  analytics: '/portfolio',
+  aiInsights: '/backtests/new',
+  reports: '/orders',
 };
 
+/**
+ * One layout for every feature that isn't built yet, the same as the
+ * Watchlist's empty state: say what it will do, then point at what works today.
+ * No placeholder figures are ever shown.
+ */
 export function PlannedFeaturePage({ feature }: { feature: PlannedFeatureKey }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -25,17 +30,17 @@ export function PlannedFeaturePage({ feature }: { feature: PlannedFeatureKey }) 
   return (
     <AppPage width="reading">
       <PageIntro
-        eyebrow={t('plannedFeatures.eyebrow')}
+        eyebrow={t(`${prefix}.eyebrow`)}
         title={t(`${prefix}.title`)}
         description={t(`${prefix}.description`)}
       />
 
       <AppPanel className="p-0 sm:p-0">
         <PageState
-          className="min-h-[20rem] border-0 bg-transparent"
+          className="min-h-[22rem] border-0 bg-transparent"
           kind="empty"
-          title={t('plannedFeatures.unavailableTitle')}
-          description={t(`${prefix}.unavailableDescription`)}
+          title={t('plannedFeatures.comingSoon')}
+          description={t(`${prefix}.meanwhile`)}
           action={
             <Button
               trailingIcon={RiArrowRightLine}
@@ -46,10 +51,6 @@ export function PlannedFeaturePage({ feature }: { feature: PlannedFeatureKey }) 
           }
         />
       </AppPanel>
-
-      <AppNotice title={t('plannedFeatures.noticeTitle')}>
-        {t('plannedFeatures.notice')}
-      </AppNotice>
     </AppPage>
   );
 }

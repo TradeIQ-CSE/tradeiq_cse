@@ -360,11 +360,11 @@
   --color-status-dot-yellow-halo:   var(--color-yellow-200);
   --color-status-dot-indigo-halo:   var(--color-indigo-100);
 
-  /* Ranked market bars use a restrained tint plus a dedicated high-contrast
-   * foreground. This avoids the broad candy-mint/pink blocks produced by the
-   * old 40% mix while preserving the magnitude encoding. */
-  --color-market-gain-bar:  color-mix(in srgb, var(--color-gain) 44%, var(--color-background-primary-default));
-  --color-market-loss-bar:  color-mix(in srgb, var(--color-loss) 42%, var(--color-background-primary-default));
+  /* Top-movers bars: the same tint as a gain/loss chip, so the ranking reads
+   * without a slab of solid colour behind every row; the figure itself uses
+   * the -text shade. */
+  --color-market-gain-bar:  var(--color-gain-surface);
+  --color-market-loss-bar:  var(--color-loss-surface);
   --color-market-gain-text: var(--color-gain-text);
   --color-market-loss-text: var(--color-loss-text);
 
@@ -620,8 +620,8 @@
   --color-status-dot-yellow-halo:   color-mix(in srgb, var(--color-yellow-800) 40%, transparent);
   --color-status-dot-indigo-halo:   color-mix(in srgb, var(--color-indigo-800) 40%, transparent);
 
-  --color-market-gain-bar:  color-mix(in srgb, var(--color-gain) 34%, var(--color-background-primary-default));
-  --color-market-loss-bar:  color-mix(in srgb, var(--color-loss) 32%, var(--color-background-primary-default));
+  --color-market-gain-bar:  var(--color-gain-surface);
+  --color-market-loss-bar:  var(--color-loss-surface);
   --color-market-gain-text: var(--color-gain-text);
   --color-market-loss-text: var(--color-loss-text);
 

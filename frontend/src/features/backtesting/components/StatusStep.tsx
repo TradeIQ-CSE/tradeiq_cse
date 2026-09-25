@@ -1,17 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   RiArrowLeftLine,
   RiCheckboxCircleLine,
   RiCloseCircleLine,
   RiHistoryLine,
+  RiLineChartLine,
   RiLoader4Line,
   RiRefreshLine,
   RiTimeLine,
   RiWallet3Line,
 } from "@remixicon/react";
 import { Button } from "@/components/base/buttons/button";
-import { Chip } from "@/components/base/badges/chip";
 import {
   AppNotice,
   AppPage,
@@ -33,36 +33,32 @@ import type {
 import { useDataCoverage } from "../../markets/useDataCoverage";
 import { crossingDataGaps, type DataGap } from "../../../lib/data-gaps";
 import { chartPalette } from "../../../components/charts/chart-theme";
+import { formatDay } from "../domain/descriptions";
+import { RunReveal } from "./RunReveal";
+import { TradeReason } from "./RuleList";
+import { useRunReveal } from "./useRunReveal";
 
 const MAX_TRANSIENT_RETRIES = 5;
 
 const STATUS_COPY = {
   queued: {
-    title: "Simulation Queued",
-    description:
-      "The run is waiting for the historical simulation worker to begin.",
-    color: "blue" as const,
+    title: "Waiting to start",
+    description: "Your test will start in a moment",
     Icon: RiTimeLine,
   },
   running: {
-    title: "Simulation in Progress...",
-    description:
-      "TradeIQ is checking the configured rules against the available daily bars.",
-    color: "yellow" as const,
+    title: "Running your test",
+    description: "Checking your rules against each trading day",
     Icon: RiLoader4Line,
   },
   completed: {
-    title: "Backtest Simulation Complete!",
-    description:
-      "The historical run finished. The figures below come from the persisted API result.",
-    color: "lime" as const,
+    title: "Your test is done",
+    description: "Here’s how your idea would have done",
     Icon: RiCheckboxCircleLine,
   },
   failed: {
-    title: "Simulation Failed",
-    description:
-      "The engine could not complete this run. Review the failure detail before trying again.",
-    color: "rose" as const,
+    title: "Your test couldn’t finish",
+    description: "Something went wrong. Please try again",
     Icon: RiCloseCircleLine,
   },
 };
@@ -157,9 +153,9 @@ function EquityCurvePreview({
 
   if (sampled.length === 0) {
     return (
-      <AppNotice title="No equity observations returned">
-        This completed run did not include equity-curve points.
-      </AppNotice>
+      <p className="text-body-2-regular text-text-secondary">
+        No daily values to show for this test
+      </p>
     );
   }
 
@@ -230,7 +226,7 @@ function EquityCurvePreview({
             const label = isClosure ? 'Market closed' : 'Data gap';
             const titleText = isClosure
               ? `Market closed, ${gap.from} to ${gap.to}`
-              : `No market data, ${gap.from} to ${gap.to}`;
+              : `Data gap, ${gap.from} to ${gap.to}`;
             return (
               <g key={`${gap.kind}-${gap.from}-${gap.to}`}>
                 <rect
@@ -276,21 +272,33 @@ function EquityCurvePreview({
         </svg>
       </div>
       <figcaption className="grid gap-2 text-body-2-regular text-text-secondary sm:grid-cols-3">
-        <span>{data.length.toLocaleString("en-LK")} daily observations</span>
+        <span>{formatDay(first.date)} to {formatDay(last.date)}</span>
         <span>
-          Range: {formatCurrency(minimum)} to {formatCurrency(maximum)}
+          Low {formatCurrency(minimum)} · High {formatCurrency(maximum)}
         </span>
         <span className="sm:text-right">
-          {first.date} to {last.date}
+          {data.length.toLocaleString("en-LK")} trading days
         </span>
       </figcaption>
       {totalGapSessions > 0 && (
         <p className="text-body-2-regular text-text-secondary">
-          Includes {totalGapSessions.toLocaleString("en-LK")} sessions without
-          market data.
+          Includes {totalGapSessions.toLocaleString("en-LK")} trading days in a
+          data gap
         </p>
       )}
     </figure>
+  );
+}
+
+/** The caveat line and the page's buttons, shared by saved and preview results. */
+export function ResultsFooter({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-body-2-regular text-text-secondary">
+        Based on daily closing prices and your settings · Past results don’t promise future ones
+      </p>
+      <div className="flex flex-col gap-2 sm:flex-row">{children}</div>
+    </div>
   );
 }
 
@@ -305,27 +313,27 @@ export function ResultsView({
     <div className="flex flex-col gap-5">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatSurface
-          label="Starting capital"
+          label="Starting cash"
           value={formatCurrency(results.initialCapital)}
-          supportingText="Hypothetical opening cash"
+          supportingText="Virtual money"
           icon={RiWallet3Line}
         />
         <StatSurface
-          label="Final equity"
+          label="Final value"
           value={formatCurrency(results.finalEquity)}
-          supportingText="Cash plus ending position value"
-          icon={RiCheckboxCircleLine}
+          supportingText="Cash plus shares held"
+          icon={RiLineChartLine}
         />
         <StatSurface
           label="Final cash"
           value={formatCurrency(results.finalCash)}
-          supportingText="Uninvested cash after the final bar"
+          supportingText="Cash left at the end"
           icon={RiWallet3Line}
         />
         <StatSurface
-          label="Trade count"
+          label="Trades"
           value={results.trades.length.toLocaleString("en-LK")}
-          supportingText="Executions returned in the trade ledger"
+          supportingText="Buys and sells"
           icon={RiHistoryLine}
         />
       </div>
@@ -333,10 +341,10 @@ export function ResultsView({
       <AppPanel className="flex flex-col gap-4">
         <div>
           <h2 className="text-headline-medium text-text-primary">
-            Equity through the period
+            Portfolio value over time
           </h2>
-          <p className="text-body-regular text-text-secondary">
-            Daily simulated portfolio equity returned by the backtest API.
+          <p className="text-body-2-regular text-text-secondary">
+            What your virtual portfolio was worth each trading day
           </p>
         </div>
         <EquityCurvePreview data={results.equityCurve} gaps={gaps} />
@@ -346,43 +354,39 @@ export function ResultsView({
         <div className="flex items-start justify-between gap-3 p-4 sm:p-5">
           <div>
             <h2 className="text-headline-medium text-text-primary">
-              Simulated trades
+              Trades
             </h2>
-            <p className="text-body-regular text-text-secondary">
-              {results.trades.length.toLocaleString("en-LK")} executions
-              returned for this historical run.
+            <p className="text-body-2-regular text-text-secondary">
+              {results.trades.length === 1
+                ? "1 buy or sell"
+                : `${results.trades.length.toLocaleString("en-LK")} buys and sells`}
             </p>
           </div>
         </div>
         {results.trades.length === 0 ? (
-          <div className="border-t border-separator-border p-4 sm:p-5">
-            <AppNotice title="No trades were triggered">
-              The configured entry rule did not produce an execution in the
-              selected period.
-            </AppNotice>
-          </div>
+          <p className="border-t border-separator-border p-4 text-body-2-regular text-text-secondary sm:p-5">
+            No trades. Your buy rule was never met in these dates
+          </p>
         ) : (
           <div className="overflow-x-auto border-t border-separator-border">
             <table className="w-full min-w-[760px] border-collapse text-left">
               <thead className="bg-background-secondary-default">
-                <tr className="text-caption-1-semibold text-text-secondary">
+                <tr className="text-caption-1-medium text-text-secondary">
                   <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Side</th>
+                  <th className="px-4 py-3">Type</th>
                   <th className="px-4 py-3 text-right">Price</th>
-                  <th className="px-4 py-3 text-right">Quantity</th>
+                  <th className="px-4 py-3 text-right">Shares</th>
                   <th className="px-4 py-3 text-right">Fees</th>
-                  <th className="px-4 py-3 text-right">Cash effect</th>
+                  <th className="px-4 py-3 text-right">Cash in or out</th>
                   <th className="px-4 py-3">Reason</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-separator-border">
                 {results.trades.map((trade) => (
                   <tr key={trade.id} className="text-body-2-regular text-text-primary">
-                    <td className="whitespace-nowrap px-4 py-3">{trade.date}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{formatDay(trade.date)}</td>
                     <td className="px-4 py-3">
-                      <Chip color={trade.type === "BUY" ? "blue" : "rose"}>
-                        {trade.type === "BUY" ? "Buy" : "Sell"}
-                      </Chip>
+                      {trade.type === "BUY" ? "Buy" : "Sell"}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums">
                       {formatCurrency(trade.executionPrice)}
@@ -403,8 +407,8 @@ export function ResultsView({
                     >
                       {formatCurrency(trade.netCashFlow)}
                     </td>
-                    <td className="max-w-64 px-4 py-3 text-text-secondary">
-                      {trade.reason}
+                    <td className="max-w-64 px-4 py-3">
+                      <TradeReason code={trade.reason} />
                     </td>
                   </tr>
                 ))}
@@ -507,100 +511,105 @@ export function StatusStep() {
     };
   }, [resultsVersion, runId, statusData?.status]);
 
+  const { playing, finish: finishReveal } = useRunReveal();
   const currentStatus = statusData?.status || "queued";
+  // Held on the intro until it finishes, so the "done" panel and the
+  // results never flash in underneath it.
+  const revealing = playing && currentStatus === "completed" && results !== null;
   const status = STATUS_COPY[currentStatus];
   const StatusIcon = status.Icon;
 
   return (
     <AppPage className="max-w-5xl">
       <PageIntro
-        eyebrow="Historical simulation"
-        title="Backtest run"
-        description="Follow the run from queue to completion, then review the persisted historical results returned by TradeIQ."
-        actions={<Chip color={status.color}>{currentStatus.toUpperCase()}</Chip>}
+        eyebrow="Backtesting"
+        title="Your test"
       />
 
-      <AppPanel className="flex flex-col items-center gap-5 py-8 text-center">
-        <span
-          className={cx(
-            "flex size-16 items-center justify-center rounded-full",
-            currentStatus === "completed" && "bg-status-lime-background text-status-lime-text",
-            currentStatus === "failed" && "bg-status-rose-background text-status-rose-text",
-            currentStatus === "running" && "bg-status-yellow-background text-status-yellow-text",
-            currentStatus === "queued" && "bg-status-blue-background text-status-blue-text",
-          )}
-        >
-          <StatusIcon
+      {revealing && results ? (
+        <RunReveal onDone={finishReveal} />
+      ) : (
+        <AppPanel className="flex flex-col items-center gap-5 py-8 text-center">
+          <span
             className={cx(
-              "size-8",
-              currentStatus === "running" && "animate-spin",
+              "flex size-16 items-center justify-center rounded-full",
+              currentStatus === "completed" && "bg-status-lime-background text-status-lime-text",
+              currentStatus === "failed" && "bg-status-rose-background text-status-rose-text",
+              currentStatus === "running" && "bg-status-yellow-background text-status-yellow-text",
+              currentStatus === "queued" && "bg-status-blue-background text-status-blue-text",
             )}
-            aria-hidden
-          />
-        </span>
-        <div className="flex max-w-2xl flex-col gap-1">
-          <h1 className="text-title-1-medium text-text-primary">{status.title}</h1>
-          <p className="text-body-regular text-text-secondary">
-            {currentStatus === "failed" && statusData?.failureReason
-              ? statusData.failureReason
-              : status.description}
-          </p>
-        </div>
+          >
+            <StatusIcon
+              className={cx(
+                "size-8",
+                currentStatus === "running" && "animate-spin",
+              )}
+              aria-hidden
+            />
+          </span>
+          <div className="flex max-w-2xl flex-col gap-1">
+            <h2 className="text-title-2-medium text-text-primary">{status.title}</h2>
+            <p className="text-body-regular text-text-secondary">
+              {currentStatus === "failed" && statusData?.failureReason
+                ? statusData.failureReason
+                : status.description}
+            </p>
+          </div>
 
-        <dl className="grid w-full max-w-2xl gap-3 rounded-2xl border border-border-button-default bg-background-secondary-default p-4 text-left sm:grid-cols-3">
-          <div className="min-w-0">
-            <dt className="text-caption-1-medium text-text-tertiary">Run ID</dt>
-            <dd className="truncate text-body-2-medium text-text-primary" title={runId}>
-              {runId || "Unavailable"}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-caption-1-medium text-text-tertiary">Started</dt>
-            <dd className="text-body-2-medium text-text-primary">
-              {statusData?.startedAt
-                ? new Date(statusData.startedAt).toLocaleString()
-                : "Waiting"}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-caption-1-medium text-text-tertiary">Completed</dt>
-            <dd className="text-body-2-medium text-text-primary">
-              {statusData?.completedAt
-                ? new Date(statusData.completedAt).toLocaleString()
-                : "Not yet"}
-            </dd>
-          </div>
-        </dl>
-
-        {error && (
-          <AppNotice tone="error" title="Status check failed" className="w-full max-w-2xl text-left">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <span>{error}</span>
-              <Button
-                variant="secondary"
-                size="small"
-                leadingIcon={RiRefreshLine}
-                onClick={retryStatus}
-              >
-                Retry Status Check
-              </Button>
+          <dl className="grid w-full max-w-2xl gap-3 rounded-2xl border border-border-button-default bg-background-secondary-default p-4 text-left sm:grid-cols-3">
+            <div className="min-w-0">
+              <dt className="text-caption-1-medium text-text-secondary">Test ID</dt>
+              <dd className="truncate text-body-2-medium text-text-primary" title={runId}>
+                {runId || "Unavailable"}
+              </dd>
             </div>
-          </AppNotice>
-        )}
-      </AppPanel>
+            <div>
+              <dt className="text-caption-1-medium text-text-secondary">Started</dt>
+              <dd className="text-body-2-medium text-text-primary">
+                {statusData?.startedAt
+                  ? new Date(statusData.startedAt).toLocaleString()
+                  : "Waiting"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-caption-1-medium text-text-secondary">Finished</dt>
+              <dd className="text-body-2-medium text-text-primary">
+                {statusData?.completedAt
+                  ? new Date(statusData.completedAt).toLocaleString()
+                  : "Not yet"}
+              </dd>
+            </div>
+          </dl>
 
-      {currentStatus === "completed" && (
+          {error && (
+            <AppNotice tone="error" title="Couldn’t check on your test" className="w-full max-w-2xl text-left">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <span>{error}</span>
+                <Button
+                  variant="secondary"
+                  size="small"
+                  leadingIcon={RiRefreshLine}
+                  onClick={retryStatus}
+                >
+                  Try again
+                </Button>
+              </div>
+            </AppNotice>
+          )}
+        </AppPanel>
+      )}
+
+      {currentStatus === "completed" && !revealing && (
         <>
           {resultsLoading && !results ? (
             <PageState
               kind="loading"
-              title="Loading completed results"
-              description="Retrieving the persisted trade ledger and equity curve."
+              title="Loading your results"
             />
           ) : resultsError ? (
             <PageState
               kind="error"
-              title="Results could not be loaded"
+              title="Couldn’t load your results"
               description={resultsError}
               action={
                 <Button
@@ -608,7 +617,7 @@ export function StatusStep() {
                   leadingIcon={RiRefreshLine}
                   onClick={() => setResultsVersion((version) => version + 1)}
                 >
-                  Retry results
+                  Try again
                 </Button>
               }
             />
@@ -618,28 +627,22 @@ export function StatusStep() {
         </>
       )}
 
-      <AppNotice title="Interpret results carefully">
-        This is a historical simulation based on available end-of-day data and
-        the assumptions you supplied. It does not model every source of
-        slippage, liquidity risk, or future market behaviour.
-      </AppNotice>
-
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <ResultsFooter>
         <Button
           variant="secondary"
           leadingIcon={RiArrowLeftLine}
           onClick={() => navigate("/markets")}
           className="w-full sm:w-auto"
         >
-          Browse markets
+          Browse companies
         </Button>
         <Button
           onClick={() => navigate("/backtests/new")}
           className="w-full sm:w-auto"
         >
-          Configure another backtest
+          Test another idea
         </Button>
-      </div>
+      </ResultsFooter>
     </AppPage>
   );
 }

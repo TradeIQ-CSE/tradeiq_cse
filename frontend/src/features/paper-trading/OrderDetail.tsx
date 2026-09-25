@@ -1,9 +1,16 @@
 import { useTranslation } from "react-i18next";
 import { localeFor } from "../../i18n";
 import { readErrorText } from "./error-text";
-import { changeDirection, formatMoney, formatSignedMoney } from "./format";
+import {
+  changeDirection,
+  formatDay,
+  formatMoney,
+  formatSignedMoney,
+} from "./format";
 import { useOrder } from "./useOrders";
-import { ErrorCard } from "./ui";
+import { ErrorCard, StateMessage } from "./ui";
+import { DetailList, DetailRow } from "../../components/application/detail-list";
+import { InfoTip } from "../../components/domain/info-tip";
 import {
   FinancialDirectionGlyph,
   financialToneClass,
@@ -12,23 +19,6 @@ import {
 interface OrderDetailProps {
   portfolioId: string;
   orderId: string;
-}
-
-function DetailRow({
-  term,
-  children,
-}: {
-  term: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-baseline justify-between gap-3">
-      <dt className="text-body-medium text-text-secondary">{term}</dt>
-      <dd className="text-body-medium tabular-nums text-text-primary">
-        {children}
-      </dd>
-    </div>
-  );
 }
 
 /**
@@ -71,11 +61,7 @@ export function OrderDetail({ portfolioId, orderId }: OrderDetailProps) {
   // inline on the row itself, without needing this fetch.
   if (!fill) {
     return (
-      <div className="rounded-2xl bg-background-secondary-default p-4">
-        <p className="text-body-medium text-text-secondary">
-          {t("orders.detail.noFill")}
-        </p>
-      </div>
+      <StateMessage>{t("orders.detail.noFill")}</StateMessage>
     );
   }
 
@@ -83,67 +69,60 @@ export function OrderDetail({ portfolioId, orderId }: OrderDetailProps) {
     fill.realized_pnl !== null ? changeDirection(fill.realized_pnl) : "flat";
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
-        <h3 className="text-headline-medium text-text-primary">
+    <DetailList
+      title={
+        <span className="flex items-center gap-1">
           {t("orders.detail.executionTitle")}
-        </h3>
-        <p className="text-body-regular text-text-secondary">
-          {t("orders.detail.executionHelp")}
-        </p>
-      </div>
-
-      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {[
-          [t("orders.detail.price"), formatMoney(fill.price, locale)],
-          [t("orders.detail.fillDate"), fill.fill_date],
-          [t("orders.detail.settlementDate"), fill.settlement_date],
-          [
-            t("orders.detail.grossConsideration"),
-            formatMoney(fill.gross_consideration, locale),
-          ],
-          [t("orders.detail.feeTotal"), formatMoney(fill.fee_total, locale)],
-        ].map(([term, value]) => (
-          <div
-            className="rounded-2xl bg-background-secondary-default p-3"
-            key={term}
-          >
-            <DetailRow term={term}>{value}</DetailRow>
-          </div>
-        ))}
-
-        <div className="rounded-2xl bg-background-secondary-default p-3">
-          <div className="flex items-baseline justify-between gap-3">
-            <dt className="text-body-medium text-text-secondary">
-              {t("orders.detail.cashEffect")}
-            </dt>
-            <dd
-              className={`text-body-medium tabular-nums ${financialToneClass(fill.cash_effect)}`}
-            >
-              {formatSignedMoney(fill.cash_effect, locale)}
-            </dd>
-          </div>
-        </div>
-
-        {/* realized_pnl is only ever non-null on a sell that closed a FIFO lot
-          (§3.3) — a buy's fill always carries `null` here, so this row is
-          simply omitted for a buy rather than shown as a meaningless zero. */}
-        {fill.realized_pnl !== null && (
-          <div className="rounded-2xl bg-background-secondary-default p-3">
-            <div className="flex items-baseline justify-between gap-3">
-              <dt className="text-body-medium text-text-secondary">
-                {t("orders.detail.realizedPnl")}
-              </dt>
-              <dd
-                className={`text-body-medium tabular-nums ${financialToneClass(fill.realized_pnl)}`}
-              >
-                <FinancialDirectionGlyph direction={pnlDirection} />
-                {formatSignedMoney(fill.realized_pnl, locale)}
-              </dd>
-            </div>
-          </div>
-        )}
-      </dl>
-    </div>
+          <InfoTip label={t("orders.detail.executionTitle")}>
+            {t("orders.detail.executionHelp")}
+          </InfoTip>
+        </span>
+      }
+    >
+      <DetailRow
+        label={t("orders.detail.price")}
+        value={formatMoney(fill.price, locale)}
+      />
+      <DetailRow
+        label={t("orders.detail.grossConsideration")}
+        value={formatMoney(fill.gross_consideration, locale)}
+      />
+      <DetailRow
+        label={t("orders.detail.feeTotal")}
+        value={formatMoney(fill.fee_total, locale)}
+      />
+      <DetailRow
+        label={t("orders.detail.fillDate")}
+        value={formatDay(fill.fill_date, locale)}
+      />
+      <DetailRow
+        label={t("orders.detail.settlementDate")}
+        value={formatDay(fill.settlement_date, locale)}
+      />
+      <DetailRow
+        className="border-t border-separator-border pt-3 text-body-medium"
+        label={t("orders.detail.cashEffect")}
+        value={
+          <span className={financialToneClass(fill.cash_effect)}>
+            {formatSignedMoney(fill.cash_effect, locale)}
+          </span>
+        }
+      />
+      {/* realized_pnl is only ever non-null on a sell that closed a FIFO lot
+        (§3.3) — a buy's fill always carries `null` here, so this row is
+        simply omitted for a buy rather than shown as a meaningless zero. */}
+      {fill.realized_pnl !== null && (
+        <DetailRow
+          className="text-body-medium"
+          label={t("orders.detail.realizedPnl")}
+          value={
+            <span className={financialToneClass(fill.realized_pnl)}>
+              <FinancialDirectionGlyph direction={pnlDirection} />
+              {formatSignedMoney(fill.realized_pnl, locale)}
+            </span>
+          }
+        />
+      )}
+    </DetailList>
   );
 }

@@ -1,8 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { RiLineChartLine, RiStarLine } from '@remixicon/react';
+import { RiLineChartLine } from '@remixicon/react';
 import {
-  AppNotice,
   AppPage,
   AppPanel,
   PageIntro,
@@ -20,11 +19,6 @@ export function Watchlist() {
         eyebrow={t('watchlistPage.eyebrow')}
         title={t('watchlistPage.title')}
         description={t('watchlistPage.description')}
-        actions={
-          <Button leadingIcon={RiLineChartLine} onClick={() => navigate('/markets')}>
-            {t('watchlistPage.browse')}
-          </Button>
-        }
       />
 
       <AppPanel className="p-0 sm:p-0">
@@ -34,16 +28,12 @@ export function Watchlist() {
           title={t('watchlistPage.emptyTitle')}
           description={t('watchlistPage.emptyDescription')}
           action={
-            <Button leadingIcon={RiStarLine} onClick={() => navigate('/markets')}>
-              {t('watchlistPage.findSecurity')}
+            <Button leadingIcon={RiLineChartLine} onClick={() => navigate('/markets')}>
+              {t('watchlistPage.browse')}
             </Button>
           }
         />
       </AppPanel>
-
-      <AppNotice title={t('watchlistPage.noticeTitle')}>
-        {t('watchlistPage.notice')}
-      </AppNotice>
     </AppPage>
   );
 }

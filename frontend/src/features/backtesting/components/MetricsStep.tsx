@@ -1,8 +1,6 @@
 import { RiCheckDoubleLine } from "@remixicon/react";
 import { Button } from "@/components/base/buttons/button";
 import { CheckboxCard } from "@/components/base/checkbox/checkbox-card";
-import { Chip } from "@/components/base/badges/chip";
-import { AppNotice } from "@/components/application/layout/application-layout";
 import { cx } from "@/utils/cx";
 import { useBacktestWizard } from "../hooks/useBacktestWizard";
 import { AVAILABLE_METRICS } from "../domain/defaults";
@@ -44,43 +42,31 @@ export function MetricsStep({ embedded = false }: { embedded?: boolean }) {
     <div className="flex flex-col gap-6">
       <BacktestStepHeader
         embedded={embedded}
-        step={6}
-        title="Choose the metrics to focus on"
-        description="These selections help you review which questions matter before submission. They do not change the strategy, trades, or execution rules."
+        title="What to focus on"
+        description="Pick the results you care about most"
       />
-
-      <AppNotice title="Current results contract">
-        Every completed run returns initial capital, final cash, final equity,
-        the trade ledger, and the daily equity curve. TradeIQ only presents
-        additional financial metrics when they are returned by the API rather
-        than recomputing them in the browser.
-      </AppNotice>
 
       <section className="flex flex-col gap-3">
         <BacktestSectionHeader
           title="Analysis focus"
-          description="Select at least one concept to carry into the review step."
+          description={`${selectedMetrics.length} of ${AVAILABLE_METRICS.length} picked`}
+          info="This only changes what you look at first. It doesn’t change the test. Every result shows your starting cash, final value, trades and daily portfolio value."
           aside={
-            <div className="flex items-center gap-2">
-              <Chip color="blue">
-                {selectedMetrics.length} of {AVAILABLE_METRICS.length}
-              </Chip>
-              <Button
-                variant="secondary"
-                size="small"
-                leadingIcon={RiCheckDoubleLine}
-                onClick={selectAll}
-              >
-                Select all
-              </Button>
-            </div>
+            <Button
+              variant="secondary"
+              size="small"
+              leadingIcon={RiCheckDoubleLine}
+              onClick={selectAll}
+            >
+              Select all
+            </Button>
           }
         />
         <BacktestFieldError>{metricsError?.message}</BacktestFieldError>
         <div
           className="grid gap-3 sm:grid-cols-2"
           role="group"
-          aria-label="Backtest analysis metrics"
+          aria-label="Analysis focus"
         >
           {AVAILABLE_METRICS.map((metric) => {
             const isSelected = selectedMetrics.includes(metric.id);

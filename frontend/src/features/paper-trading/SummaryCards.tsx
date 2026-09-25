@@ -8,17 +8,17 @@ import {
   RiWallet3Line,
 } from "@remixicon/react";
 import { ApiError } from "../../lib/api";
-import { StatSurface } from "../../components/application/layout/application-layout";
 import { readErrorText } from "./error-text";
 import { localeFor } from "../../i18n";
 import {
   changeDirection,
+  formatDay,
   formatMoney,
   formatPercent,
   formatSignedMoney,
 } from "./format";
 import { usePortfolioSummary } from "./usePortfolios";
-import { ErrorCard, NoticeCard } from "./ui";
+import { Card, CardHeading, CardProgress, ErrorCard, NoticeCard } from "./ui";
 import {
   FinancialDirectionGlyph,
   financialToneClass,
@@ -30,12 +30,13 @@ interface SummaryCardsProps {
   asOf?: string;
 }
 
-function SummaryCard({
+/** One labelled figure; shared with the dashboard's portfolio snapshot. */
+export function SummaryStat({
   label,
   value,
   sub,
   tone,
-  icon,
+  icon: Icon,
 }: {
   label: string;
   value: ReactNode;
@@ -44,22 +45,30 @@ function SummaryCard({
   icon: typeof RiFundsLine;
 }) {
   return (
-    <StatSurface
-      label={label}
-      icon={icon}
-      value={
-        <span
-          className={cx("truncate tabular-nums", tone ?? "text-text-primary")}
-        >
-          {value}
+    <div className="flex min-w-0 items-start gap-3 px-4 py-3 sm:px-5">
+      <Icon
+        className="mt-0.5 size-5 shrink-0 text-foreground-icon-tertiary"
+        aria-hidden
+      />
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className="text-body-2-medium text-text-secondary">{label}</span>
+        <span className="flex flex-wrap items-baseline gap-x-2">
+          <span
+            className={cx(
+              "truncate text-headline-medium tabular-nums",
+              tone ?? "text-text-primary",
+            )}
+          >
+            {value}
+          </span>
+          {sub && (
+            <span className={cx("text-body-2-regular tabular-nums", tone)}>
+              {sub}
+            </span>
+          )}
         </span>
-      }
-      supportingText={
-        sub ? (
-          <span className={cx("truncate tabular-nums", tone)}>{sub}</span>
-        ) : undefined
-      }
-    />
+      </div>
+    </div>
   );
 }
 
@@ -78,7 +87,9 @@ export function SummaryCards({ portfolioId, asOf }: SummaryCardsProps) {
       return (
         <NoticeCard>
           {t("portfolio.summary.priceUnavailable", {
-            date: asOf || t("portfolio.summary.latestSession"),
+            date: asOf
+            ? formatDay(asOf, locale)
+            : t("portfolio.summary.latestSession"),
           })}
         </NoticeCard>
       );
@@ -93,16 +104,9 @@ export function SummaryCards({ portfolioId, asOf }: SummaryCardsProps) {
   if (isPending || !data) {
     return (
       <div
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
+        className="h-44 animate-pulse rounded-3xl bg-background-secondary-default"
         aria-busy="true"
-      >
-        {Array.from({ length: 6 }).map((_, index) => (
-          <div
-            className="h-28 animate-pulse rounded-3xl bg-background-secondary-default"
-            key={index}
-          />
-        ))}
-      </div>
+      />
     );
   }
 
@@ -113,32 +117,38 @@ export function SummaryCards({ portfolioId, asOf }: SummaryCardsProps) {
   const unrealizedDirection = changeDirection(summary.unrealized_pnl);
 
   return (
-    <section className="relative flex flex-col gap-3" aria-busy={isFetching}>
-      {isFetching && (
-        <span
-          className="absolute inset-x-0 -top-1 h-0.5 animate-pulse bg-button-primary"
-          role="status"
-          aria-label={t("portfolio.summary.loading")}
-        />
-      )}
+    <Card busy={isFetching}>
+      {isFetching && <CardProgress label={t("portfolio.summary.loading")} />}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <SummaryCard
+      <CardHeading
+        title={t("portfolio.summary.title")}
+        info={t("portfolio.summary.help")}
+        subtitle={
+          summary.as_of
+            ? t("portfolio.summary.asOf", {
+                date: formatDay(summary.as_of, locale),
+              })
+            : t("portfolio.summary.noSession")
+        }
+      />
+
+      <div className="grid grid-cols-1 border-t border-separator-border py-1 sm:grid-cols-2 lg:grid-cols-3">
+        <SummaryStat
           icon={RiFundsLine}
           label={t("portfolio.summary.totalEquity")}
           value={formatMoney(summary.total_equity, locale)}
         />
-        <SummaryCard
+        <SummaryStat
           icon={RiWallet3Line}
           label={t("portfolio.summary.cashBalance")}
           value={formatMoney(summary.cash_balance, locale)}
         />
-        <SummaryCard
+        <SummaryStat
           icon={RiBarChartBoxLine}
           label={t("portfolio.summary.holdingsValue")}
           value={formatMoney(summary.holdings_value, locale)}
         />
-        <SummaryCard
+        <SummaryStat
           icon={RiLineChartLine}
           label={t("portfolio.summary.totalPnl")}
           tone={financialToneClass(summary.total_pnl)}
@@ -155,7 +165,7 @@ export function SummaryCards({ portfolioId, asOf }: SummaryCardsProps) {
             </>
           }
         />
-        <SummaryCard
+        <SummaryStat
           icon={RiCoinsLine}
           label={t("portfolio.summary.realizedPnl")}
           tone={financialToneClass(summary.realized_pnl)}
@@ -166,7 +176,7 @@ export function SummaryCards({ portfolioId, asOf }: SummaryCardsProps) {
             </>
           }
         />
-        <SummaryCard
+        <SummaryStat
           icon={RiLineChartLine}
           label={t("portfolio.summary.unrealizedPnl")}
           tone={financialToneClass(summary.unrealized_pnl)}
@@ -178,12 +188,6 @@ export function SummaryCards({ portfolioId, asOf }: SummaryCardsProps) {
           }
         />
       </div>
-
-      <p className="text-body-2-medium text-text-tertiary">
-        {summary.as_of
-          ? t("portfolio.summary.asOf", { date: summary.as_of })
-          : t("portfolio.summary.noSession")}
-      </p>
-    </section>
+    </Card>
   );
 }

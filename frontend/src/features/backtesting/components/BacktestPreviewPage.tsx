@@ -23,7 +23,9 @@ import {
   clearBacktestPreview,
   loadBacktestPreview,
 } from "../domain/preview";
-import { ResultsView } from "./StatusStep";
+import { ResultsFooter, ResultsView } from "./StatusStep";
+import { RunReveal } from "./RunReveal";
+import { useRunReveal } from "./useRunReveal";
 
 /**
  * Results of a backtest run without an account (POST /backtests/preview).
@@ -43,6 +45,7 @@ export function BacktestPreviewPage() {
       (location.state as { preview?: BacktestPreviewRecord } | null)
         ?.preview ?? loadBacktestPreview(),
   );
+  const { playing, finish: finishReveal } = useRunReveal();
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -51,6 +54,7 @@ export function BacktestPreviewPage() {
   }
 
   const { config } = preview;
+  const revealing = playing;
   const returnHere = { from: { pathname: "/backtests/preview" } };
 
   const save = async () => {
@@ -64,7 +68,7 @@ export function BacktestPreviewPage() {
       setSaveError(
         error instanceof ApiError
           ? error.body.message
-          : "The backtest could not be saved. Please try again.",
+          : "Couldn’t save your test. Please try again.",
       );
       setIsSaving(false);
     }
@@ -73,17 +77,15 @@ export function BacktestPreviewPage() {
   return (
     <AppPage className="max-w-5xl">
       <PageIntro
-        eyebrow="Historical simulation"
-        title="Backtest result"
+        eyebrow="Backtesting"
+        title="Your test results"
         description={`${config.security.symbol} · ${config.period.startDate} to ${config.period.endDate}`}
       />
 
       {authStatus === "authenticated" ? (
         <AppNotice title="This result isn't saved yet">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <span>
-              Save it to your account to come back to it later.
-            </span>
+            <span>Save it to your account to come back to it later</span>
             <Button
               leadingIcon={RiSaveLine}
               onClick={save}
@@ -99,7 +101,7 @@ export function BacktestPreviewPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <span>
               Create an account or sign in to save it. Until then it only
-              stays in this browser tab.
+              stays in this tab
             </span>
             <div className="flex shrink-0 flex-wrap gap-2">
               <Button
@@ -121,36 +123,34 @@ export function BacktestPreviewPage() {
       )}
 
       {saveError && (
-        <AppNotice tone="error" title="Save failed">
+        <AppNotice tone="error" title="Couldn’t save">
           {saveError}
         </AppNotice>
       )}
 
-      <ResultsView results={preview.results} gaps={priceGaps} />
+      {revealing ? (
+        <RunReveal onDone={finishReveal} />
+      ) : (
+        <ResultsView results={preview.results} gaps={priceGaps} />
+      )}
 
-      <AppNotice title="Interpret results carefully">
-        This is a historical simulation based on available end-of-day data and
-        the assumptions you supplied. It does not model every source of
-        slippage, liquidity risk, or future market behaviour.
-      </AppNotice>
-
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <ResultsFooter>
         <Button
           variant="secondary"
           leadingIcon={RiArrowLeftLine}
           onClick={() => navigate(workflowLocation("simple", "review"))}
           className="w-full sm:w-auto"
         >
-          Change the settings
+          Change settings
         </Button>
         <Button
           variant="secondary"
           onClick={() => navigate("/markets")}
           className="w-full sm:w-auto"
         >
-          Browse markets
+          Browse companies
         </Button>
-      </div>
+      </ResultsFooter>
     </AppPage>
   );
 }

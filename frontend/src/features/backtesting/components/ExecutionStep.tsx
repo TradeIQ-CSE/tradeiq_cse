@@ -4,7 +4,6 @@ import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
 import { RadioCard } from "@/components/base/radio/radio-card";
 import { RadioGroup } from "@/components/base/radio/radio";
-import { AppNotice } from "@/components/application/layout/application-layout";
 import { cx } from "@/utils/cx";
 import { useBacktestWizard } from "../hooks/useBacktestWizard";
 import type { FeeConfig, PositionSizingType } from "../domain/types";
@@ -21,41 +20,37 @@ const SIZING_OPTIONS: Array<{
   label: string;
   description: string;
   valueLabel?: string;
-  valueSuffix?: string;
   min?: number;
   max?: number;
   step?: number;
 }> = [
   {
     type: "full_capital",
-    label: "Use available cash",
-    description: "Use all available simulated cash when an entry rule triggers.",
+    label: "All available cash",
+    description: "Each buy uses all the virtual cash you have",
   },
   {
     type: "percentage",
-    label: "Portfolio percentage",
-    description: "Limit each entry to a fixed percentage of portfolio equity.",
-    valueLabel: "Portfolio share",
-    valueSuffix: "% of portfolio equity",
+    label: "Part of your portfolio",
+    description: "Each buy uses a set percentage of your portfolio",
+    valueLabel: "Share of portfolio (%)",
     min: 1,
     max: 100,
     step: 1,
   },
   {
     type: "absolute",
-    label: "Fixed cash amount",
-    description: "Use the same simulated cash amount for each entry.",
-    valueLabel: "Cash amount",
-    valueSuffix: "LKR per entry",
+    label: "Fixed amount",
+    description: "Each buy spends the same amount of cash",
+    valueLabel: "Amount per buy (LKR)",
     min: 100,
     step: 100,
   },
   {
     type: "fixed_quantity",
-    label: "Fixed share quantity",
-    description: "Attempt to buy the same whole-share quantity at each entry.",
-    valueLabel: "Number of shares",
-    valueSuffix: "whole shares",
+    label: "Fixed number of shares",
+    description: "Each buy gets the same number of shares",
+    valueLabel: "Shares per buy",
     min: 1,
     step: 1,
   },
@@ -64,21 +59,12 @@ const SIZING_OPTIONS: Array<{
 const FEE_FIELDS: Array<{
   key: keyof FeeConfig;
   label: string;
-  description: string;
 }> = [
-  {
-    key: "brokerageRate",
-    label: "Brokerage commission",
-    description: "Broker transaction charge",
-  },
-  { key: "cseRate", label: "CSE fee", description: "Exchange fee" },
-  { key: "cdsRate", label: "CDS fee", description: "Depository fee" },
-  { key: "secCessRate", label: "SEC cess", description: "Regulatory cess" },
-  {
-    key: "stlRate",
-    label: "Share transaction levy",
-    description: "Statutory transaction levy",
-  },
+  { key: "brokerageRate", label: "Brokerage commission" },
+  { key: "cseRate", label: "CSE fee" },
+  { key: "cdsRate", label: "CDS fee" },
+  { key: "secCessRate", label: "SEC cess" },
+  { key: "stlRate", label: "Share transaction levy" },
 ];
 
 export function ExecutionStep({ embedded = false }: { embedded?: boolean }) {
@@ -158,21 +144,20 @@ export function ExecutionStep({ embedded = false }: { embedded?: boolean }) {
     <div className="flex flex-col gap-7">
       <BacktestStepHeader
         embedded={embedded}
-        step={4}
-        title="Set execution assumptions"
-        description="These controls describe how much simulated capital each entry can use and which transaction charges are deducted. They make historical comparisons more realistic, but they cannot reproduce every market condition."
+        title="Trade size and charges"
+        description="How much each buy uses, and the fees taken"
       />
 
       <section className="flex flex-col gap-3">
         <BacktestSectionHeader
-          title="Position sizing"
-          description="Choose how the engine calculates the maximum size of each simulated buy."
+          title="Trade size"
+          info="Shares are bought in whole numbers. Any cash left over stays in the portfolio."
         />
         <BacktestFieldError>{sizingError?.message}</BacktestFieldError>
         <RadioGroup
           value={currentSizing.type}
           onChange={(value) => selectSizing(value as PositionSizingType)}
-          aria-label="Position sizing strategy"
+          aria-label="Trade size"
           className="grid gap-3 sm:grid-cols-2"
           isInvalid={Boolean(sizingError)}
         >
@@ -206,7 +191,6 @@ export function ExecutionStep({ embedded = false }: { embedded?: boolean }) {
               isInvalid={Boolean(sizingError)}
               max={selectedSizing.max}
               step={selectedSizing.step}
-              hint={selectedSizing.valueSuffix}
               fieldClassName="ring-1 ring-inset ring-border-button-default"
               className="max-w-sm"
             />
@@ -216,8 +200,9 @@ export function ExecutionStep({ embedded = false }: { embedded?: boolean }) {
 
       <section className="flex flex-col gap-3 border-t border-separator-border pt-6">
         <BacktestSectionHeader
-          title="Transaction charges"
-          description={`The current combined rate is ${totalFeePct}%. Rates are stored as execution assumptions and applied by the backtest engine.`}
+          title="Charges"
+          description={`${totalFeePct}% on each buy or sell`}
+          info="These are the standard CSE trading fees. Change them if your broker charges differently."
           aside={
             <Button
               variant="secondary"
@@ -227,7 +212,7 @@ export function ExecutionStep({ embedded = false }: { embedded?: boolean }) {
                 isCustomFees ? resetFees() : setIsCustomFees(true)
               }
             >
-              {isCustomFees ? "Use documented defaults" : "Customize rates"}
+              {isCustomFees ? "Reset to CSE rates" : "Edit charges"}
             </Button>
           }
         />
@@ -245,7 +230,7 @@ export function ExecutionStep({ embedded = false }: { embedded?: boolean }) {
                   min={0}
                   step={0.001}
                   isInvalid={feeErrors.some((error) => error.field.includes(field.key))}
-                  hint={feeErrors.find((error) => error.field.includes(field.key))?.message || field.description}
+                  hint={feeErrors.find((error) => error.field.includes(field.key))?.message}
                   fieldClassName="ring-1 ring-inset ring-border-button-default"
                 />
               ) : (
@@ -253,37 +238,21 @@ export function ExecutionStep({ embedded = false }: { embedded?: boolean }) {
                   <p className="text-body-2-regular text-text-secondary">
                     {field.label}
                   </p>
-                  <p className="text-headline-medium tabular-nums text-text-primary">
+                  <p className="text-body-medium tabular-nums text-text-primary">
                     {(currentFees[field.key] * 100).toFixed(3)}%
-                  </p>
-                  <p className="text-caption-1-medium text-text-tertiary">
-                    {field.description}
                   </p>
                 </div>
               ),
             )}
-            <div className="flex flex-col gap-0.5 rounded-xl bg-status-blue-background p-3">
-              <p className="text-body-2-regular text-status-blue-text">
-                Combined rate
-              </p>
-              <p className="text-title-3-semibold tabular-nums text-text-primary">
+            <div className="flex flex-col gap-0.5">
+              <p className="text-body-2-regular text-text-secondary">Total</p>
+              <p className="text-body-medium tabular-nums text-text-primary">
                 {totalFeePct}%
               </p>
             </div>
           </div>
         </ParameterPanel>
       </section>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <AppNotice title="Whole-share rounding">
-          Fractional quantities are rounded down. Unused simulated cash stays
-          in the portfolio.
-        </AppNotice>
-        <AppNotice title="Same-bar exit order">
-          The first triggered rule wins. When stop loss and take profit trigger
-          on the same bar, stop loss is evaluated first.
-        </AppNotice>
-      </div>
     </div>
   );
 }

@@ -7,11 +7,12 @@ import {
 } from "@/components/base/date-picker/date-range-picker";
 import { AppNotice } from "@/components/application/layout/application-layout";
 import { useBacktestWizard } from "../hooks/useBacktestWizard";
+import { formatDay } from "../domain/descriptions";
 import {
   CSE_DATASET_MAX_DATE,
   CSE_DATASET_MIN_DATE,
 } from "../domain/defaults";
-import { crossingNoticeText } from "../domain/gapNotice";
+import { crossingNoticeLines } from "../domain/gapNotice";
 import {
   backtestDateGap,
   crossingDataGaps,
@@ -138,21 +139,19 @@ export function PeriodStep({ embedded = false }: { embedded?: boolean }) {
     <div className="flex flex-col gap-6">
       <BacktestStepHeader
         embedded={embedded}
-        step={2}
-        title="Choose the historical period"
-        description="The engine checks each available daily bar inside this inclusive date range. A longer range offers more observations, but it does not make future outcomes more certain."
+        title="Choose dates"
+        description="Pick the stretch of past prices to test on"
       />
-
-      <AppNotice title="Available price coverage">
-        {config.security.symbol
-          ? `${config.security.symbol} currently reports data from ${minimum.toString()} to ${maximum.toString()}.`
-          : `Choose dates within the declared CSE dataset boundary of ${minimum.toString()} to ${maximum.toString()}.`}
-      </AppNotice>
 
       <section className="flex flex-col gap-3">
         <BacktestSectionHeader
-          title="Simulation date range"
-          description="Both dates are included. The calendar prevents dates outside the selected security’s reported coverage."
+          title="Dates"
+          description={
+            config.security.symbol
+              ? `${config.security.symbol} has prices from ${formatDay(minimum.toString())} to ${formatDay(maximum.toString())}`
+              : `Prices run from ${formatDay(minimum.toString())} to ${formatDay(maximum.toString())}`
+          }
+          info="Both dates are included, and only days the market traded are used. A longer stretch gives more to learn from, but it doesn’t make the future more certain."
         />
         <div className="flex max-w-xl flex-col gap-2">
           <DateRangePicker
@@ -168,10 +167,9 @@ export function PeriodStep({ embedded = false }: { embedded?: boolean }) {
             aria-label="Backtest simulation date range"
             labels={{ apply: "Apply range" }}
           />
-          <p
-            id="backtest-period-help"
-            className="text-body-2-regular text-text-tertiary"
-          >
+          {/* The picker already shows the range; this is its screen-reader
+              description only. */}
+          <p id="backtest-period-help" className="sr-only">
             Selected: {value.start.toString()} to {value.end.toString()}
           </p>
           <BacktestFieldError>
@@ -184,15 +182,17 @@ export function PeriodStep({ embedded = false }: { embedded?: boolean }) {
         <AppNotice
           title={
             crossedGaps.length > 1
-              ? "Selected range crosses data gaps"
-              : "Selected range crosses a data gap"
+              ? "Your dates include data gaps"
+              : "Your dates include a data gap"
           }
         >
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-2">
             {crossedGaps.map((gap) => (
-              <p key={`${gap.from}-${gap.to}`}>
-                {crossingNoticeText(gap, NOTICE_LOCALE)}
-              </p>
+              <ul key={`${gap.from}-${gap.to}`} className="list-disc pl-5">
+                {crossingNoticeLines(gap, NOTICE_LOCALE).map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
             ))}
           </div>
         </AppNotice>
@@ -200,8 +200,8 @@ export function PeriodStep({ embedded = false }: { embedded?: boolean }) {
 
       <section className="flex flex-col gap-3">
         <BacktestSectionHeader
-          title="Quick ranges"
-          description="Each preset ends on the latest date reported for this security and is clipped to its available coverage."
+          title="Quick picks"
+          info="Each one ends on the latest day with prices for this company."
         />
         <div className="flex flex-wrap gap-2">
           {presets.map((preset) => {
@@ -232,7 +232,7 @@ export function PeriodStep({ embedded = false }: { embedded?: boolean }) {
               applyRange({ start: gapAwareMinimum, end: gapAwareMaximum })
             }
           >
-            Full available range
+            All dates
           </Button>
         </div>
       </section>

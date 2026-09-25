@@ -5,9 +5,9 @@ import { RiHistoryLine } from "@remixicon/react";
 import { ButtonLink } from "../../components/base/buttons/button";
 import {
   AppPage,
-  AppNotice,
   PageIntro,
 } from "../../components/application/layout/application-layout";
+import { InfoTip } from "../../components/domain/info-tip";
 import { OrderTicket } from "./OrderTicket";
 import { PortfolioScope } from "./PortfolioScope";
 import { DEFAULT_PRACTICE_CAPITAL } from './defaults';
@@ -31,41 +31,38 @@ export function PaperTradingPage() {
         title={t("paperTrading.page.title")}
         description={t("paperTrading.page.subtitle")}
         actions={
-          <ButtonLink
-            href="/orders"
-            variant="secondary"
-            leadingIcon={RiHistoryLine}
-          >
-            {t("paperTrading.page.viewOrders")}
-          </ButtonLink>
+          <>
+            <div className="flex items-center gap-1">
+              <SegmentedControl aria-label={t('paperTrading.workflow.label')}
+                selectedKeys={new Set([mode])} isDisabled={busy}
+                onSelectionChange={(keys) => {
+                  const [next] = [...keys];
+                  if (!next || busy) return;
+                  const updated = new URLSearchParams(params);
+                  updated.set('mode', String(next));
+                  setParams(updated);
+                }}>
+                <SegmentedControlItem id="simple">{t('paperTrading.workflow.simple')}</SegmentedControlItem>
+                <SegmentedControlItem id="advanced">{t('paperTrading.workflow.advanced')}</SegmentedControlItem>
+              </SegmentedControl>
+              <InfoTip label={`${t('paperTrading.workflow.simple')} and ${t('paperTrading.workflow.advanced')}`}>
+                {t('paperTrading.workflow.simpleHelp')}
+              </InfoTip>
+            </div>
+            <ButtonLink
+              href="/orders"
+              variant="secondary"
+              leadingIcon={RiHistoryLine}
+            >
+              {t("paperTrading.page.viewOrders")}
+            </ButtonLink>
+          </>
         }
       />
 
-      <AppNotice title={t("paperTrading.page.noticeTitle")}>
-        {t("paperTrading.page.notice")}
-      </AppNotice>
-
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-body-2-regular text-text-secondary">
-          {t(`paperTrading.workflow.${mode}Help`)}
-        </p>
-        <SegmentedControl className="sm:shrink-0" aria-label={t('paperTrading.workflow.label')}
-          selectedKeys={new Set([mode])} isDisabled={busy}
-          onSelectionChange={(keys) => {
-            const [next] = [...keys];
-            if (!next || busy) return;
-            const updated = new URLSearchParams(params);
-            updated.set('mode', String(next));
-            setParams(updated);
-          }}>
-          <SegmentedControlItem id="simple">{t('paperTrading.workflow.simple')}</SegmentedControlItem>
-          <SegmentedControlItem id="advanced">{t('paperTrading.workflow.advanced')}</SegmentedControlItem>
-        </SegmentedControl>
-      </div>
-
       <PortfolioScope mode={mode} busy={busy} onBusyChange={setBusy}
         creationDefaults={{ name: t('paperTrading.page.defaultPortfolioName'), startingCapital: DEFAULT_PRACTICE_CAPITAL }}>
-        {(portfolioId) => <OrderTicket portfolioId={portfolioId} mode={mode} onBusyChange={setBusy} />}
+        {(portfolioId) => <OrderTicket portfolioId={portfolioId} mode={mode} onBusyChange={setBusy} initialSymbol={params.get('symbol') ?? undefined} />}
       </PortfolioScope>
     </AppPage>
   );

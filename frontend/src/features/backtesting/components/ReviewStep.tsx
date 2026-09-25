@@ -1,15 +1,16 @@
 import { RiPlayCircleLine } from "@remixicon/react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/base/buttons/button";
-import { Chip } from "@/components/base/badges/chip";
 import { AppNotice } from "@/components/application/layout/application-layout";
 import { useBacktestWizard } from "../hooks/useBacktestWizard";
 import { useAuth } from "../../../auth/useAuth";
-import { entryDescription, exitDescription, sizingDescription } from "../domain/descriptions";
+import { formatDay } from "../domain/descriptions";
 import { AVAILABLE_METRICS } from "../domain/defaults";
 import { validateBacktestConfig } from "../domain/validation";
-import { crossingNoticeText } from "../domain/gapNotice";
+import { crossingNoticeLines } from "../domain/gapNotice";
+import { RuleList, TradeSizeList } from "./RuleList";
 import { crossingDataGaps } from "../../../lib/data-gaps";
+import { STEP_LABELS } from "../domain/stepLabels";
 import {
   BacktestStepHeader,
   ReviewRow,
@@ -31,8 +32,6 @@ export function ReviewStep({ configuration }: { configuration?: ReactNode }) {
     submitTraceId,
     submitFieldErrors,
     validateAllSteps,
-    stepIndex,
-    totalSteps,
   } = useBacktestWizard();
   const { status: authStatus } = useAuth();
   const reviewValidation = validateBacktestConfig(config, undefined, priceGaps);
@@ -42,10 +41,6 @@ export function ReviewStep({ configuration }: { configuration?: ReactNode }) {
     config.period.startDate,
     config.period.endDate,
   );
-  const totalFeesPct = (
-    Object.values(config.execution.fees).reduce((sum, rate) => sum + rate, 0) *
-    100
-  ).toFixed(3);
   const metricNames = config.metrics.selected.map(
     (id) => AVAILABLE_METRICS.find((metric) => metric.id === id)?.name || id,
   );
@@ -58,28 +53,18 @@ export function ReviewStep({ configuration }: { configuration?: ReactNode }) {
   return (
     <div className="flex flex-col gap-6">
       <BacktestStepHeader
-        step={stepIndex + 1}
-        total={totalSteps}
-        title="Review simulation assumptions"
-        description="Check the complete rule set before sending it to the historical simulation engine. You can return to any section without losing the draft."
+        title="Check and run"
+        description="Check your settings, then run the test"
       />
 
-      {isValid ? (
-        <AppNotice tone="success" title="Everything looks valid.">
-          The current draft meets the client-side constraints and is ready to
-          submit to the backtest API.
-        </AppNotice>
-      ) : (
-        <AppNotice tone="error" title="Configuration requires attention">
-          Resolve the {reviewValidation.errors.length} highlighted configuration
-          {reviewValidation.errors.length === 1 ? " issue" : " issues"} before
-          running the backtest.
-          <ul className="mt-3 flex list-disc flex-col gap-2 pl-5">
+      {!isValid && (
+        <AppNotice tone="error" title={`Fix ${reviewValidation.errors.length} ${reviewValidation.errors.length === 1 ? "thing" : "things"} before running`}>
+          <ul className="mt-1 flex list-disc flex-col gap-2 pl-5">
             {reviewValidation.errors.map((error, index) => (
               <li key={`${error.step}-${error.field}-${index}`}>
                 {error.message}{" "}
                 <Button variant="ghost" size="xs" disabled={isSubmitting} onClick={() => goToStep(error.step)}>
-                  Open {error.step}
+                  Go to {STEP_LABELS[error.step].toLowerCase()}
                 </Button>
               </li>
             ))}
@@ -91,22 +76,24 @@ export function ReviewStep({ configuration }: { configuration?: ReactNode }) {
         <AppNotice
           title={
             crossedGaps.length > 1
-              ? "Selected range crosses data gaps"
-              : "Selected range crosses a data gap"
+              ? "Your dates include data gaps"
+              : "Your dates include a data gap"
           }
         >
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-2">
             {crossedGaps.map((gap) => (
-              <p key={`${gap.from}-${gap.to}`}>
-                {crossingNoticeText(gap, NOTICE_LOCALE)}
-              </p>
+              <ul key={`${gap.from}-${gap.to}`} className="list-disc pl-5">
+                {crossingNoticeLines(gap, NOTICE_LOCALE).map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
             ))}
           </div>
         </AppNotice>
       )}
 
       {submitError && (
-        <AppNotice tone="error" title="Submission Failed">
+        <AppNotice tone="error" title="Couldn’t run the test">
           <div className="flex flex-col gap-2">
             <p>{submitError}</p>
             {submitFieldErrors && submitFieldErrors.length > 0 && (
@@ -118,115 +105,70 @@ export function ReviewStep({ configuration }: { configuration?: ReactNode }) {
                 ))}
               </ul>
             )}
+            <p>Your settings are kept, so you can change them and try again.</p>
             {submitTraceId && (
               <p className="text-body-2-regular">
-                Trace ID: <code>{submitTraceId}</code>
+                Reference: <code>{submitTraceId}</code>
               </p>
             )}
-            <p>Your parameters have been retained. You can edit and retry.</p>
           </div>
         </AppNotice>
       )}
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <ReviewSection title="Security" onEdit={() => goToStep("security")}>
+        <ReviewSection title="Company" onEdit={() => goToStep("security")}>
           <ReviewRow
-            label="Ticker"
-            value={<Chip color="blue">{config.security.symbol}</Chip>}
-          />
-          <ReviewRow
-            label="Company"
-            value={config.security.companyName || "CSE listed security"}
-          />
-          <ReviewRow
-            label="Sector"
-            value={config.security.sector || "Not reported"}
+            label={config.security.symbol}
+            value={config.security.companyName || "CSE listed company"}
           />
         </ReviewSection>
 
-        <ReviewSection title="Historical period" onEdit={() => goToStep("period")}>
+        <ReviewSection title="Dates" onEdit={() => goToStep("period")}>
           <ReviewRow
-            label="Inclusive date range"
-            value={`${config.period.startDate} to ${config.period.endDate}`}
+            label="From"
+            value={formatDay(config.period.startDate)}
           />
-          <ReviewRow label="Data frequency" value="Daily end-of-day bars" />
+          <ReviewRow label="To" value={formatDay(config.period.endDate)} />
         </ReviewSection>
 
-        <ReviewSection
-          title="Entry and exit rules"
-          onEdit={() => goToStep("rules")}
-        >
-          <ReviewRow
-            label="Entry"
-            value={entryDescription(
-              config.rules.buy.type,
-              config.rules.buy.value,
-            )}
-          />
-          <div className="border-t border-separator-border pt-3">
-            <p className="mb-2 text-body-2-regular text-text-secondary">
-              Exits, first trigger wins
-            </p>
-            <ul className="flex list-disc flex-col gap-1 pl-5 text-body-regular text-text-primary">
-              {config.rules.sells.map((sell) => (
-                <li key={sell.type}>
-                  {exitDescription(sell.type, sell.value)}
-                </li>
-              ))}
-            </ul>
-          </div>
+        <ReviewSection title="Rules" onEdit={() => goToStep("rules")}>
+          <RuleList rules={config.rules} />
         </ReviewSection>
 
-        <ReviewSection
-          title="Execution"
-          onEdit={() => goToStep("execution")}
-        >
-          <ReviewRow
-            label="Position size"
-            value={sizingDescription(
-              config.execution.positionSizing.type,
-              config.execution.positionSizing.value,
-            )}
-          />
-          <ReviewRow label="Combined transaction rate" value={`${totalFeesPct}%`} />
-          <ReviewRow label="Share quantities" value="Whole shares, rounded down" />
-          <ReviewRow
-            label="Same-bar priority"
-            value="Stop loss before take profit"
-          />
+        <ReviewSection title="Trade size" onEdit={() => goToStep("execution")}>
+          <TradeSizeList execution={config.execution} />
         </ReviewSection>
 
-        <ReviewSection title="Capital" onEdit={() => goToStep("portfolio")}>
+        <ReviewSection title="Starting cash" onEdit={() => goToStep("portfolio")}>
           <ReviewRow
-            label="Hypothetical starting cash"
+            label="Virtual money"
             value={`LKR ${Number(config.portfolio.startingCapital).toLocaleString(
               "en-LK",
             )}`}
           />
         </ReviewSection>
 
-        <ReviewSection title="Analysis focus" onEdit={() => goToStep("metrics")}>
-          <div className="flex flex-wrap gap-2">
-            {metricNames.map((name) => (
-              <Chip key={name} color="soft" variant="caption">
-                {name}
-              </Chip>
-            ))}
-          </div>
-        </ReviewSection>
+        {/* Simple mode edits the focus right below instead. */}
+        {!configuration && (
+          <ReviewSection title="Analysis focus" onEdit={() => goToStep("metrics")}>
+            <p className="text-body-2-regular text-text-primary">
+              {metricNames.join(" · ")}
+            </p>
+          </ReviewSection>
+        )}
       </div>
 
       {configuration}
 
-      <section className="flex flex-col items-start gap-4 rounded-3xl border border-border-button-active bg-status-blue-background p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex max-w-2xl flex-col gap-1">
+      <section className="flex flex-col items-start gap-4 rounded-3xl border border-border-button-default bg-background-secondary-default p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex max-w-2xl flex-col gap-0.5">
           <h3 className="text-headline-medium text-text-primary">
-            Run this historical simulation
+            Ready to run
           </h3>
-          <p className="text-body-regular text-text-secondary">
+          <p className="text-body-2-regular text-text-secondary">
             {authStatus === "authenticated"
-              ? "TradeIQ runs the simulation and saves it to your account so you can come back to it. Historical results are not investment advice or a prediction."
-              : "No account needed. You'll see the results right away, and you can sign in afterwards if you want to save them. Historical results are not investment advice or a prediction."}
+              ? "The results are saved to your account"
+              : "No account needed. Sign in afterwards to save the results"}
           </p>
         </div>
         <Button
@@ -236,7 +178,7 @@ export function ReviewStep({ configuration }: { configuration?: ReactNode }) {
           disabled={!isValid || isSubmitting}
           className="w-full shrink-0 sm:w-auto"
         >
-          {isSubmitting ? "Running simulation" : "Run backtest"}
+          {isSubmitting ? "Running" : "Run backtest"}
         </Button>
       </section>
     </div>

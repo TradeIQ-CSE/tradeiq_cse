@@ -9,26 +9,31 @@ import {
   RiWallet3Line,
 } from '@remixicon/react';
 import {
-  AppNotice,
   AppPage,
   AppPanel,
   PageIntro,
   PageState,
-  StatSurface,
 } from '../../components/application/layout/application-layout';
 import { Button } from '../../components/base/buttons/button';
-import { financialToneClass } from '../../components/application/financial-data';
+import {
+  FinancialDirectionGlyph,
+  financialToneClass,
+} from '../../components/application/financial-data';
+import { Card, CardHeading, CardProgress } from '../../features/paper-trading/ui';
+import { SummaryStat } from '../../features/paper-trading/SummaryCards';
 import { localeFor } from '../../i18n';
 import { useMarketOverview } from '../../features/markets/useMarketOverview';
 import { formatPrice, formatSigned, formatVolume } from '../../features/markets/format';
 import { usePortfolioSummary, usePortfolios } from '../../features/paper-trading/usePortfolios';
 import { useSelectedPortfolio } from '../../features/paper-trading/useSelectedPortfolio';
-import { formatMoney, formatPercent, formatSignedMoney } from '../../features/paper-trading/format';
+import {
+  changeDirection,
+  formatDay,
+  formatMoney,
+  formatPercent,
+  formatSignedMoney,
+} from '../../features/paper-trading/format';
 import { cx } from '../../utils/cx';
-
-function DashboardLoadingCard() {
-  return <div className="h-28 animate-pulse rounded-3xl bg-background-secondary-default" />;
-}
 
 export function Dashboard() {
   const { t, i18n } = useTranslation();
@@ -48,49 +53,44 @@ export function Dashboard() {
       <PageIntro
         eyebrow={t('dashboardPage.eyebrow')}
         title={t('dashboardPage.title')}
-        description={t('dashboardPage.description')}
-        actions={
-          <Button leadingIcon={RiLineChartLine} onClick={() => navigate('/markets')}>
-            {t('dashboardPage.actions.markets')}
-          </Button>
-        }
+        description={t('dashboardPage.dataNotice')}
       />
 
-      <AppNotice title={t('dashboardPage.dataNoticeTitle')}>
-        {t('dashboardPage.dataNotice')}
-      </AppNotice>
-
-      <section aria-labelledby="dashboard-portfolio-heading" className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 id="dashboard-portfolio-heading" className="text-title-2-medium text-text-primary">
-              {t('dashboardPage.portfolio.title')}
-            </h2>
-            <p className="text-body-regular text-text-secondary">
-              {activePortfolio
-                ? t('dashboardPage.portfolio.selected', { name: activePortfolio.name })
-                : t('dashboardPage.portfolio.description')}
-            </p>
-          </div>
-          <Button variant="secondary" trailingIcon={RiArrowRightLine} onClick={() => navigate('/portfolio')}>
-            {t('dashboardPage.actions.portfolio')}
-          </Button>
-        </div>
+      <Card busy={summary.isFetching}>
+        {summary.isFetching && <CardProgress label={t('portfolio.summary.loading')} />}
+        <CardHeading
+          title={t('dashboardPage.portfolio.title')}
+          subtitle={
+            activePortfolio
+              ? summary.data?.data.as_of
+                ? t('dashboardPage.portfolio.selected', {
+                    name: activePortfolio.name,
+                    date: formatDay(summary.data.data.as_of, locale),
+                  })
+                : activePortfolio.name
+              : undefined
+          }
+          actions={
+            activePortfolio && (
+              <Button variant="secondary" size="small" trailingIcon={RiArrowRightLine} onClick={() => navigate('/portfolio')}>
+                {t('dashboardPage.actions.portfolio')}
+              </Button>
+            )
+          }
+        />
 
         {portfolios.isError ? (
           <PageState
+            className="border-0 shadow-none"
             kind="error"
             title={t('dashboardPage.portfolio.errorTitle')}
             description={t('dashboardPage.portfolio.errorDescription')}
           />
         ) : portfolios.isPending ? (
-          <div className="grid gap-4 sm:grid-cols-3" aria-busy="true">
-            <DashboardLoadingCard />
-            <DashboardLoadingCard />
-            <DashboardLoadingCard />
-          </div>
+          <div className="mx-4 mb-4 h-20 animate-pulse rounded-2xl bg-background-secondary-default sm:mx-5" aria-busy="true" />
         ) : !activePortfolio ? (
           <PageState
+            className="border-0 shadow-none"
             kind="empty"
             title={t('dashboardPage.portfolio.emptyTitle')}
             description={t('dashboardPage.portfolio.emptyDescription')}
@@ -102,6 +102,7 @@ export function Dashboard() {
           />
         ) : summary.isError ? (
           <PageState
+            className="border-0 shadow-none"
             kind="error"
             title={t('dashboardPage.portfolio.summaryErrorTitle')}
             description={t('dashboardPage.portfolio.summaryErrorDescription')}
@@ -112,57 +113,45 @@ export function Dashboard() {
             }
           />
         ) : summary.isPending || !summary.data ? (
-          <div className="grid gap-4 sm:grid-cols-3" aria-busy="true">
-            <DashboardLoadingCard />
-            <DashboardLoadingCard />
-            <DashboardLoadingCard />
-          </div>
+          <div className="mx-4 mb-4 h-20 animate-pulse rounded-2xl bg-background-secondary-default sm:mx-5" aria-busy="true" />
         ) : (
-          <div className="grid gap-4 sm:grid-cols-3" aria-busy={summary.isFetching}>
-            <StatSurface
+          <div className="grid grid-cols-1 border-t border-separator-border py-1 sm:grid-cols-3">
+            <SummaryStat
               icon={RiFundsLine}
               label={t('dashboardPage.portfolio.equity')}
               value={formatMoney(summary.data.data.total_equity, locale)}
-              supportingText={
-                summary.data.data.as_of
-                  ? t('dashboardPage.portfolio.pricedAt', { date: summary.data.data.as_of })
-                  : t('dashboardPage.portfolio.noPriceDate')
-              }
             />
-            <StatSurface
+            <SummaryStat
               icon={RiWallet3Line}
               label={t('dashboardPage.portfolio.cash')}
               value={formatMoney(summary.data.data.cash_balance, locale)}
-              supportingText={t('dashboardPage.portfolio.simulatedFunds')}
             />
-            <StatSurface
+            <SummaryStat
               icon={RiBarChartBoxLine}
               label={t('dashboardPage.portfolio.return')}
+              tone={financialToneClass(summary.data.data.total_pnl)}
               value={
-                <span className={cx('tabular-nums', financialToneClass(summary.data.data.total_pnl))}>
+                <>
+                  <FinancialDirectionGlyph direction={changeDirection(summary.data.data.total_pnl)} />
                   {formatSignedMoney(summary.data.data.total_pnl, locale)}
-                </span>
+                </>
               }
-              supportingText={
-                <span className={cx('tabular-nums', financialToneClass(summary.data.data.total_return_pct))}>
-                  {formatPercent(summary.data.data.total_return_pct, locale)}
-                </span>
-              }
+              sub={formatPercent(summary.data.data.total_return_pct, locale)}
             />
           </div>
         )}
-      </section>
+      </Card>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.65fr)]">
         <AppPanel className="flex min-w-0 flex-col gap-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 className="text-title-2-medium text-text-primary">{t('dashboardPage.market.title')}</h2>
-              <p className="text-body-regular text-text-secondary">
-                {market.data
-                  ? t('dashboardPage.market.asOf', { date: market.data.data.as_of })
-                  : t('dashboardPage.market.description')}
-              </p>
+              <h2 className="text-headline-medium text-text-primary">{t('dashboardPage.market.title')}</h2>
+              {market.data?.data.as_of && (
+                <p className="text-body-2-regular text-text-secondary">
+                  {t('dashboardPage.market.asOf', { date: formatDay(market.data.data.as_of, locale) })}
+                </p>
+              )}
             </div>
             <Button variant="secondary" size="small" onClick={() => navigate('/markets')}>
               {t('dashboardPage.actions.viewAll')}
@@ -207,11 +196,12 @@ export function Dashboard() {
                     <span className="block truncate text-body-2-regular text-text-tertiary">{security.company_name}</span>
                   </button>
                   <div className="shrink-0 text-right">
-                    <span className="block tabular-nums text-body-medium text-text-primary">
-                      LKR {formatPrice(security.close, locale)}
-                    </span>
-                    <span className="block tabular-nums text-body-2-medium text-status-lime-text">
+                    <span className={cx('flex items-center justify-end tabular-nums text-body-medium', financialToneClass(security.change_pct))}>
+                      <FinancialDirectionGlyph direction={changeDirection(security.change_pct)} />
                       {formatSigned(security.change_pct, 2, locale)}%
+                    </span>
+                    <span className="block tabular-nums text-body-2-regular text-text-secondary">
+                      {t('dashboardPage.market.closedAt', { price: formatPrice(security.close, locale) })}
                     </span>
                   </div>
                 </li>
@@ -222,9 +212,8 @@ export function Dashboard() {
 
         <AppPanel tone="glass" className="flex flex-col gap-4">
           <div>
-            <p className="text-caption-1-semibold text-status-blue-text">{t('dashboardPage.next.eyebrow')}</p>
-            <h2 className="mt-1 text-title-2-medium text-text-primary">{t('dashboardPage.next.title')}</h2>
-            <p className="mt-1 text-body-regular text-text-secondary">{t('dashboardPage.next.description')}</p>
+            <h2 className="text-headline-medium text-text-primary">{t('dashboardPage.next.title')}</h2>
+            <p className="mt-1 text-body-2-regular text-text-secondary">{t('dashboardPage.next.description')}</p>
           </div>
           <div className="grid gap-3">
             <Button className="w-full justify-between" leadingIcon={RiFlaskLine} trailingIcon={RiArrowRightLine} onClick={() => navigate('/paper-trading')}>

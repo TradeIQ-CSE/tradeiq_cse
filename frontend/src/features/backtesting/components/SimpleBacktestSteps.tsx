@@ -2,9 +2,8 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { RiArrowDownSLine, RiArrowUpSLine } from "@remixicon/react";
 import { Button } from "@/components/base/buttons/button";
-import { Chip } from "@/components/base/badges/chip";
+import { InfoTip } from "@/components/domain/info-tip";
 import { Input } from "@/components/base/input/input";
-import { AppNotice } from "@/components/application/layout/application-layout";
 import { useBacktestWizard } from "../hooks/useBacktestWizard";
 import { createDefaultBacktestConfig, defaultBacktestPeriod } from "../domain/defaults";
 import type { StepKey } from "../domain/types";
@@ -14,15 +13,18 @@ import { RulesStep } from "./RulesStep";
 import { ExecutionStep } from "./ExecutionStep";
 import { MetricsStep } from "./MetricsStep";
 import { BacktestStepHeader } from "./BacktestStepLayout";
-import { entryDescription, exitDescription, sizingDescription } from "../domain/descriptions";
+import { formatDay } from "../domain/descriptions";
+import { RuleList, TradeSizeList } from "./RuleList";
 
 /** A composition of the installed BoardUI button and panel styles. */
 function ConfigureSection({
-  section, title, summary, actionLabel = title.toLowerCase(), custom = false, children,
+  section, title, summary, info, actionLabel = title.toLowerCase(), custom = false, children,
 }: {
   section: StepKey;
   title: string;
   summary: ReactNode;
+  /** Short explanation shown in the "i" tooltip next to the title. */
+  info?: ReactNode;
   actionLabel?: string;
   custom?: boolean;
   children: ReactNode;
@@ -49,14 +51,17 @@ function ConfigureSection({
   }, [open, hasErrors, hash, section]);
 
   return (
-    <section className="flex flex-col gap-3 rounded-3xl border border-border-button-default bg-background-secondary-default p-4 sm:p-5">
+    <section className="flex flex-col gap-3 rounded-2xl border border-border-button-default bg-background-secondary-default p-4 sm:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 flex-col gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-headline-medium text-text-primary">{title}</h3>
-            {custom && <Chip color="blue" variant="subtle">Custom</Chip>}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <div className="flex items-center gap-1">
+              <h3 className="text-headline-medium text-text-primary">{title}</h3>
+              {info && <InfoTip label={title}>{info}</InfoTip>}
+            </div>
+            {custom && <span className="text-caption-1-medium text-text-secondary">Edited</span>}
           </div>
-          <div className="text-body-regular text-text-secondary">{summary}</div>
+          <div className="mt-1 text-body-2-regular text-text-secondary">{summary}</div>
         </div>
         <Button
           variant="secondary" size="small"
@@ -66,7 +71,7 @@ function ConfigureSection({
           onClick={() => setOpen((previous) => !previous)}
           className="shrink-0"
         >
-          {open ? "Hide" : "Configure"} {actionLabel}
+          {open ? "Hide" : "Change"} {actionLabel}
         </Button>
       </div>
       <div id={panelId} ref={panelRef} tabIndex={-1} hidden={!open} className="border-t border-separator-border pt-5 outline-none">
@@ -81,12 +86,13 @@ export function SimpleCompanyStep() {
   const suggested = defaultBacktestPeriod(config.security.dataFrom, config.security.dataTo, priceGaps);
   return (
     <div className="flex flex-col gap-6">
-      <BacktestStepHeader step={1} total={3} title="Choose a company and period"
-        description="Choose one listed company. A recent year of its available history is selected for you, and you can change the exact dates below." />
+      <BacktestStepHeader title="Choose a company and dates"
+        description="Pick a company. Its latest year of prices is chosen for you" />
       <SecurityStep embedded />
-      <ConfigureSection section="period" title="Historical period"
+      <ConfigureSection section="period" title="Dates"
+        info="Both dates are included. Only days the market traded are used."
         custom={JSON.stringify(config.period) !== JSON.stringify(suggested)}
-        summary={<p>{config.period.startDate} to {config.period.endDate}, including both dates. Only available trading days are used.</p>}>
+        summary={<p>{formatDay(config.period.startDate)} to {formatDay(config.period.endDate)}</p>}>
         <PeriodStep embedded />
       </ConfigureSection>
     </div>
@@ -102,23 +108,14 @@ export function SimpleIdeaStep() {
   useEffect(() => {
     if (hash === "#portfolio" || capitalError) capitalRef.current?.focus();
   }, [hash, capitalError]);
-  const totalFeesPct = (Object.values(config.execution.fees).reduce((sum, rate) => sum + rate, 0) * 100).toFixed(3);
   return (
     <div className="flex flex-col gap-6">
-      <BacktestStepHeader step={2} total={3} title="Describe your investing idea"
-        description="Review when the simulation will buy and sell. These editable example rules are already filled in, so you can continue without configuring every option." />
-      <AppNotice title="Example rules, not recommendations">
-        The gain and loss thresholds below are starting points for learning how a simulation works. They are not advice about when to trade.
-      </AppNotice>
-      <ConfigureSection section="rules" title="Buy and sell rules"
+      <BacktestStepHeader title="When to buy and sell"
+        description="Example rules are filled in · Change them or continue" />
+      <ConfigureSection section="rules" title="Buy and sell rules" actionLabel="buy and sell rules"
+        info="These are examples to learn with, not advice on when to trade. The first sell rule to trigger closes the trade."
         custom={JSON.stringify(config.rules) !== JSON.stringify(defaults.rules)}
-        summary={<div className="flex flex-col gap-2">
-          <p>{entryDescription(config.rules.buy.type, config.rules.buy.value)}.</p>
-          <ul className="flex list-disc flex-col gap-1 pl-5">
-            {config.rules.sells.map((sell) => <li key={sell.type}>{exitDescription(sell.type, sell.value)}.</li>)}
-          </ul>
-          <p>The first exit condition to trigger closes the position.</p>
-        </div>}>
+        summary={<RuleList rules={config.rules} />}>
         <RulesStep embedded />
       </ConfigureSection>
       <section id="portfolio" className="flex flex-col gap-3">
@@ -129,15 +126,13 @@ export function SimpleIdeaStep() {
             ...previous, portfolio: { ...previous.portfolio, startingCapital: Number.parseFloat(value) },
           }))}
           min={1} step={1000} isDisabled={isSubmitting} isInvalid={Boolean(capitalError)}
-          hint={capitalError?.message || "Hypothetical money for this simulation. No real funds are used."}
+          hint={capitalError?.message || "Virtual money only · No real money is used"}
           className="max-w-md" />
       </section>
       <ConfigureSection section="execution" title="Trade size and charges" actionLabel="trade settings"
+        info="Charges are the standard CSE fees. Shares are bought in whole numbers, and leftover cash stays in the portfolio."
         custom={JSON.stringify(config.execution) !== JSON.stringify(defaults.execution)}
-        summary={<div className="flex flex-col gap-1">
-          <p>{sizingDescription(config.execution.positionSizing.type, config.execution.positionSizing.value)}.</p>
-          <p>Combined simulation charge: {totalFeesPct}% per buy or sell. Whole shares are rounded down.</p>
-        </div>}>
+        summary={<TradeSizeList execution={config.execution} />}>
         <ExecutionStep embedded />
       </ConfigureSection>
     </div>
@@ -149,8 +144,9 @@ export function SimpleAnalysisSection() {
   const defaults = createDefaultBacktestConfig();
   return (
     <ConfigureSection section="metrics" title="Analysis focus"
+      info="This only changes what you look at first. It doesn't change the test."
       custom={JSON.stringify(config.metrics) !== JSON.stringify(defaults.metrics)}
-      summary="Optional review preferences only. They do not change the simulation or which results the API returns.">
+      summary="Optional · Pick the results you care about most">
       <MetricsStep embedded />
     </ConfigureSection>
   );

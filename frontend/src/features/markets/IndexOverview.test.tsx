@@ -122,7 +122,7 @@ describe('IndexOverview', () => {
 
     expect(
       await screen.findByText(
-        t('markets.indices.gapNote', { range: 'Jan 1 to Sep 8, 2026' }),
+        t('markets.indices.gapNote'),
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: '2025' })).toBeChecked();

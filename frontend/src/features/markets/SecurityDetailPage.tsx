@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import { parseDate } from "@internationalized/date";
 import { CandlestickChart } from "../../components/charts/CandlestickChart";
-import { Button } from "../../components/base/buttons/button";
+import { RiArrowRightLine } from "@remixicon/react";
+import { Button, ButtonLink } from "../../components/base/buttons/button";
 import { Chip } from "../../components/base/badges/chip";
 import {
   DateRangePicker,
@@ -18,18 +19,17 @@ import {
   AppPanel,
   PageIntro,
   PageState,
-  PageToolbar,
 } from "../../components/application/layout/application-layout";
 import {
   MarketTerm,
   MarketTermHelp,
   type MarketTermKey,
 } from "../../components/domain/market-term";
-import { cx } from "../../utils/cx";
+import { InfoTip } from "../../components/domain/info-tip";
 import { localeFor } from "../../i18n";
 import { ApiError } from "../../lib/api";
 import { defaultRangeAvoidingGaps } from "../../lib/data-gaps";
-import { formatCount, formatPrice, formatSigned, formatVolume } from "./format";
+import { formatCount, formatPrice, formatVolume } from "./format";
 import { isWeekend, normalizeOhlcvBars, priceChartMode } from "./ohlcv-chart";
 import {
   ListingStatus,
@@ -41,6 +41,7 @@ import { useSecurityDetail, useSecurityOhlcv } from "./useSecurityDetail";
 import { useDataCoverage } from "./useDataCoverage";
 import { SecuritySectorIcon } from "./SecuritySectorIcon";
 import { BackToMarketsLink } from "./BackToMarketsLink";
+import { LatestClose } from "./LatestClose";
 
 const TIMEFRAMES: OhlcvTimeframe[] = ["daily", "weekly", "monthly"];
 const RANGE_ERROR_ID = "security-range-error";
@@ -78,7 +79,7 @@ function InfoItem({
         {label}
         {term && <MarketTermHelp term={term} />}
       </dt>
-      <dd className="text-right text-body-medium tabular-nums text-text-primary">
+      <dd className="whitespace-nowrap text-right text-body-medium tabular-nums text-text-primary">
         {value}
       </dd>
     </div>
@@ -142,57 +143,52 @@ function SecuritySummary({
 }) {
   const { t } = useTranslation();
   const latest = detail.latest;
-  const change = latest?.change ?? null;
-  const changeTone =
-    change === null
-      ? "text-text-primary"
-      : change >= 0
-        ? "text-status-lime-text"
-        : "text-status-rose-text";
 
   return (
     <PageIntro
       eyebrow={t("securityDetail.eyebrow")}
       title={detail.symbol}
       description={
-        <span className="flex items-center gap-2">
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <SecuritySectorIcon sector={detail.sector} />
           <span>{detail.company_name}</span>
+          {detail.sector?.name && (
+            <>
+              <span aria-hidden className="text-text-tertiary">·</span>
+              <span className="text-text-tertiary">{detail.sector.name}</span>
+            </>
+          )}
+          {/* Only an unusual status is worth a badge; "Listed" is the norm. */}
+          {detail.listing_status !== "listed" && (
+            <Chip variant="subtle" color={STATUS_COLOR[detail.listing_status]}>
+              {t(`securityDetail.listingStatus.${detail.listing_status}`)}
+            </Chip>
+          )}
         </span>
       }
       actions={
-        <div className="flex flex-wrap items-center gap-3 sm:justify-end">
-          <Chip variant="subtle" color={STATUS_COLOR[detail.listing_status]}>
-            {t(`securityDetail.listingStatus.${detail.listing_status}`)}
-          </Chip>
-          <div className="flex flex-col sm:items-end">
-            {latest ? (
-              <>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-body-2-medium text-text-tertiary">
-                    {t("securityDetail.currency")}
-                  </span>
-                  <strong className="text-title-2-medium tabular-nums text-text-primary">
-                    {formatPrice(latest.close, locale)}
-                  </strong>
-                </div>
-                <div
-                  className={cx("text-body-medium tabular-nums", changeTone)}
-                >
-                  {latest.change === null
-                    ? "—"
-                    : formatSigned(latest.change, 2, locale)}
-                  {latest.change_pct === null
-                    ? ""
-                    : ` (${formatSigned(latest.change_pct, 2, locale)}%)`}
-                </div>
-              </>
-            ) : (
-              <span className="text-body-medium text-text-tertiary">
-                {t("securityDetail.states.noLatestPrice")}
-              </span>
-            )}
-          </div>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 sm:justify-end">
+          {latest ? (
+            <LatestClose
+              close={latest.close}
+              change={latest.change}
+              changePct={latest.change_pct}
+              currency={t("securityDetail.currency")}
+              locale={locale}
+            />
+          ) : (
+            <span className="text-body-medium text-text-tertiary">
+              {t("securityDetail.states.noLatestPrice")}
+            </span>
+          )}
+          {detail.listing_status === "listed" && (
+            <ButtonLink
+              href={`/paper-trading?symbol=${encodeURIComponent(detail.symbol)}`}
+              trailingIcon={RiArrowRightLine}
+            >
+              {t("securityDetail.practiseTrade")}
+            </ButtonLink>
+          )}
         </div>
       }
     />
@@ -340,12 +336,12 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
           className="relative overflow-hidden p-0"
           aria-busy={chartQuery.isFetching}
         >
-          <div className="flex flex-col gap-3 px-4 pt-4 pb-3 sm:flex-row sm:items-start sm:justify-between sm:px-5 sm:pt-5">
+          <div className="flex flex-col gap-3 px-4 pt-4 pb-3 lg:flex-row lg:items-start lg:justify-between sm:px-5 sm:pt-5">
             <div className="flex min-w-0 flex-col gap-0.5">
               <h2 className="text-headline-medium text-text-primary">
                 {t("securityDetail.chart.title")}
               </h2>
-              <p className="text-body-2-medium text-text-tertiary">
+              <p className="text-body-2-regular text-text-secondary">
                 {chartQuery.data?.from && chartQuery.data.to
                   ? t("securityDetail.chart.range", {
                       from: isoDateLabel(chartQuery.data.from, locale),
@@ -355,29 +351,7 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
               </p>
             </div>
 
-            <div className="max-w-full overflow-x-auto pb-0.5">
-              <SegmentedControl
-                aria-label={t("securityDetail.chart.timeframeLabel")}
-                selectedKeys={new Set([timeframe])}
-                onSelectionChange={(keys) => {
-                  const [next] = [...keys];
-                  if (next) setTimeframe(next as OhlcvTimeframe);
-                }}
-              >
-                {TIMEFRAMES.map((value) => (
-                  <SegmentedControlItem key={value} id={value}>
-                    {t(`securityDetail.timeframes.${value}`)}
-                  </SegmentedControlItem>
-                ))}
-              </SegmentedControl>
-            </div>
-          </div>
-
-          <PageToolbar className="mx-4 mb-3 sm:mx-5">
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <span className="text-body-2-medium text-text-secondary">
-                {t("securityDetail.range.label")}
-              </span>
+            <div className="flex max-w-full flex-wrap items-center gap-2 sm:justify-end">
               <DateRangePicker
                 aria-label={t("securityDetail.range.label")}
                 className="w-full sm:w-fit"
@@ -416,18 +390,33 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
                   setIsDefaultRange(!value);
                 }}
               />
-            </div>
-            <div className="flex items-end sm:ml-auto">
-              <Button
-                type="button"
-                variant="ghost"
-                size="small"
-                onClick={resetRange}
+              {!isDefaultRange && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="small"
+                  onClick={resetRange}
+                >
+                  {t("securityDetail.actions.reset")}
+                </Button>
+              )}
+
+              <SegmentedControl
+                aria-label={t("securityDetail.chart.timeframeLabel")}
+                selectedKeys={new Set([timeframe])}
+                onSelectionChange={(keys) => {
+                  const [next] = [...keys];
+                  if (next) setTimeframe(next as OhlcvTimeframe);
+                }}
               >
-                {t("securityDetail.actions.reset")}
-              </Button>
+                {TIMEFRAMES.map((value) => (
+                  <SegmentedControlItem key={value} id={value}>
+                    {t(`securityDetail.timeframes.${value}`)}
+                  </SegmentedControlItem>
+                ))}
+              </SegmentedControl>
             </div>
-          </PageToolbar>
+          </div>
 
           {rangeHasError && (
             <div
@@ -489,7 +478,7 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
             ) : (
               <div className="flex flex-col gap-3">
                 {chartMode === "close" ? (
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-body-2-medium text-text-secondary">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-body-2-medium text-text-secondary">
                     <span className="inline-flex items-center gap-1.5 text-text-primary">
                       <span
                         className="h-0.5 w-4 rounded-full bg-accent-500"
@@ -497,9 +486,9 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
                       />
                       {t("securityDetail.chart.legend.closePrice")}
                     </span>
-                    <span>
+                    <InfoTip label={t("securityDetail.chart.legend.closePrice")}>
                       {t("securityDetail.chart.legend.closeOnlyHelp")}
-                    </span>
+                    </InfoTip>
                   </div>
                 ) : (
                   <div className="flex flex-wrap items-center gap-4 text-body-2-medium text-text-secondary">
@@ -517,7 +506,9 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
                       />
                       {t("securityDetail.chart.legend.down")}
                     </span>
-                    <span>{t("securityDetail.chart.legend.help")}</span>
+                    <InfoTip label={t("securityDetail.chart.title")}>
+                      {t("securityDetail.chart.legend.help")}
+                    </InfoTip>
                   </div>
                 )}
                 <div
@@ -584,19 +575,12 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
             {t("securityDetail.info.title")}
           </h2>
           <dl>
-            <InfoItem
-              label={t("securityDetail.info.sector")}
-              value={detail.sector?.name ?? "—"}
-              term="sector"
-            />
-            <InfoItem
-              label={t("securityDetail.info.cseCode")}
-              value={detail.cse_code ?? "—"}
-            />
-            <InfoItem
-              label={t("securityDetail.info.listingStatus")}
-              value={t(`securityDetail.listingStatus.${detail.listing_status}`)}
-            />
+            {detail.cse_code && detail.cse_code !== detail.symbol && (
+              <InfoItem
+                label={t("securityDetail.info.cseCode")}
+                value={detail.cse_code}
+              />
+            )}
             <InfoItem
               label={t("securityDetail.info.lastTrade")}
               value={isoDateLabel(detail.latest?.trade_date ?? null, locale)}
@@ -641,10 +625,12 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
               }
               term="pbRatio"
             />
-            <InfoItem
-              label={t("securityDetail.info.ratioDate")}
-              value={isoDateLabel(detail.ratios?.valid_from ?? null, locale)}
-            />
+            {detail.ratios?.valid_from && (
+              <InfoItem
+                label={t("securityDetail.info.ratioDate")}
+                value={isoDateLabel(detail.ratios.valid_from, locale)}
+              />
+            )}
           </dl>
         </AppPanel>
       </div>

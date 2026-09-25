@@ -71,21 +71,21 @@ export const CSE_DATASET_MAX_DATE = '2025-12-31';
 export const DEFAULT_STARTING_CAPITAL = 1_000_000; // Rs. 1,000,000 (1M LKR)
 
 export const CAPITAL_PRESETS = [
-  { label: 'Rs. 100K', value: 100_000 },
-  { label: 'Rs. 500K', value: 500_000 },
-  { label: 'Rs. 1M', value: 1_000_000 },
-  { label: 'Rs. 5M', value: 5_000_000 },
-  { label: 'Rs. 10M', value: 10_000_000 },
+  { label: 'LKR 100K', value: 100_000 },
+  { label: 'LKR 500K', value: 500_000 },
+  { label: 'LKR 1M', value: 1_000_000 },
+  { label: 'LKR 5M', value: 5_000_000 },
+  { label: 'LKR 10M', value: 10_000_000 },
 ];
 
 export const AVAILABLE_METRICS = [
-  { id: 'total_return', name: 'Total Return (%)', description: 'Overall percentage gain or loss across the period', default: true },
-  { id: 'max_drawdown', name: 'Maximum Drawdown (%)', description: 'Largest peak-to-trough decline in portfolio equity', default: true },
-  { id: 'win_rate', name: 'Win Rate (%)', description: 'Percentage of completed trades closing in net profit', default: true },
-  { id: 'profit_factor', name: 'Profit Factor', description: 'Ratio of gross trading profits to gross trading losses', default: false },
-  { id: 'final_equity', name: 'Final Portfolio Equity', description: 'Ending cash plus market value of held shares in LKR', default: true },
-  { id: 'trade_count', name: 'Total Trade Count', description: 'Total number of buy and sell transactions executed', default: true },
-  { id: 'sharpe_ratio', name: 'Sharpe Ratio', description: 'Risk-adjusted return relative to Sri Lanka risk-free rate', default: false },
+  { id: 'total_return', name: 'Total return', description: 'How much the portfolio gained or lost overall', default: true },
+  { id: 'max_drawdown', name: 'Largest drop', description: 'The biggest fall from a high point along the way', default: true },
+  { id: 'win_rate', name: 'Win rate', description: 'The share of trades that made money', default: true },
+  { id: 'profit_factor', name: 'Profit factor', description: 'Money made on winning trades compared with money lost on losing ones', default: false },
+  { id: 'final_equity', name: 'Final value', description: 'Cash plus the value of shares held at the end', default: true },
+  { id: 'trade_count', name: 'Number of trades', description: 'How many buys and sells happened', default: true },
+  { id: 'sharpe_ratio', name: 'Sharpe ratio', description: 'Return compared with how bumpy the ride was', default: false },
 ];
 
 export function createDefaultBacktestConfig(): BacktestConfig {

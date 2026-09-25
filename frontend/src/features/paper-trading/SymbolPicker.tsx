@@ -12,6 +12,7 @@ import { getEnvelope } from "../../lib/api";
 import { readErrorText } from "./error-text";
 import { SecurityListItem } from "../markets/types";
 import { SecuritySectorIcon } from "../markets/SecuritySectorIcon";
+import { SelectedCompany } from "../markets/SelectedCompany";
 import { Field } from "./ui";
 import { InputBase } from "../../components/base/input/input";
 import { RiSearchLine } from "@remixicon/react";
@@ -197,9 +198,17 @@ export function SymbolPicker({ value, onChange, disabled, label, showCompanyName
         />
       </Field>
       {showCompanyName && company && (
-        <p id={companyNameId} className="mt-2 text-body-2-medium text-text-secondary">
-          {company.company_name}
-        </p>
+        <div className="mt-3">
+          <SelectedCompany
+            symbol={company.symbol}
+            companyName={company.company_name}
+            sector={company.sector}
+            price={company.price}
+            historyFrom={company.data_from}
+            historyTo={company.data_to}
+            nameId={companyNameId}
+          />
+        </div>
       )}
 
       {showDropdown && (

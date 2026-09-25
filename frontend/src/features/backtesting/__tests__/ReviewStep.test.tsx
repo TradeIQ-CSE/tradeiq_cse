@@ -48,9 +48,7 @@ describe('ReviewStep — crossing notice', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(
-          "No market data from Jan 1 to Jun 12, 2026 in this range. The backtest skips it: an open position is held through it, and stop-loss and take-profit rules can't act until Jun 15, 2026.",
-        ),
+        screen.getByText("Sell rules wait until Jun 15, 2026"),
       ).toBeInTheDocument();
     });
   });
@@ -61,7 +59,7 @@ describe('ReviewStep — crossing notice', () => {
     renderReview('simple');
 
     await waitFor(() => {
-      expect(screen.getByText(/No market data from Jan 1 to Jun 12, 2026/)).toBeInTheDocument();
+      expect(screen.getByText("Jan 1 to Jun 12, 2026")).toBeInTheDocument();
     });
   });
 
@@ -71,7 +69,7 @@ describe('ReviewStep — crossing notice', () => {
     renderReview('advanced');
 
     await waitFor(() => {
-      expect(screen.getByText('Configuration requires attention')).toBeInTheDocument();
+      expect(screen.getByText(/^Fix \d+ things? before running$/)).toBeInTheDocument();
       expect(
         screen.getByText('No market data from 2026-01-01 to 2026-06-12. Choose a date outside this period.'),
       ).toBeInTheDocument();
@@ -84,7 +82,7 @@ describe('ReviewStep — crossing notice', () => {
     seedDraft({ startDate: '2024-01-01', endDate: '2024-12-31' });
     renderReview('advanced');
 
-    await screen.findByRole('heading', { name: 'Review simulation assumptions' });
-    expect(screen.queryByText(/No market data from/)).not.toBeInTheDocument();
+    await screen.findByRole('heading', { name: 'Check and run' });
+    expect(screen.queryByText(/Shares you hold are kept through it/)).not.toBeInTheDocument();
   });
 });

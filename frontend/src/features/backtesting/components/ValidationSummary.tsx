@@ -2,6 +2,7 @@ import { Button } from "@/components/base/buttons/button";
 import { AppNotice } from "@/components/application/layout/application-layout";
 import { useBacktestWizard } from "../hooks/useBacktestWizard";
 import type { StepKey } from "../domain/types";
+import { STEP_LABELS } from "../domain/stepLabels";
 
 export function ValidationSummary() {
   const { validationErrors, goToStep } = useBacktestWizard();
@@ -11,9 +12,9 @@ export function ValidationSummary() {
   return (
     <AppNotice
       tone="error"
-      title={`Check ${validationErrors.length} configuration ${
-        validationErrors.length === 1 ? "issue" : "issues"
-      }`}
+      title={`Fix ${validationErrors.length} ${
+        validationErrors.length === 1 ? "thing" : "things"
+      } to continue`}
       aria-live="polite"
     >
       <ul className="mt-1 flex list-disc flex-col gap-2 pl-5">
@@ -26,7 +27,7 @@ export function ValidationSummary() {
                 size="xs"
                 onClick={() => goToStep(error.step as StepKey)}
               >
-                Open {error.step}
+                Go to {STEP_LABELS[error.step as StepKey]?.toLowerCase() ?? error.step}
               </Button>
             </div>
           </li>

@@ -18,7 +18,7 @@ export function TradingDetails({ title, children, expanded = false, disabled = f
   return (
     <div className={cx('flex min-w-0 flex-col gap-3', className)}>
       {!expanded && (
-        <Button type="button" variant="secondary" className="self-start"
+        <Button type="button" variant="secondary" size="small" className="self-start"
           trailingIcon={open ? RiArrowUpSLine : RiArrowDownSLine}
           aria-expanded={visible} aria-controls={id} disabled={disabled}
           onClick={() => setOpen(!open)}>

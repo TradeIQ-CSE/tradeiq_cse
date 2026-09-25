@@ -9,7 +9,7 @@ import { filledOrderFixture, orderEstimateFixture, portfolioFixture } from '@/te
 import { PaperTradingPage } from './PaperTradingPage';
 import { OrderTicket } from './OrderTicket';
 import { CreatePortfolioForm } from './CreatePortfolioForm';
-import { formatMoney, formatSignedMoney } from './format';
+import { formatDay, formatMoney, formatSignedMoney } from './format';
 import { within } from '@testing-library/react';
 
 const t = i18n.t.bind(i18n);
@@ -42,7 +42,7 @@ describe('Simple/Advanced paper trading', () => {
     const steps = screen.getByRole('list', { name: t('paperTrading.workflow.steps.label') });
     const current = () => within(steps).getAllByRole('listitem').find((item) => item.getAttribute('aria-current') === 'step');
     expect(current()).toHaveTextContent(t('paperTrading.workflow.steps.choose'));
-    expect(screen.getByText(t('paperTrading.workflow.choosePrompt'))).toBeVisible();
+    expect(screen.getByText(t('paperTrading.workflow.guidance.missingBoth'))).toBeVisible();
     expect(review()).toBeDisabled();
     expect(review()).toHaveAccessibleDescription(t('paperTrading.workflow.guidance.missingBoth'));
     const shares = screen.getByRole('spinbutton', { name: t('paperTrading.workflow.shareCount') });
@@ -105,13 +105,13 @@ describe('Simple/Advanced paper trading', () => {
     expect(orders).not.toHaveBeenCalled();
     expect(screen.getByText(formatMoney(orderEstimateFixture.fee_total, 'en-LK'))).toBeVisible();
     expect(screen.getByText(formatSignedMoney(orderEstimateFixture.cash_effect, 'en-LK'))).toBeVisible();
-    expect(screen.getByText(orderEstimateFixture.price_as_of)).toBeVisible();
+    expect(screen.getByText(formatDay(orderEstimateFixture.price_as_of, 'en-LK'))).toBeVisible();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: t('paperTrading.workflow.chargeBreakdown') }));
     expect(screen.getByRole('table')).toBeVisible();
     for (const fee of orderEstimateFixture.fees) expect(screen.getByText(formatMoney(fee.amount, 'en-LK'))).toBeVisible();
-    await user.click(screen.getByRole('button', { name: t('paperTrading.workflow.settlementDetails') }));
-    expect(screen.getByText(t('paperTrading.workflow.settlementHelp', { date: orderEstimateFixture.settlement_date }))).toBeVisible();
+    await user.hover(screen.getByRole('button', { name: `More about ${t('paperTrading.ticket.estimate.title')}` }));
+    expect(await screen.findByText(t('paperTrading.workflow.settlementHelp', { date: formatDay(orderEstimateFixture.settlement_date, 'en-LK') }))).toBeVisible();
     await user.click(confirm());
     await screen.findByText(t('paperTrading.ticket.result.filledTitle', { side: 'Buy', quantity: 1000, symbol: 'COMB.N0000' }));
     expect(orders).toHaveBeenCalledTimes(1);
@@ -134,7 +134,7 @@ describe('Simple/Advanced paper trading', () => {
     expect(screen.getByRole('button', { name: t('paperTrading.ticket.confirm') })).toBeEnabled();
     expect(screen.getByRole('button', { name: new RegExp(`${t('portfolio.selector.label')}$`) })).toBeVisible();
     expect(screen.getByRole('button', { name: t('portfolio.selector.new') })).toBeVisible();
-    expect(screen.getByText(orderEstimateFixture.settlement_date)).toBeVisible();
+    expect(screen.getByText(formatDay(orderEstimateFixture.settlement_date, 'en-LK'))).toBeVisible();
     await user.click(screen.getByRole('radio', { name: 'Simple' }));
     expect(confirm()).toBeEnabled();
     expect(screen.getByRole('combobox', { name: t('paperTrading.workflow.company') })).toHaveValue('COMB.N0000');

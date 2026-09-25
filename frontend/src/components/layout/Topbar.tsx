@@ -30,7 +30,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         />
 
         <Breadcrumb className="hidden sm:flex" aria-label={t('topbar.breadcrumbRoot')}>
-          <BreadcrumbItem href="/markets">{t('topbar.breadcrumbRoot')}</BreadcrumbItem>
+          <BreadcrumbItem href="/dashboard">{t('topbar.breadcrumbRoot')}</BreadcrumbItem>
           {activeRoute && <BreadcrumbItem current>{t(activeRoute.labelKey)}</BreadcrumbItem>}
         </Breadcrumb>
       </div>

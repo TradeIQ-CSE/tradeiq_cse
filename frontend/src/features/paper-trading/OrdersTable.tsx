@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import {
   RiCheckboxCircleLine,
   RiCloseCircleLine,
@@ -93,10 +94,7 @@ export function OrdersTable({ portfolioId }: OrdersTableProps) {
       <CardHeading
         title={t("orders.tableTitle")}
         actions={
-          <div className="flex min-w-44 flex-col gap-1">
-            <span className="text-body-2-medium text-text-secondary">
-              {t("orders.filter.label")}
-            </span>
+          <div className="min-w-44">
             <Select
               aria-label={t("orders.filter.label")}
               selectedKey={status}
@@ -172,7 +170,14 @@ export function OrdersTable({ portfolioId }: OrdersTableProps) {
                           <td className="tabular-nums">
                             {formatDateTime(order.placed_at, locale)}
                           </td>
-                          <td className="text-text-primary">{order.symbol}</td>
+                          <td className="text-text-primary">
+                            <Link
+                              to={`/markets/${encodeURIComponent(order.symbol)}`}
+                              className="text-body-medium text-text-primary outline-none hover:text-accent-600 focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+                            >
+                              {order.symbol}
+                            </Link>
+                          </td>
                           <td>
                             {t(`paperTrading.ticket.sides.${order.side}`)}
                           </td>

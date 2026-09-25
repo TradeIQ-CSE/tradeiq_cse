@@ -1,16 +1,10 @@
-import { Chip } from "@/components/base/badges/chip";
 import { CheckboxCard } from "@/components/base/checkbox/checkbox-card";
 import { Input } from "@/components/base/input/input";
 import { RadioCard } from "@/components/base/radio/radio-card";
 import { RadioGroup } from "@/components/base/radio/radio";
-import { AppNotice } from "@/components/application/layout/application-layout";
 import { cx } from "@/utils/cx";
 import { useBacktestWizard } from "../hooks/useBacktestWizard";
-import {
-  DISALLOWED_INDICATOR_STRATEGIES,
-  V1_BUY_RULES,
-  V1_SELL_RULES,
-} from "../domain/v1Rules";
+import { V1_BUY_RULES, V1_SELL_RULES } from "../domain/v1Rules";
 import type { BuyConditionType, SellConditionType } from "../domain/types";
 import {
   BacktestFieldError,
@@ -103,29 +97,20 @@ export function RulesStep({ embedded = false }: { embedded?: boolean }) {
     <div className="flex flex-col gap-7">
       <BacktestStepHeader
         embedded={embedded}
-        step={3}
-        title="Define entry and exit rules"
-        description="An entry rule decides when the simulation buys. One or more exit rules decide when it sells; if several trigger on the same bar, the engine uses its fixed precedence rules."
+        title="When to buy and sell"
+        description="Choose one buy rule and at least one sell rule"
       />
-
-      <AppNotice title="Version 1 supports price rules only">
-        Indicators such as{" "}
-        {DISALLOWED_INDICATOR_STRATEGIES.map((item) => item.code).join(", ")}
-        {" "}may be useful for research, but the current execution API does not
-        accept them as backtest rules.
-      </AppNotice>
 
       <section className="flex flex-col gap-3">
         <BacktestSectionHeader
-          title="Entry rule"
-          description="Choose exactly one condition that opens a long position."
-          aside={<Chip color="blue">One required</Chip>}
+          title="Buy"
+          info="The test buys once, the first time this rule is met. Only price rules are available for now."
         />
         <BacktestFieldError>{buyError?.message}</BacktestFieldError>
         <RadioGroup
           value={selectedBuy.type}
           onChange={(value) => selectBuy(value as BuyConditionType)}
-          aria-label="Entry rule"
+          aria-label="Buy rule"
           className="grid gap-3 md:grid-cols-3"
           isInvalid={Boolean(buyError)}
         >
@@ -159,11 +144,6 @@ export function RulesStep({ embedded = false }: { embedded?: boolean }) {
               max={selectedBuyMeta.max}
               step={selectedBuyMeta.step}
               placeholder={selectedBuyMeta.valuePlaceholder}
-              hint={
-                selectedBuyMeta.valueSuffix
-                  ? `Enter a value in ${selectedBuyMeta.valueSuffix}.`
-                  : undefined
-              }
               fieldClassName="ring-1 ring-inset ring-border-button-default"
               className="max-w-sm"
             />
@@ -173,15 +153,14 @@ export function RulesStep({ embedded = false }: { embedded?: boolean }) {
 
       <section className="flex flex-col gap-3 border-t border-separator-border pt-6">
         <BacktestSectionHeader
-          title="Exit rules"
-          description="Choose one or more. The first condition reached closes the open position."
-          aside={<Chip color="blue">At least one required</Chip>}
+          title="Sell"
+          info="The first sell rule to trigger closes the trade. If stop loss and take profit trigger on the same day, stop loss goes first."
         />
         <BacktestFieldError>{sellsError?.message}</BacktestFieldError>
         <div
           className="grid gap-3 md:grid-cols-2"
           role="group"
-          aria-label="Exit rules"
+          aria-label="Sell rules"
         >
           {V1_SELL_RULES.map((rule) => {
             const isSelected = selectedSells.some(
@@ -232,11 +211,6 @@ export function RulesStep({ embedded = false }: { embedded?: boolean }) {
                     max={metadata.max}
                     step={metadata.step}
                     placeholder={metadata.valuePlaceholder}
-                    hint={
-                      metadata.valueSuffix
-                        ? `Enter a value in ${metadata.valueSuffix}.`
-                        : undefined
-                    }
                     fieldClassName="ring-1 ring-inset ring-border-button-default"
                   />
                 );

@@ -1,3 +1,4 @@
+import { formatGapBoundary } from '../../lib/data-gaps';
 // LKR currency formatting for the paper-trading UI. Locale is always a
 // parameter, never hardcoded, matching features/markets/format.ts.
 
@@ -52,4 +53,13 @@ export function changeDirection(value: number): 'up' | 'down' | 'flat' {
   if (value > 0) return 'up';
   if (value < 0) return 'down';
   return 'flat';
+}
+
+/** "Sep 25, 2026"-style date for an ISO trading day; the raw value if unparseable. */
+export function formatDay(day: string, locale: string): string {
+  try {
+    return formatGapBoundary(day, locale);
+  } catch {
+    return day;
+  }
 }

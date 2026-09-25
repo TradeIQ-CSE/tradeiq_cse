@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import { IndexLineChart } from "../../components/charts/IndexLineChart";
 import { Button } from "../../components/base/buttons/button";
-import { Chip } from "../../components/base/badges/chip";
 import {
   DateRangePicker,
   type DateRangeValue,
@@ -17,19 +16,19 @@ import {
   AppPanel,
   PageIntro,
   PageState,
-  PageToolbar,
 } from "../../components/application/layout/application-layout";
 import { cx } from "../../utils/cx";
 import { localeFor } from "../../i18n";
 import { ApiError } from "../../lib/api";
-import { defaultRangeAvoidingGaps } from "../../lib/data-gaps";
-import { formatPrice, formatSigned } from "./format";
+import { defaultRangeAvoidingGaps, formatGapBoundary } from "../../lib/data-gaps";
 import { resampleIndexValues } from "./index-chart";
 import { isWeekend } from "./ohlcv-chart";
 import { OhlcvRange, OhlcvTimeframe } from "./types";
 import { useIndices, useIndexValues } from "./useIndices";
 import { useDataCoverage } from "./useDataCoverage";
 import { BackToMarketsLink } from "./BackToMarketsLink";
+import { LatestClose } from "./LatestClose";
+import { InfoTip } from "../../components/domain/info-tip";
 
 const TIMEFRAMES: OhlcvTimeframe[] = ["daily", "weekly", "monthly"];
 const RANGE_ERROR_ID = "index-range-error";
@@ -140,7 +139,6 @@ function IndexDetailView({ code }: { code: string }) {
   }
 
   const latest = index.latest;
-  const positive = (latest?.change ?? 0) >= 0;
   const valuesApiError =
     valuesQuery.error instanceof ApiError ? valuesQuery.error : null;
   const serverFieldErrors =
@@ -162,25 +160,20 @@ function IndexDetailView({ code }: { code: string }) {
       <PageIntro
         eyebrow={t("markets.indices.eyebrow")}
         title={index.code}
-        description={index.name}
+        description={
+          <span className="flex items-center gap-1">
+            {index.name}
+            <InfoTip label={index.code}>{t("markets.indices.whatIsIndex")}</InfoTip>
+          </span>
+        }
         actions={
           latest ? (
-            <div className="flex flex-col sm:items-end">
-              <strong className="text-title-2-medium tabular-nums text-text-primary">
-                {formatPrice(latest.close, locale)}
-              </strong>
-              <div className="flex flex-wrap items-center gap-2">
-                {latest.change !== null && latest.change_pct !== null && (
-                  <Chip variant="bold" color={positive ? "lime" : "rose"}>
-                    {formatSigned(latest.change, 2, locale)} (
-                    {formatSigned(latest.change_pct, 2, locale)}%)
-                  </Chip>
-                )}
-                <span className="text-body-2-medium text-text-tertiary">
-                  {t("markets.asOf", { date: latest.date })}
-                </span>
-              </div>
-            </div>
+            <LatestClose
+              close={latest.close}
+              change={latest.change}
+              changePct={latest.change_pct}
+              locale={locale}
+            />
           ) : (
             <span className="text-body-medium text-text-tertiary">
               {t("markets.indices.noLatest")}
@@ -193,44 +186,22 @@ function IndexDetailView({ code }: { code: string }) {
         className="relative overflow-hidden p-0"
         aria-busy={valuesQuery.isFetching}
       >
-        <div className="flex flex-col gap-3 px-4 pt-4 pb-3 sm:flex-row sm:items-start sm:justify-between sm:px-5 sm:pt-5">
+        <div className="flex flex-col gap-3 px-4 pt-4 pb-3 lg:flex-row lg:items-start lg:justify-between sm:px-5 sm:pt-5">
           <div className="flex min-w-0 flex-col gap-0.5">
             <h2 className="text-headline-medium text-text-primary">
               {t("securityDetail.chart.title")}
             </h2>
-            <p className="text-body-2-medium text-text-tertiary">
+            <p className="text-body-2-regular text-text-secondary">
               {valuesQuery.data?.from && valuesQuery.data.to
                 ? t("securityDetail.chart.range", {
-                    from: valuesQuery.data.from,
-                    to: valuesQuery.data.to,
+                    from: formatGapBoundary(valuesQuery.data.from, locale),
+                    to: formatGapBoundary(valuesQuery.data.to, locale),
                   })
                 : t("securityDetail.chart.rangeUnavailable")}
             </p>
           </div>
 
-          <div className="max-w-full overflow-x-auto pb-0.5">
-            <SegmentedControl
-              aria-label={t("securityDetail.chart.timeframeLabel")}
-              selectedKeys={new Set([timeframe])}
-              onSelectionChange={(keys) => {
-                const [next] = [...keys];
-                if (next) setTimeframe(next as OhlcvTimeframe);
-              }}
-            >
-              {TIMEFRAMES.map((value) => (
-                <SegmentedControlItem key={value} id={value}>
-                  {t(`securityDetail.timeframes.${value}`)}
-                </SegmentedControlItem>
-              ))}
-            </SegmentedControl>
-          </div>
-        </div>
-
-        <PageToolbar className="mx-4 mb-3 sm:mx-5">
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <span className="text-body-2-medium text-text-secondary">
-              {t("securityDetail.range.label")}
-            </span>
+          <div className="flex max-w-full flex-wrap items-center gap-2 sm:justify-end">
             <DateRangePicker
               aria-label={t("securityDetail.range.label")}
               className="w-full sm:w-fit"
@@ -259,13 +230,28 @@ function IndexDetailView({ code }: { code: string }) {
                 setIsDefaultRange(!value);
               }}
             />
+            {!isDefaultRange && (
+              <Button type="button" variant="ghost" size="small" onClick={resetRange}>
+                {t("securityDetail.actions.reset")}
+              </Button>
+            )}
+
+            <SegmentedControl
+              aria-label={t("securityDetail.chart.timeframeLabel")}
+              selectedKeys={new Set([timeframe])}
+              onSelectionChange={(keys) => {
+                const [next] = [...keys];
+                if (next) setTimeframe(next as OhlcvTimeframe);
+              }}
+            >
+              {TIMEFRAMES.map((value) => (
+                <SegmentedControlItem key={value} id={value}>
+                  {t(`securityDetail.timeframes.${value}`)}
+                </SegmentedControlItem>
+              ))}
+            </SegmentedControl>
           </div>
-          <div className="flex items-end sm:ml-auto">
-            <Button type="button" variant="ghost" size="small" onClick={resetRange}>
-              {t("securityDetail.actions.reset")}
-            </Button>
-          </div>
-        </PageToolbar>
+        </div>
 
         {rangeHasError && (
           <div

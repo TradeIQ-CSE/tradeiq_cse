@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { localeFor } from "../../i18n";
-import { formatMoney, formatSignedMoney } from "./format";
+import { formatDay, formatMoney, formatSignedMoney } from "./format";
 import { mapOrderCode } from "./order-messages";
 import { Order } from "./types";
 import { ErrorCard } from "./ui";
@@ -51,7 +51,7 @@ export function ResultBanner({ outcome }: ResultBannerProps) {
             {t("paperTrading.ticket.result.filledDetail", {
               price: formatMoney(order.fill.price, locale),
               cashEffect: formatSignedMoney(order.fill.cash_effect, locale),
-              date: order.fill.settlement_date,
+              date: formatDay(order.fill.settlement_date, locale),
             })}
           </p>
         </div>

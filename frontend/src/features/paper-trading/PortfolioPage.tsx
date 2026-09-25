@@ -8,6 +8,7 @@ import {
   AppPage,
   PageIntro,
 } from "../../components/application/layout/application-layout";
+import { InfoTip } from "../../components/domain/info-tip";
 import { CashLedger } from "./CashLedger";
 import { PortfolioScope } from "./PortfolioScope";
 import { PositionsTable } from "./PositionsTable";
@@ -40,23 +41,25 @@ export function PortfolioPage() {
         }
       />
 
-      <div className="flex flex-col gap-1 sm:ml-auto sm:items-end">
-        <span className="text-body-2-medium text-text-secondary">
-          {t("portfolio.asOfLabel")}
-        </span>
-        <DatePicker
-          aria-label={t("portfolio.asOfLabel")}
-          value={displayedDate ? parseDate(displayedDate) : null}
-          minValue={availableFrom ? parseDate(availableFrom) : undefined}
-          maxValue={availableTo ? parseDate(availableTo) : undefined}
-          onChange={(value) => value && setSelectedAsOf(value.toString())}
-        />
-        <span className="max-w-sm text-right text-caption-1-medium text-text-tertiary">
-          {t("portfolio.asOfHelp")}
-        </span>
-      </div>
-
-      <PortfolioScope>
+      <PortfolioScope
+        toolbarExtra={
+          <div className="flex flex-col gap-1">
+            <span className="flex items-center gap-1 text-body-2-medium text-text-secondary">
+              {t("portfolio.asOfLabel")}
+              <InfoTip label={t("portfolio.asOfLabel")}>
+                {t("portfolio.asOfHelp")}
+              </InfoTip>
+            </span>
+            <DatePicker
+              aria-label={t("portfolio.asOfLabel")}
+              value={displayedDate ? parseDate(displayedDate) : null}
+              minValue={availableFrom ? parseDate(availableFrom) : undefined}
+              maxValue={availableTo ? parseDate(availableTo) : undefined}
+              onChange={(value) => value && setSelectedAsOf(value.toString())}
+            />
+          </div>
+        }
+      >
         {(portfolioId) => (
           <>
             <SummaryCards

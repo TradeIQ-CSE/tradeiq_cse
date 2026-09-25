@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { RiAddLine } from "@remixicon/react";
+import { RiArrowRightLine } from "@remixicon/react";
 import { ButtonLink } from "../../components/base/buttons/button";
 import {
   AppPage,
@@ -21,7 +21,7 @@ export function OrdersPage() {
         title={t("orders.page.title")}
         description={t("orders.page.subtitle")}
         actions={
-          <ButtonLink href="/paper-trading" leadingIcon={RiAddLine}>
+          <ButtonLink href="/paper-trading" trailingIcon={RiArrowRightLine}>
             {t("orders.page.placeTrade")}
           </ButtonLink>
         }

@@ -3,7 +3,12 @@ import { useTranslation } from "react-i18next";
 import { ApiError } from "../../lib/api";
 import { readErrorText } from "./error-text";
 import { localeFor } from "../../i18n";
-import { formatMoney, formatQuantity, formatSignedMoney } from "./format";
+import {
+  formatDay,
+  formatMoney,
+  formatQuantity,
+  formatSignedMoney,
+} from "./format";
 import { useCashTransactions } from "./usePortfolios";
 import {
   Card,
@@ -110,7 +115,7 @@ export function CashLedger({ portfolioId }: CashLedgerProps) {
                           {formatMoney(transaction.balance_after, locale)}
                         </td>
                         <td className="tabular-nums">
-                          {transaction.effective_date}
+                          {formatDay(transaction.effective_date, locale)}
                         </td>
                       </tr>
                     ))}

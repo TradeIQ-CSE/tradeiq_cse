@@ -232,7 +232,7 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
         const results = await previewBacktestRun(dto);
         const record = { config, results, ranAt: new Date().toISOString() };
         storeBacktestPreview(record);
-        navigate('/backtests/preview', { state: { preview: record } });
+        navigate('/backtests/preview', { state: { preview: record, justRan: true } });
         return null;
       }
 
@@ -240,7 +240,7 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
 
       setRunId(response.id);
       // Navigate to status page using returned run identifier
-      navigate(`/backtests/${response.id}/status`);
+      navigate(`/backtests/${response.id}/status`, { state: { justRan: true } });
       return response;
     } catch (err: unknown) {
       if (err instanceof ApiError) {
