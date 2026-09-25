@@ -1,6 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import en from './locales/en.json';
+import si from './locales/si.json';
 
 export const STORAGE_KEY = 'tradeiq.language';
 
@@ -15,11 +16,10 @@ export interface SupportedLanguage {
    */
   locale: string;
   /**
-   * Whether a translation catalogue exists yet. Sinhala and Tamil are listed
-   * so the switcher matches the design and the plumbing is exercised, but
-   * they stay unselectable until a translated catalogue is added — showing
-   * untranslated English under a Sinhala label would be worse than saying
-   * it isn't ready.
+   * Whether a translation catalogue exists yet. Tamil is listed so the
+   * switcher matches the design, but stays unselectable until a translated
+   * catalogue is added — showing untranslated English under a Tamil label
+   * would be worse than saying it isn't ready.
    *
    * To enable one: add `locales/<code>.json`, register it in `resources`
    * below, and flip this to true. Nothing else needs to change.
@@ -29,7 +29,7 @@ export interface SupportedLanguage {
 
 export const SUPPORTED_LANGUAGES: SupportedLanguage[] = [
   { code: 'en', label: 'EN', locale: 'en-LK', available: true },
-  { code: 'si', label: 'සිං', locale: 'si-LK', available: false },
+  { code: 'si', label: 'සිං', locale: 'si-LK', available: true },
   { code: 'ta', label: 'தமிழ்', locale: 'ta-LK', available: false },
 ];
 
@@ -60,6 +60,7 @@ export function localeFor(languageCode: string): string {
 i18n.use(initReactI18next).init({
   resources: {
     en: { translation: en },
+    si: { translation: si },
   },
   lng: initialLanguage(),
   fallbackLng: DEFAULT_LANGUAGE.code,
