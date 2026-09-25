@@ -27,6 +27,8 @@ interface SymbolPickerProps {
   disabled?: boolean;
   label?: string;
   showCompanyName?: boolean;
+  /** Called when a result is chosen from the list, not on every keystroke. */
+  onSelect?: (security: SecurityListItem) => void;
 }
 
 // Reuses the PUBLIC GET /securities (features/markets/useSecurities.ts's
@@ -50,7 +52,7 @@ interface SymbolPickerProps {
 // delisted security (SECURITY_NOT_TRADABLE) can only be discovered when the
 // estimate or submit call comes back with that code — this component does
 // not attempt to pre-filter the results it shows.
-export function SymbolPicker({ value, onChange, disabled, label, showCompanyName = false }: SymbolPickerProps) {
+export function SymbolPicker({ value, onChange, disabled, label, showCompanyName = false, onSelect }: SymbolPickerProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -107,6 +109,7 @@ export function SymbolPicker({ value, onChange, disabled, label, showCompanyName
     onChange(security.symbol);
     setOpen(false);
     setActiveIndex(-1);
+    onSelect?.(security);
   }
 
   // Standard combobox keyboard behaviour: the input keeps DOM focus the

@@ -42,6 +42,7 @@ import { useDataCoverage } from "./useDataCoverage";
 import { SecuritySectorIcon } from "./SecuritySectorIcon";
 import { BackToMarketsLink } from "./BackToMarketsLink";
 import { LatestClose } from "./LatestClose";
+import { WatchButton } from "../watchlist/WatchButton";
 
 const TIMEFRAMES: OhlcvTimeframe[] = ["daily", "weekly", "monthly"];
 const RANGE_ERROR_ID = "security-range-error";
@@ -181,6 +182,7 @@ function SecuritySummary({
               {t("securityDetail.states.noLatestPrice")}
             </span>
           )}
+          <WatchButton symbol={detail.symbol} appearance="label" />
           {detail.listing_status === "listed" && (
             <ButtonLink
               href={`/paper-trading?symbol=${encodeURIComponent(detail.symbol)}`}

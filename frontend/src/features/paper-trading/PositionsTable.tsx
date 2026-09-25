@@ -152,16 +152,22 @@ export function PositionsTable({ portfolioId, asOf }: PositionsTableProps) {
                           <td className="text-right tabular-nums">
                             {formatMoney(position.market_value, locale)}
                           </td>
-                          <td className={`text-right tabular-nums ${tone}`}>
-                            <FinancialDirectionGlyph direction={direction} />
-                            {formatSignedMoney(position.unrealized_pnl, locale)}
+                          {/* The tone sits inside the cell: `.bui-table td`
+                              sets its own colour, which outranks a utility. */}
+                          <td className="text-right tabular-nums">
+                            <span className={tone}>
+                              <FinancialDirectionGlyph direction={direction} />
+                              {formatSignedMoney(position.unrealized_pnl, locale)}
+                            </span>
                           </td>
-                          <td className={`text-right tabular-nums ${tone}`}>
-                            <FinancialDirectionGlyph direction={direction} />
-                            {formatPercent(
-                              position.unrealized_return_pct,
-                              locale,
-                            )}
+                          <td className="text-right tabular-nums">
+                            <span className={tone}>
+                              <FinancialDirectionGlyph direction={direction} />
+                              {formatPercent(
+                                position.unrealized_return_pct,
+                                locale,
+                              )}
+                            </span>
                           </td>
                         </tr>
                       );

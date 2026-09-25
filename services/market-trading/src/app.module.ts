@@ -17,6 +17,7 @@ import { PaperTradingQuotesModule } from './paper-trading-quotes/paper-trading-q
 import { SecuritiesModule } from './securities/securities.module';
 import { BacktestRunsModule } from './backtest-runs/backtest-runs.module';
 import { EodIngestionModule } from './eod-ingestion/eod-ingestion.module';
+import { WatchlistModule } from './watchlist/watchlist.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { EodIngestionModule } from './eod-ingestion/eod-ingestion.module';
     SecuritiesModule,
     BacktestRunsModule,
     EodIngestionModule,
+    WatchlistModule,
   ],
 })
 export class AppModule {}

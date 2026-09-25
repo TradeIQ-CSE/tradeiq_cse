@@ -106,10 +106,11 @@ export function CashLedger({ portfolioId }: CashLedgerProps) {
                         <td>
                           {t(`portfolio.cashLedger.types.${transaction.type}`)}
                         </td>
-                        <td
-                          className={`text-right tabular-nums ${financialToneClass(transaction.amount)}`}
-                        >
-                          {formatSignedMoney(transaction.amount, locale)}
+                        {/* Toned inside the cell: `.bui-table td` sets its own colour. */}
+                        <td className="text-right tabular-nums">
+                          <span className={financialToneClass(transaction.amount)}>
+                            {formatSignedMoney(transaction.amount, locale)}
+                          </span>
                         </td>
                         <td className="text-right tabular-nums">
                           {formatMoney(transaction.balance_after, locale)}

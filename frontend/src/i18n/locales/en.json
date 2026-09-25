@@ -87,10 +87,43 @@
   "watchlistPage": {
     "eyebrow": "Watchlist",
     "title": "Companies you follow",
-    "description": "Keep the companies you care about in one place",
-    "emptyTitle": "Saving companies is coming soon",
-    "emptyDescription": "Stars on the Markets page are cleared when you leave it.",
-    "browse": "Browse companies"
+    "description": "Follow up to {{limit}} companies and see their latest prices in one place",
+    "loading": "Updating your watchlist",
+    "list": {
+      "title": "Your list",
+      "count_one": "{{count}} of {{limit}} company",
+      "count_other": "{{count}} of {{limit}} companies",
+      "pricesFrom": "Closing prices from {{date}}",
+      "on": "on {{date}}",
+      "full": "Your list is full · Remove a company to add another"
+    },
+    "add": {
+      "label": "Add a company"
+    },
+    "columns": {
+      "company": "Company",
+      "close": "Latest close",
+      "change": "Since the day before",
+      "follow": "Follow"
+    },
+    "dataGap": "Data gap",
+    "noChange": "No earlier price to compare",
+    "empty": "No companies yet · Search above or tap the star on the Markets page",
+    "browse": "Browse companies",
+    "errors": {
+      "load": "Couldn’t load your watchlist",
+      "retry": "Try again",
+      "add": "Couldn’t add that company · Try again",
+      "full": "Your list is full · Remove a company first"
+    },
+    "watch": {
+      "follow": "Follow",
+      "following": "Following",
+      "add": "Add {{symbol}} to your watchlist",
+      "remove": "Remove {{symbol}} from your watchlist",
+      "full": "Your watchlist is full",
+      "failed": "Couldn’t update your watchlist · Try again"
+    }
   },
   "plannedFeatures": {
     "comingSoon": "Coming soon",
@@ -238,10 +271,6 @@
       "errorTitle": "Couldn’t load companies",
       "empty": "Try a different search, sector or date.",
       "unreachable": "Please try again in a moment."
-    },
-    "watch": {
-      "add": "Add to watchlist",
-      "remove": "Remove from watchlist"
     },
     "pagination": {
       "page": "Page {{page}} of {{lastPage}}",
@@ -1010,5 +1039,11 @@
         "unreachable": "Couldn’t reach the trading service. Please try again."
       }
     }
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
   }
 }

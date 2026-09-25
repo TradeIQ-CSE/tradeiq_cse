@@ -1,12 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import {
-  RiStarFill,
-  RiStarLine,
-} from "@remixicon/react";
 import { parseDate } from "@internationalized/date";
-import { Button } from "../../components/base/buttons/button";
 import { cx } from "../../utils/cx";
 import { DatePicker } from "../../components/base/date-picker/date-picker";
 import { Pagination } from "../../components/base/pagination/pagination";
@@ -32,6 +27,7 @@ import { useSectorOptions } from "./useSectorOptions";
 import { IndexOverview } from "./IndexOverview";
 import { DataAvailability } from "./DataAvailability";
 import { TopMovers } from "./TopMovers";
+import { WatchButton } from "../watchlist/WatchButton";
 import { SecuritySectorIcon } from "./SecuritySectorIcon";
 import {
   formatCount,
@@ -52,7 +48,6 @@ export function MarketsPage() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [selectedTradingDate, setSelectedTradingDate] = useState<string>("");
   const [selectedSector, setSelectedSector] = useState<string>("");
-  const [watchedSymbols, setWatchedSymbols] = useState<Set<string>>(new Set());
 
   const {
     data: sectorOptions,
@@ -94,15 +89,6 @@ export function MarketsPage() {
   ]
     .filter(Boolean)
     .join(" · ");
-
-  function toggleWatch(symbol: string) {
-    setWatchedSymbols((prev) => {
-      const next = new Set(prev);
-      if (next.has(symbol)) next.delete(symbol);
-      else next.add(symbol);
-      return next;
-    });
-  }
 
   function toggleSort(next: SecuritiesSort) {
     setSecuritySort(next);
@@ -325,7 +311,6 @@ export function MarketsPage() {
                               ? "text-status-lime-text"
                               : "text-status-rose-text",
                         );
-                        const isWatched = watchedSymbols.has(security.symbol);
                         return (
                           <tr key={security.symbol}>
                             <td>
@@ -393,29 +378,7 @@ export function MarketsPage() {
                               </td>
                             )}
                             <td className="market-watch-cell">
-                              <Button
-                                variant="ghost"
-                                size="small"
-                                iconOnly
-                                leadingIcon={
-                                  isWatched ? RiStarFill : RiStarLine
-                                }
-                                onClick={() => toggleWatch(security.symbol)}
-                                aria-pressed={isWatched}
-                                aria-label={t(
-                                  isWatched
-                                    ? "markets.watch.remove"
-                                    : "markets.watch.add",
-                                )}
-                                title={t(
-                                  isWatched
-                                    ? "markets.watch.remove"
-                                    : "markets.watch.add",
-                                )}
-                                className={
-                                  isWatched ? "text-status-yellow-text" : undefined
-                                }
-                              />
+                              <WatchButton symbol={security.symbol} />
                             </td>
                           </tr>
                         );
