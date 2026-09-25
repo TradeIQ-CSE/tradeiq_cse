@@ -205,7 +205,7 @@ describe("SecurityDetailPage", () => {
     expect(within(picker).getAllByRole("grid")).toHaveLength(1);
   });
 
-  it("renders nullable latest price and ratios without inventing values", async () => {
+  it("renders a missing latest price and ratios without inventing values", async () => {
     server.use(
       http.get("*/securities/:symbol", () =>
         HttpResponse.json({
@@ -222,14 +222,31 @@ describe("SecurityDetailPage", () => {
     expect(
       await screen.findByText(t("securityDetail.states.noLatestPrice")),
     ).toBeInTheDocument();
-    const peItem = screen.getByText(
-      t("securityDetail.info.peRatio"),
+    // No ratios means no ratio rows, rather than rows of dashes.
+    expect(screen.queryByText(t("securityDetail.info.peRatio"))).not.toBeInTheDocument();
+    expect(screen.queryByText(t("securityDetail.info.pbRatio"))).not.toBeInTheDocument();
+    expect(screen.queryByText(t("securityDetail.info.ratioDate"))).not.toBeInTheDocument();
+  });
+
+  it("shows only the ratio that has a figure", async () => {
+    server.use(
+      http.get("*/securities/:symbol", () =>
+        HttpResponse.json({
+          data: {
+            ...securityDetailFixture,
+            ratios: { valid_from: "2026-06-30", pe_ratio: 12.5, pb_ratio: null },
+          },
+        }),
+      ),
+    );
+    renderPage();
+
+    const peItem = (
+      await screen.findByText(t("securityDetail.info.peRatio"))
     ).parentElement;
-    const pbItem = screen.getByText(
-      t("securityDetail.info.pbRatio"),
-    ).parentElement;
-    expect(peItem).toHaveTextContent("—");
-    expect(pbItem).toHaveTextContent("—");
+    expect(peItem).toHaveTextContent("12.50");
+    expect(screen.queryByText(t("securityDetail.info.pbRatio"))).not.toBeInTheDocument();
+    expect(screen.getByText(t("securityDetail.info.ratioDate"))).toBeInTheDocument();
   });
 
   it("sends committed dates exactly and retains them across timeframe changes", async () => {
