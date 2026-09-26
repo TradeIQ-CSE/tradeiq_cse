@@ -3,6 +3,10 @@ services:
     ports: !override
       - "127.0.0.1:${SMOKE_DB_PORT:-55432}:5432"
 
+  # Counters only, nothing worth reaching from the host during a smoke run.
+  redis:
+    ports: !override []
+
   market-trading:
     image: tradeiq-smoke/market-trading:${SMOKE_IMAGE_TAG:-local}
     ports: !override

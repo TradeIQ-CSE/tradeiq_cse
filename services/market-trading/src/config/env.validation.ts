@@ -5,6 +5,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUrl,
   Max,
   Min,
   validateSync,
@@ -45,6 +46,21 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   MARKET_INGESTION_TOKEN?: string;
+
+  //: Redis backs the hourly per-key rate-limit counters (SRS 3.6.1). Required
+  //: so a missing or malformed URL fails at boot rather than surfacing later
+  //: as every counter call throwing; the request path itself still fails open
+  //: on a Redis that is reachable-but-down at runtime (ADR 0010).
+  //: require_tld: false so a bare Compose service name (`redis://redis:6379`)
+  //: or `localhost` validates, not just a fully-qualified host.
+  @IsString()
+  @IsNotEmpty()
+  @IsUrl({
+    protocols: ['redis', 'rediss'],
+    require_tld: false,
+    require_protocol: true,
+  })
+  REDIS_URL!: string;
 }
 
 export function validate(config: Record<string, unknown>) {
