@@ -1,6 +1,7 @@
 import appConfig from './app.config';
 import authConfig from './auth.config';
 import databaseConfig from './database.config';
+import publicApiConfig from './public-api.config';
 import redisConfig from './redis.config';
 import { generateKeyPairSync, KeyObject } from 'crypto';
 import { validate } from './env.validation';
@@ -104,6 +105,18 @@ describe('config', () => {
     it('exposes the redis url', () => {
       process.env.REDIS_URL = 'redis://localhost:6379';
       expect(redisConfig().url).toBe('redis://localhost:6379');
+    });
+  });
+
+  describe('publicApiConfig', () => {
+    it('defaults the hourly limit to 100 when unset', () => {
+      delete process.env.PUBLIC_API_HOURLY_LIMIT;
+      expect(publicApiConfig().hourlyLimit).toBe(100);
+    });
+
+    it('parses PUBLIC_API_HOURLY_LIMIT as a number', () => {
+      process.env.PUBLIC_API_HOURLY_LIMIT = '250';
+      expect(publicApiConfig().hourlyLimit).toBe(250);
     });
   });
 
@@ -274,6 +287,31 @@ describe('config', () => {
           MARKET_TRADING_PORT: 'not-a-port',
         }),
       ).toThrow('Invalid environment configuration');
+    });
+
+    describe('PUBLIC_API_HOURLY_LIMIT', () => {
+      it('is optional', () => {
+        const validated = validate({ ...MINIMAL_ENV });
+        expect(validated.PUBLIC_API_HOURLY_LIMIT).toBeUndefined();
+      });
+
+      it('coerces a numeric string', () => {
+        const validated = validate({
+          ...MINIMAL_ENV,
+          PUBLIC_API_HOURLY_LIMIT: '250',
+        });
+        expect(validated.PUBLIC_API_HOURLY_LIMIT).toBe(250);
+      });
+
+      it.each([
+        ['zero', '0'],
+        ['negative', '-5'],
+        ['not an integer', 'abc'],
+      ])('rejects a value that is %s', (_label, value) => {
+        expect(() =>
+          validate({ ...MINIMAL_ENV, PUBLIC_API_HOURLY_LIMIT: value }),
+        ).toThrow('Invalid environment configuration');
+      });
     });
 
     it('throws on an unknown NODE_ENV', () => {
