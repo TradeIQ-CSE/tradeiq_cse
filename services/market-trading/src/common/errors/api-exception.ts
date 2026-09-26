@@ -23,6 +23,7 @@ export type ApiErrorCode =
   | 'PRICE_UNAVAILABLE'
   | 'STALE_PRICE'
   | 'WATCHLIST_FULL'
+  | 'API_KEY_EXISTS'
   | 'INTERNAL';
 
 // docs/api/paper-trading-v1.md §6.2 — the seven outcomes that a submitted
@@ -163,6 +164,21 @@ export class WatchlistFullException extends ApiException {
       HttpStatus.UNPROCESSABLE_ENTITY,
       'WATCHLIST_FULL',
       `A watchlist holds at most ${limit} securities.`,
+    );
+  }
+}
+
+// docs/api/public-api-v1.md §7.2 — a user may hold at most one active public
+// API key at a time; regenerate or revoke it first. Backed by the partial
+// unique index on `api_keys(user_id) WHERE revoked_at IS NULL`
+// (src/db/migrations/1788800000000-PublicApiKeys.ts) as a database-level
+// backstop against a race between two concurrent creates.
+export class ApiKeyExistsException extends ApiException {
+  constructor() {
+    super(
+      HttpStatus.CONFLICT,
+      'API_KEY_EXISTS',
+      'An active API key already exists. Regenerate or revoke it first.',
     );
   }
 }

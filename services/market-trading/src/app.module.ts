@@ -6,9 +6,11 @@ import appConfig from './config/app.config';
 import authConfig from './config/auth.config';
 import databaseConfig from './config/database.config';
 import ingestionConfig from './config/ingestion.config';
+import publicApiConfig from './config/public-api.config';
 import redisConfig from './config/redis.config';
 import { validate } from './config/env.validation';
 import { DataCoverageModule } from './data-coverage/data-coverage.module';
+import { DeveloperApiModule } from './developer-api/developer-api.module';
 import { HealthModule } from './health/health.module';
 import { IndicesModule } from './indices/indices.module';
 import { MarketOverviewModule } from './market-overview/market-overview.module';
@@ -31,6 +33,7 @@ import { WatchlistModule } from './watchlist/watchlist.module';
         authConfig,
         databaseConfig,
         ingestionConfig,
+        publicApiConfig,
         redisConfig,
       ],
       validate,
@@ -54,6 +57,7 @@ import { WatchlistModule } from './watchlist/watchlist.module';
       }),
     }),
     DataCoverageModule,
+    DeveloperApiModule,
     HealthModule,
     IndicesModule,
     MarketOverviewModule,

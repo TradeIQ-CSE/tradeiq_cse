@@ -471,8 +471,10 @@ until the key's first use.
 
 ### 7.2 `POST /developer/key`
 
-Body: `{ "label": "My backtesting script" }` — `label` optional, up to 100
-characters.
+Body: `{ "label": "My backtesting script" }`
+
+`label` is optional. It is trimmed, may be up to 100 characters, and an
+empty label is stored as `null`.
 
 `201 Created`:
 
@@ -496,8 +498,9 @@ never again, and never in `GET /developer/key`.
 ### 7.3 `POST /developer/key/regenerate`
 
 Revokes the active key and issues a new one in one transaction — the old
-secret stops working immediately. Same response shape as §7.2, same
-`label` unless the request body sets a new one.
+secret stops working immediately. It answers `201 Created` with §7.2's
+request body and response. The label carries over unless the body sets one
+(a blank label clears it).
 
 If the user has no active key, this behaves exactly like §7.2: a new key is
 issued straight away rather than erroring.
@@ -541,10 +544,11 @@ This hour's count against the limit, plus the last 30 days. `data` is
 }
 ```
 
-`limit`/`used`/`reset_at` describe the current UTC clock hour — the same
-numbers §3's headers would carry on the key's next request. `daily` has
-exactly 30 entries, one per UTC calendar day including today, oldest first,
-zero-filled for days with no requests.
+`limit`, `used` and `reset_at` describe the current UTC clock hour, the same
+numbers §3's headers would carry on the key's next request. `used` is
+`null` when the hourly count can't be read. `daily` has exactly 30 entries,
+one per UTC day including today, oldest first, with zeros for days without
+requests. Each entry adds up all the user's keys, revoked ones included.
 
 **Errors**
 
