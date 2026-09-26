@@ -2,6 +2,7 @@ process.env.MARKET_DATA_DATABASE_URL =
   process.env.MARKET_DATA_DATABASE_URL ||
   'postgresql://market_data:changeme@localhost:5432/market_data';
 process.env.MARKET_INGESTION_TOKEN = 'test-market-ingestion-token';
+process.env.REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { NestExpressApplication } from '@nestjs/platform-express';

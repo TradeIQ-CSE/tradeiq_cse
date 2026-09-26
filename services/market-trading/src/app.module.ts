@@ -6,6 +6,7 @@ import appConfig from './config/app.config';
 import authConfig from './config/auth.config';
 import databaseConfig from './config/database.config';
 import ingestionConfig from './config/ingestion.config';
+import redisConfig from './config/redis.config';
 import { validate } from './config/env.validation';
 import { DataCoverageModule } from './data-coverage/data-coverage.module';
 import { HealthModule } from './health/health.module';
@@ -14,6 +15,7 @@ import { MarketOverviewModule } from './market-overview/market-overview.module';
 import { OrdersModule } from './orders/orders.module';
 import { PortfoliosModule } from './portfolios/portfolios.module';
 import { PaperTradingQuotesModule } from './paper-trading-quotes/paper-trading-quotes.module';
+import { RedisModule } from './redis/redis.module';
 import { SecuritiesModule } from './securities/securities.module';
 import { BacktestRunsModule } from './backtest-runs/backtest-runs.module';
 import { EodIngestionModule } from './eod-ingestion/eod-ingestion.module';
@@ -24,7 +26,13 @@ import { WatchlistModule } from './watchlist/watchlist.module';
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
-      load: [appConfig, authConfig, databaseConfig, ingestionConfig],
+      load: [
+        appConfig,
+        authConfig,
+        databaseConfig,
+        ingestionConfig,
+        redisConfig,
+      ],
       validate,
     }),
     TypeOrmModule.forRootAsync({
@@ -52,6 +60,7 @@ import { WatchlistModule } from './watchlist/watchlist.module';
     OrdersModule,
     PaperTradingQuotesModule,
     PortfoliosModule,
+    RedisModule,
     SecuritiesModule,
     BacktestRunsModule,
     EodIngestionModule,
