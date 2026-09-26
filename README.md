@@ -133,6 +133,7 @@ docker compose --project-name "$SMOKE_PROJECT_NAME" \
 
 - [Market-data endpoint catalogue](./docs/api/endpoint-catalogue-v0.md)
 - [Paper-trading v1 contract](./docs/api/paper-trading-v1.md)
+- [Public developer API v1](./docs/api/public-api-v1.md)
 - [Structured error envelope](./docs/api/error-envelope.md)
 - [Architecture decisions](./docs/adr/)
 

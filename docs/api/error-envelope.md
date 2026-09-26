@@ -50,6 +50,7 @@ Success responses never contain `error`; error responses never contain `data`.
 | 404 | `SECURITY_NOT_FOUND` | — | `{symbol}` matches no security | Show "unknown symbol" state |
 | 404 | `INDEX_NOT_FOUND` | — | `{code}` matches no market index | Show "unknown index" state |
 | 409 | `CONFLICT` | — | State conflict (e.g. duplicate unique value) | Refresh state, surface message |
+| 409 | `API_KEY_EXISTS` | — | The user already has an active public-API key (public-api-v1.md §7.2) | Offer regenerate or revoke instead of create |
 | 422 | `BUSINESS_RULE_VIOLATION` | — | Well-formed request rejected by a domain rule (e.g. insufficient buying power) | Surface `message`; no field highlight |
 | 422 | `DATE_IN_DATA_GAP` | — | A backtest start or end date falls in a period with no market data (`details` carries `field`, `from`, `to`) | Ask for a date outside `details.from`–`details.to`; do not retry unchanged |
 | 422 | `WATCHLIST_FULL` | — | The watchlist already holds its maximum number of securities (see watchlist-v1.md §3.2) | Ask the user to remove one first; do not retry unchanged |
@@ -73,6 +74,10 @@ are added here first — reuse an existing code whenever it fits.
 - `reset_at` — RFC 3339 UTC instant when the quota window resets (SRS 3.1.3.3
   requires the response to identify the reset time).
 - `Retry-After: <seconds>` header mirrors it for HTTP-native clients.
+
+On the public developer API, every keyed response (2xx or 4xx) also carries
+`X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset` — see
+[public-api-v1.md](./public-api-v1.md) §3.
 
 ## 3. Non-disclosure rules (SRS 3.1.2.3)
 
