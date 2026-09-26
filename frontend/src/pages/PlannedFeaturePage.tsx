@@ -9,17 +9,16 @@ import {
 } from '../components/application/layout/application-layout';
 import { Button } from '../components/base/buttons/button';
 
-export type PlannedFeatureKey = 'analytics' | 'aiInsights' | 'reports';
+export type PlannedFeatureKey = 'aiInsights' | 'reports';
 
 const alternatives: Record<PlannedFeatureKey, string> = {
-  analytics: '/portfolio',
   aiInsights: '/backtests/new',
   reports: '/orders',
 };
 
 /**
- * One layout for every feature that isn't built yet, the same as the
- * Watchlist's empty state: say what it will do, then point at what works today.
+ * One layout for every feature that isn't built yet: say what it will do,
+ * then point at what works today.
  * No placeholder figures are ever shown.
  */
 export function PlannedFeaturePage({ feature }: { feature: PlannedFeatureKey }) {

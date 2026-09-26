@@ -318,6 +318,8 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
           to: isoDateLabel(detail.data_to, locale),
         })
       : "—";
+  const peRatio = detail.ratios?.pe_ratio;
+  const pbRatio = detail.ratios?.pb_ratio;
 
   function resetRange() {
     setSelectedRange(null);
@@ -607,27 +609,23 @@ function SecurityDetailView({ symbol }: { symbol: string }) {
               label={t("securityDetail.info.coverage")}
               value={coverage}
             />
-            <InfoItem
-              label={t("securityDetail.info.peRatio")}
-              value={
-                detail.ratios?.pe_ratio === null ||
-                detail.ratios?.pe_ratio === undefined
-                  ? "—"
-                  : formatPrice(detail.ratios.pe_ratio, locale)
-              }
-              term="peRatio"
-            />
-            <InfoItem
-              label={t("securityDetail.info.pbRatio")}
-              value={
-                detail.ratios?.pb_ratio === null ||
-                detail.ratios?.pb_ratio === undefined
-                  ? "—"
-                  : formatPrice(detail.ratios.pb_ratio, locale)
-              }
-              term="pbRatio"
-            />
-            {detail.ratios?.valid_from && (
+            {/* Ratios aren't collected for most companies yet, so a row only
+                appears when there is a figure; a column of dashes says nothing. */}
+            {peRatio != null && (
+              <InfoItem
+                label={t("securityDetail.info.peRatio")}
+                value={formatPrice(peRatio, locale)}
+                term="peRatio"
+              />
+            )}
+            {pbRatio != null && (
+              <InfoItem
+                label={t("securityDetail.info.pbRatio")}
+                value={formatPrice(pbRatio, locale)}
+                term="pbRatio"
+              />
+            )}
+            {(peRatio != null || pbRatio != null) && detail.ratios?.valid_from && (
               <InfoItem
                 label={t("securityDetail.info.ratioDate")}
                 value={isoDateLabel(detail.ratios.valid_from, locale)}

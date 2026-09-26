@@ -24,6 +24,7 @@ import {
   financialToneClass,
 } from "../../components/application/financial-data";
 import { cx } from "../../utils/cx";
+import { InfoTip } from "../../components/domain/info-tip";
 
 interface SummaryCardsProps {
   portfolioId: string;
@@ -37,12 +38,15 @@ export function SummaryStat({
   sub,
   tone,
   icon: Icon,
+  info,
 }: {
   label: string;
   value: ReactNode;
   sub?: ReactNode;
   tone?: string;
   icon: typeof RiFundsLine;
+  /** Short explanation in the "i" tooltip beside the label. */
+  info?: ReactNode;
 }) {
   return (
     <div className="flex min-w-0 items-start gap-3 px-4 py-3 sm:px-5">
@@ -51,7 +55,10 @@ export function SummaryStat({
         aria-hidden
       />
       <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="text-body-2-medium text-text-secondary">{label}</span>
+        <span className="flex items-center gap-1 text-body-2-medium text-text-secondary">
+          {label}
+          {info && <InfoTip label={label}>{info}</InfoTip>}
+        </span>
         <span className="flex flex-wrap items-baseline gap-x-2">
           <span
             className={cx(
