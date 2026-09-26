@@ -29,6 +29,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let message = 'An unexpected error occurred.';
     let fields: { field: string; reason: string }[] | undefined;
     let details: unknown;
+    let resetAt: string | undefined;
 
     if (exception instanceof BacktestApiError) {
       status = exception.getStatus();
@@ -45,6 +46,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       code = exception.code;
       message = exception.message;
       fields = exception.fields;
+      resetAt = exception.resetAt;
     } else if (exception instanceof HttpException) {
       status = exception.getStatus();
       code = status === HttpStatus.NOT_FOUND ? 'NOT_FOUND' : 'INTERNAL';
@@ -70,6 +72,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message = 'An unexpected error occurred.';
       fields = undefined;
       details = undefined;
+      resetAt = undefined;
     }
 
     response.status(status).json({
@@ -77,6 +80,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         code,
         message,
         ...(fields ? { fields } : {}),
+        ...(resetAt !== undefined ? { reset_at: resetAt } : {}),
         ...(details !== undefined ? { details } : {}),
         trace_id: traceId,
       },

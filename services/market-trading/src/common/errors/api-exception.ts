@@ -53,6 +53,10 @@ export class ApiException extends HttpException {
     public readonly code: ApiErrorCode,
     message: string,
     public readonly fields?: ApiErrorField[],
+    // error-envelope.md §2's RATE_LIMITED extension: an RFC 3339 UTC instant
+    // rendered as a top-level `reset_at` alongside `code`/`message`, not
+    // nested under `details`. Only RateLimitedException sets this.
+    public readonly resetAt?: string,
   ) {
     super(message, status);
   }
@@ -222,6 +226,38 @@ const REJECTION_MESSAGES: Record<OrderRejectionCode, string> = {
   PRICE_UNAVAILABLE: 'No usable price is available for this security.',
   STALE_PRICE: 'The latest price for this security is out of date.',
 };
+
+// docs/api/public-api-v1.md §2 — a missing header, a malformed key, an
+// unknown key and a revoked key must all be indistinguishable, so this is the
+// only 401 the public API's ApiKeyGuard ever throws. Distinct from
+// UnauthenticatedException (used by the JWT-authenticated surfaces) because
+// the wording is part of this contract: "A valid API key is required" is
+// checked verbatim by the e2e suite, never "Authentication is required."
+export class InvalidApiKeyException extends ApiException {
+  constructor() {
+    super(
+      HttpStatus.UNAUTHORIZED,
+      'UNAUTHENTICATED',
+      'A valid API key is required',
+    );
+  }
+}
+
+// docs/api/public-api-v1.md §3, error-envelope.md §2 — the public API's
+// per-key hourly limit. `resetAt` is RFC 3339 UTC with no fractional seconds,
+// matching the same `currentWindow().resetAt` the X-RateLimit-Reset header is
+// built from, so the body and the headers can never disagree.
+export class RateLimitedException extends ApiException {
+  constructor(resetAt: string) {
+    super(
+      HttpStatus.TOO_MANY_REQUESTS,
+      'RATE_LIMITED',
+      'Rate limit exceeded.',
+      undefined,
+      resetAt,
+    );
+  }
+}
 
 export class OrderRejectedException extends ApiException {
   constructor(code: OrderRejectionCode) {
