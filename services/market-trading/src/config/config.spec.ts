@@ -1,6 +1,7 @@
 import appConfig from './app.config';
 import authConfig from './auth.config';
 import databaseConfig from './database.config';
+import redisConfig from './redis.config';
 import { generateKeyPairSync, KeyObject } from 'crypto';
 import { validate } from './env.validation';
 import {
@@ -32,6 +33,7 @@ const SECOND_KEY = rsaPublicKey(MIN_ACCESS_TOKEN_KEY_BITS);
 const MINIMAL_ENV = {
   MARKET_DATA_DATABASE_URL: VALID_URL,
   AUTH_JWT_PUBLIC_KEYS: VALID_KEY,
+  REDIS_URL: 'redis://localhost:6379',
 };
 
 describe('config', () => {
@@ -98,6 +100,13 @@ describe('config', () => {
     });
   });
 
+  describe('redisConfig', () => {
+    it('exposes the redis url', () => {
+      process.env.REDIS_URL = 'redis://localhost:6379';
+      expect(redisConfig().url).toBe('redis://localhost:6379');
+    });
+  });
+
   describe('validate', () => {
     it('accepts a minimal valid environment', () => {
       const validated = validate({ ...MINIMAL_ENV });
@@ -108,7 +117,7 @@ describe('config', () => {
     // The guard verifies against these keys, so booting without them would
     // turn every authenticated request into a 401 that looks like a client
     // fault.
-    it.each(['MARKET_DATA_DATABASE_URL', 'AUTH_JWT_PUBLIC_KEYS'])(
+    it.each(['MARKET_DATA_DATABASE_URL', 'AUTH_JWT_PUBLIC_KEYS', 'REDIS_URL'])(
       'throws when %s is missing',
       (key) => {
         const env: Record<string, string> = { ...MINIMAL_ENV };
@@ -274,6 +283,33 @@ describe('config', () => {
           NODE_ENV: 'staging',
         }),
       ).toThrow('Invalid environment configuration');
+    });
+
+    // Redis backs the rate-limit counters (SRS 3.6.1); require_tld: false is
+    // what lets a bare Compose service name or `localhost` through, not just a
+    // fully-qualified host.
+    describe('REDIS_URL', () => {
+      it.each([
+        ['a Compose service name', 'redis://redis:6379'],
+        ['localhost', 'redis://localhost:6379'],
+        ['the secure scheme', 'rediss://redis:6380'],
+        ['credentials and a db index', 'redis://user:pass@redis-host:6379/0'],
+      ])('accepts %s', (_label, url) => {
+        expect(validate({ ...MINIMAL_ENV, REDIS_URL: url }).REDIS_URL).toBe(
+          url,
+        );
+      });
+
+      it.each([
+        ['empty', ''],
+        ['not a url at all', 'not-a-url'],
+        ['the wrong scheme', 'http://redis:6379'],
+        ['missing a host', 'redis://'],
+      ])('rejects a value that is %s', (_label, url) => {
+        expect(() => validate({ ...MINIMAL_ENV, REDIS_URL: url })).toThrow(
+          'Invalid environment configuration',
+        );
+      });
     });
   });
 });

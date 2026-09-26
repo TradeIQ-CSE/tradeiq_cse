@@ -40,6 +40,27 @@ services:
       timeout: 5s
       retries: 10
 
+  # No published port: only nginx is reachable from outside the Compose
+  # network. No persistence (counters are hourly, disposable) and capped at
+  # 64mb with volatile-ttl so eviction always picks a key already on its way
+  # to expiring.
+  redis:
+    image: redis:7-alpine
+    <<: *restart
+    command:
+      [
+        "redis-server",
+        "--save", "",
+        "--appendonly", "no",
+        "--maxmemory", "64mb",
+        "--maxmemory-policy", "volatile-ttl",
+      ]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   market-trading:
     image: ghcr.io/tradeiq-cse/tradeiq_cse/market-trading:${IMAGE_TAG:-dev}
     <<: *restart
@@ -49,11 +70,16 @@ services:
       MARKET_DATA_DATABASE_URL: postgresql://market_data:${MARKET_DATA_DB_PASSWORD:?set MARKET_DATA_DB_PASSWORD}@db:5432/market_data
       MARKET_TRADING_CORS_ORIGINS: https://tradeiqcse.tech
       MARKET_INGESTION_TOKEN: ${MARKET_INGESTION_TOKEN:?set MARKET_INGESTION_TOKEN}
+      REDIS_URL: redis://redis:6379
       # Verification only. The private half lives in identity-auth alone.
       AUTH_JWT_PUBLIC_KEYS: ${AUTH_JWT_PUBLIC_KEYS:?set AUTH_JWT_PUBLIC_KEYS}
     depends_on:
       db:
         condition: service_healthy
+      # Start order only: the service copes with Redis being down (fail
+      # open, ADR 0010), so it must not wait on Redis's healthcheck.
+      redis:
+        condition: service_started
     healthcheck:
       test:
         [
