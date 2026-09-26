@@ -17,6 +17,7 @@ import { MarketOverviewModule } from './market-overview/market-overview.module';
 import { OrdersModule } from './orders/orders.module';
 import { PortfoliosModule } from './portfolios/portfolios.module';
 import { PaperTradingQuotesModule } from './paper-trading-quotes/paper-trading-quotes.module';
+import { PublicApiModule } from './public-api/public-api.module';
 import { RedisModule } from './redis/redis.module';
 import { SecuritiesModule } from './securities/securities.module';
 import { BacktestRunsModule } from './backtest-runs/backtest-runs.module';
@@ -64,6 +65,7 @@ import { WatchlistModule } from './watchlist/watchlist.module';
     OrdersModule,
     PaperTradingQuotesModule,
     PortfoliosModule,
+    PublicApiModule,
     RedisModule,
     SecuritiesModule,
     BacktestRunsModule,
