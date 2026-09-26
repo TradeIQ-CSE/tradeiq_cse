@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
+import { ApiKeyCache } from '../api-key-cache/api-key-cache.service';
 import { ApiKeyExistsException } from '../common/errors/api-exception';
 import { RateLimitCounter } from '../redis/rate-limit-counter';
 import { DeveloperKeysService } from './developer-keys.service';
@@ -18,6 +19,7 @@ describe('DeveloperKeysService', () => {
   let txQuery: jest.Mock;
   let rootQuery: jest.Mock;
   let counterPeek: jest.Mock;
+  let cacheInvalidate: jest.Mock;
 
   const userId = 'a1a1a1a1-1111-4111-8111-111111111111';
   const CREATED_AT = new Date('2026-09-26T09:00:00.000Z');
@@ -26,6 +28,7 @@ describe('DeveloperKeysService', () => {
     txQuery = jest.fn();
     rootQuery = jest.fn();
     counterPeek = jest.fn();
+    cacheInvalidate = jest.fn();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -47,6 +50,14 @@ describe('DeveloperKeysService', () => {
           provide: RateLimitCounter,
           useValue: { peek: counterPeek, increment: jest.fn() },
         },
+        {
+          provide: ApiKeyCache,
+          useValue: {
+            invalidate: cacheInvalidate,
+            get: jest.fn(),
+            set: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -59,7 +70,13 @@ describe('DeveloperKeysService', () => {
     txQuery.mockImplementation((sql: string) => {
       if (sql.includes('pg_advisory_xact_lock')) return [];
       if (sql.includes('SELECT api_key_id')) return existing;
-      if (sql.includes('UPDATE market_data.api_keys')) return [];
+      if (sql.includes('UPDATE market_data.api_keys')) {
+        // Matches TypeORM's real UPDATE...RETURNING shape: a
+        // [rows, affectedCount] tuple, not the rows array on its own.
+        return existing.length > 0
+          ? [[{ key_hash: 'old-key-hash' }], 1]
+          : [[], 0];
+      }
       if (sql.includes('INSERT INTO market_data.api_keys')) {
         return [{ created_at: CREATED_AT }];
       }
@@ -255,17 +272,41 @@ describe('DeveloperKeysService', () => {
         ),
       ).toBe(false);
     });
+
+    it('invalidates the old key’s cache entry after commit', async () => {
+      answerTx([activeRow()]);
+      await service.regenerate(userId, undefined);
+      expect(cacheInvalidate).toHaveBeenCalledWith('old-key-hash');
+    });
+
+    it('does not invalidate anything when there was no active key', async () => {
+      answerTx([]);
+      await service.regenerate(userId, 'fresh');
+      expect(cacheInvalidate).not.toHaveBeenCalled();
+    });
   });
 
   describe('revoke', () => {
     it('revokes only the caller’s active key', async () => {
-      txQuery.mockResolvedValue([]);
+      txQuery.mockResolvedValue([[{ key_hash: 'old-key-hash' }], 1]);
       await service.revoke(userId);
 
       const update = txQuery.mock.calls.find(([sql]) =>
         (sql as string).includes('revoked_at IS NULL'),
       );
       expect(update?.[1]).toEqual([userId]);
+    });
+
+    it('invalidates the revoked key’s cache entry', async () => {
+      txQuery.mockResolvedValue([[{ key_hash: 'old-key-hash' }], 1]);
+      await service.revoke(userId);
+      expect(cacheInvalidate).toHaveBeenCalledWith('old-key-hash');
+    });
+
+    it('invalidates nothing when there was no active key', async () => {
+      txQuery.mockResolvedValue([[], 0]);
+      await service.revoke(userId);
+      expect(cacheInvalidate).not.toHaveBeenCalled();
     });
   });
 
