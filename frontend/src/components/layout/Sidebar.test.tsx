@@ -20,6 +20,27 @@ describe('Sidebar profile', () => {
     expect(screen.queryByText(t('nav.items.reports'))).not.toBeInTheDocument();
   });
 
+  it('shows a "For developers" group with links to the API key page and the API guide', () => {
+    renderWithProviders(<Sidebar />);
+
+    expect(screen.getByText(t('nav.groups.developers'))).toBeInTheDocument();
+
+    const apiKeyLink = screen.getByRole('link', { name: t('nav.items.apiKey') });
+    expect(apiKeyLink).toHaveAttribute('href', '/api-key');
+    expect(apiKeyLink).not.toHaveAttribute('aria-disabled', 'true');
+
+    const apiGuideLink = screen.getByRole('link', { name: t('nav.items.apiGuide') });
+    expect(apiGuideLink).toHaveAttribute('href', '/developers');
+    expect(apiGuideLink).not.toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('no longer offers a Settings button', () => {
+    renderWithProviders(<Sidebar />);
+
+    const hrefs = screen.getAllByRole('link').map((link) => link.getAttribute('href'));
+    expect(hrefs).not.toContain('/settings');
+  });
+
   it('offers a sign-in link when anonymous', () => {
     renderWithProviders(<Sidebar />, { auth: { status: 'anonymous' } });
 

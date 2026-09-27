@@ -1,6 +1,6 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { RiCloseLine, RiLogoutBoxRLine, RiSettings4Line, RiShieldUserLine } from '@remixicon/react';
+import { RiCloseLine, RiLogoutBoxRLine, RiShieldUserLine } from '@remixicon/react';
 import { SUPPORTED_LANGUAGES } from '../../i18n';
 import { useAuth } from '../../auth/useAuth';
 import { Avatar } from '../base/avatar/avatar';
@@ -120,15 +120,6 @@ export function Sidebar({ isMobile = false, className, onClose }: SidebarProps) 
       </div>
 
       <div className="flex shrink-0 flex-col gap-3">
-        <button
-          type="button"
-          disabled
-          className="flex items-center gap-2 rounded-2lg p-2 text-body-medium text-text-tertiary disabled:cursor-not-allowed"
-        >
-          <RiSettings4Line className="size-5 shrink-0" aria-hidden />
-          <span>{t('nav.items.settings')}</span>
-        </button>
-
         <div className="flex items-center justify-between px-2">
           <span className="text-body-regular text-text-tertiary">{t('nav.language')}</span>
           <div className="flex gap-1">

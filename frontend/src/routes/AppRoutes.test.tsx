@@ -85,6 +85,41 @@ describe('AppRoutes', () => {
     expect(screen.queryByRole('heading', { name: t('auth.login.title') })).not.toBeInTheDocument();
   });
 
+  it('renders the API key page inside the console shell for a signed-in user', async () => {
+    renderWithProviders(<AppRoutes />, { initialEntries: ['/api-key'] });
+
+    expect(await screen.findByRole('heading', { name: t('apiKeyPage.title') })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: t('developerApi.title') })).toBeInTheDocument();
+  });
+
+  it('redirects /api-key to /login while anonymous', async () => {
+    renderWithProviders(<AppRoutes />, {
+      initialEntries: ['/api-key'],
+      auth: { status: 'anonymous' },
+    });
+
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+  });
+
+  it('is no longer routed at /settings', async () => {
+    renderWithProviders(<AppRoutes />, { initialEntries: ['/settings'] });
+
+    // Unknown paths fall through to the /markets redirect.
+    expect(await screen.findByRole('heading', { name: t('markets.title') })).toBeInTheDocument();
+  });
+
+  it('renders the public Developers page while anonymous', async () => {
+    renderWithProviders(<AppRoutes />, {
+      initialEntries: ['/developers'],
+      auth: { status: 'anonymous' },
+    });
+
+    expect(
+      await screen.findByRole('heading', { name: t('developers.hero.heading') }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Sign in' })).not.toBeInTheDocument();
+  });
+
   it('renders a lowercase security-detail URL publicly with the canonical symbol', async () => {
     renderWithProviders(<AppRoutes />, {
       initialEntries: ['/markets/jkh.n0000'],
