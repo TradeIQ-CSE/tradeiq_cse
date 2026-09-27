@@ -61,6 +61,15 @@ class EnvironmentVariables {
     require_protocol: true,
   })
   REDIS_URL!: string;
+
+  //: The public developer API's hourly per-key limit (SRS 3.1.3.3, 3.5.4).
+  //: Optional — public-api.config.ts defaults it to 100 — but a value that is
+  //: present must be a usable positive integer, not silently coerced to
+  //: something the limiter would treat as "no limit" or reject at runtime.
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  PUBLIC_API_HOURLY_LIMIT?: number;
 }
 
 export function validate(config: Record<string, unknown>) {
