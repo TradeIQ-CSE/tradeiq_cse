@@ -26,8 +26,9 @@ plan:
 | GET | `/coverage` | Price and index date coverage, with detected gaps |
 
 They are the **web application's internal API** (SRS 3.1.2.1). The **public developer
-API** (SRS 3.1.3) is a *separate, versioned* surface scheduled for Phase 8 — nothing
-here is versioned, and no `/v1` prefix is introduced in v0.
+API** (SRS 3.1.3) is a *separate, versioned* surface, contracted in
+[public-api-v1.md](./public-api-v1.md) — nothing here is versioned, and no `/v1`
+prefix is introduced in v0.
 
 All of them are **public market-data reads**: no authentication, read-only
 (SRS 3.1.1.1, 3.1.2.2). Served by `market-trading` from the `market_data` database
@@ -119,6 +120,10 @@ a `trace_id` — and a `Retry-After: 60` header. There is no `reset_at` field.
 
 The stricter limits apply on top of the general one. Normal SPA usage is far
 below all three; the FE only needs to show the 429 envelope's message.
+
+The public developer API adds a further, per-key limit inside `market-trading`
+itself, on top of this per-IP edge limit — see
+[public-api-v1.md](./public-api-v1.md) §3.
 
 ---
 
@@ -442,8 +447,9 @@ All errors use the envelope in [error-envelope.md](./error-envelope.md):
    if FE finds derivation awkward.
 2. **Market-cap thresholds use v0 implementation defaults** (§6), pending
    product sign-off; future changes need a contract revision.
-3. **No API versioning** on this internal surface; versioning arrives with the
-   separate public developer API (SRS 3.1.3, Phase 8).
+3. **No API versioning** on this internal surface; versioning belongs to the
+   separate public developer API (SRS 3.1.3), contracted in
+   [public-api-v1.md](./public-api-v1.md).
 4. **Ratios coverage:** P/E and P/B only, matching schema v2 `market_ratios`.
 
 ---
