@@ -63,7 +63,9 @@ resolves to an active key counts against its hour, including ones that go on
 to answer with a 4xx (a bad symbol, a validation failure) — only requests
 that never resolve a key (§2's `401`) are free.
 
-Once a key is resolved, every response — success or 4xx — carries:
+Once a key is resolved, every response — success or 4xx — carries these
+headers (`X-RateLimit-Remaining` is left out when the count can't be read,
+see below):
 
 | Header | Meaning |
 |---|---|
@@ -85,8 +87,8 @@ This is on top of, not instead of, the per-IP edge limit nginx already
 applies to every `/api/` route (catalogue §2.5) — a client can still be
 edge-limited even with requests to spare on its key.
 
-If the counter itself is briefly unavailable, a request is still served
-rather than rejected; this needs no client handling.
+If the counter is briefly unavailable, the request is still served and
+`X-RateLimit-Remaining` is left out. Clients need no special handling.
 
 ## 4. CORS
 
@@ -180,6 +182,7 @@ change on a specific day, see §6.6 `/eod` below.
 - `data_from` / `data_to` are the security's price-coverage window; both
   `null` when it has no price history yet.
 - `listing_status` is `listed`, `suspended` or `delisted`.
+- `search` is matched as literal text, up to 100 characters.
 
 **Errors**
 

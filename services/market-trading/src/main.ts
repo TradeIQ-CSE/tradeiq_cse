@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { configureMarketTradingApp } from './app.setup';
+import { buildCorsOptionsDelegate } from './common/cors';
 
 async function bootstrap() {
   // Install the JSON parser in app.setup with the ingestion contract's 2 MiB
@@ -27,10 +28,14 @@ async function bootstrap() {
   // credentials stays off: the token travels in a header the SPA sets itself,
   // never in a cookie, so the browser has nothing to attach automatically and
   // a cross-site request cannot borrow the user's session.
-  app.enableCors({
-    origin: config.getOrThrow<string[]>('app.corsOrigins'),
-    methods: ['GET', 'POST', 'DELETE'],
-  });
+  //
+  // The public developer API (docs/api/public-api-v1.md §4) needs a different
+  // policy — any origin, GET only, the key travels in a header never a cookie
+  // — so a per-path delegate picks between the two instead of one static
+  // options object serving every route.
+  app.enableCors(
+    buildCorsOptionsDelegate(config.getOrThrow<string[]>('app.corsOrigins')),
+  );
 
   const port = config.getOrThrow<number>('app.port');
   await app.listen(port);

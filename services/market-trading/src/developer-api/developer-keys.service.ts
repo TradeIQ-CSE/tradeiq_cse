@@ -3,6 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
+import { ApiKeyCache } from '../api-key-cache/api-key-cache.service';
 import { ApiKeyExistsException } from '../common/errors/api-exception';
 import { RateLimitCounter } from '../redis/rate-limit-counter';
 import { generateApiKey, hashApiKey, keyPrefix } from './api-key';
@@ -109,6 +110,7 @@ export class DeveloperKeysService {
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly config: ConfigService,
     private readonly rateLimitCounter: RateLimitCounter,
+    private readonly apiKeyCache: ApiKeyCache,
   ) {}
 
   // §7.1 — null when the user has none.
@@ -141,7 +143,9 @@ export class DeveloperKeysService {
     userId: string,
     label: string | undefined,
   ): Promise<CreatedApiKey> {
-    return this.dataSource.transaction(async (manager) => {
+    let revokedHash: string | null = null;
+
+    const created = await this.dataSource.transaction(async (manager) => {
       await this.lock(manager, userId);
 
       const existing = await this.findActive(userId, manager);
@@ -149,27 +153,58 @@ export class DeveloperKeysService {
         label === undefined ? (existing?.label ?? null) : normalizeLabel(label);
 
       if (existing) {
-        await manager.query(
+        // RETURNING key_hash, not a second SELECT, so the row we are about
+        // to invalidate the cache for is exactly the one this statement just
+        // revoked. See revoke(), below, for why this must happen after
+        // commit rather than inside the transaction.
+        //
+        // TypeORM's Postgres driver answers an UPDATE/DELETE differently from
+        // a SELECT or INSERT: manager.query() resolves to a two-element
+        // [rows, affectedCount] tuple rather than the rows array on its own
+        // (PostgresQueryRunner.query, "for UPDATE and DELETE query
+        // additionally return number of affected rows") — the tuple must be
+        // destructured, not indexed as if it were the rows array itself.
+        const [rows]: [{ key_hash: string }[], number] = await manager.query(
           `UPDATE market_data.api_keys SET revoked_at = now()
-           WHERE api_key_id = $1`,
+           WHERE api_key_id = $1
+           RETURNING key_hash`,
           [existing.api_key_id],
         );
+        revokedHash = rows[0]?.key_hash ?? null;
       }
 
       return this.insert(manager, userId, effectiveLabel);
     });
+
+    // Invalidated only after the transaction commits: invalidating first and
+    // then rolling back (e.g. the active-user-index backstop in insert())
+    // would leave ApiKeyGuard's cache clear for a key that, in the database,
+    // is still active — the opposite of fail-safe.
+    if (revokedHash) this.apiKeyCache.invalidate(revokedHash);
+
+    return created;
   }
 
   // §7.4 — idempotent: revoking with no active key still answers success.
   async revoke(userId: string): Promise<void> {
-    await this.dataSource.transaction(async (manager) => {
+    const revokedHash = await this.dataSource.transaction(async (manager) => {
       await this.lock(manager, userId);
-      await manager.query(
+      // See the identical note in regenerate(), above: UPDATE...RETURNING
+      // resolves to a [rows, affectedCount] tuple, not the rows array alone.
+      const [rows]: [{ key_hash: string }[], number] = await manager.query(
         `UPDATE market_data.api_keys SET revoked_at = now()
-         WHERE user_id = $1 AND revoked_at IS NULL`,
+         WHERE user_id = $1 AND revoked_at IS NULL
+         RETURNING key_hash`,
         [userId],
       );
+      return rows[0]?.key_hash ?? null;
     });
+
+    // ApiKeyGuard's cache is checked before Postgres (docs/plans/developer-api.md
+    // "Request path"), so a revoked key that stayed cached would keep
+    // authenticating on this instance until the 60 s TTL expired — this must
+    // be refused immediately (PR 4's brief).
+    if (revokedHash) this.apiKeyCache.invalidate(revokedHash);
   }
 
   // §7.5 — null when the user has no active key. `now` is a parameter, not
