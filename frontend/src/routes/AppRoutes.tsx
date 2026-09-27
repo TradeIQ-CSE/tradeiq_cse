@@ -13,6 +13,11 @@ const HowItWorksPage = lazy(() =>
     default: module.HowItWorksPage,
   })),
 );
+const DevelopersPage = lazy(() =>
+  import('../features/landing/DevelopersPage').then((module) => ({
+    default: module.DevelopersPage,
+  })),
+);
 const MarketsPage = lazy(() =>
   import('../features/markets/MarketsPage').then((module) => ({
     default: module.MarketsPage,
@@ -55,6 +60,7 @@ const Orders = lazy(() =>
 );
 const Dashboard = lazy(() => import('../pages/investor/Dashboard'));
 const Watchlist = lazy(() => import('../pages/investor/Watchlist'));
+const ApiKey = lazy(() => import('../pages/investor/ApiKey'));
 const Analytics = lazy(() => import('../pages/investor/Analytics'));
 const AdminHome = lazy(() => import('../pages/admin/AdminHome'));
 const PlannedFeaturePage = lazy(() => import('../pages/PlannedFeaturePage'));
@@ -140,6 +146,7 @@ export function AppRoutes() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/how-it-works" element={<HowItWorksPage />} />
+        <Route path="/developers" element={<DevelopersPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
 
@@ -158,6 +165,7 @@ export function AppRoutes() {
         <Route element={<ConsoleShellLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/watchlist" element={<Watchlist />} />
+          <Route path="/api-key" element={<ApiKey />} />
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/analytics" element={<Analytics />} />

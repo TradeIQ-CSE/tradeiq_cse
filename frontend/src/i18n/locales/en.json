@@ -11,6 +11,9 @@
       "analysis": "Analysis",
       "utilities": "Utilities"
     },
+    "groups": {
+      "developers": "For developers"
+    },
     "items": {
       "dashboard": "Dashboard",
       "markets": "Markets",
@@ -23,7 +26,8 @@
       "aiInsights": "AI insights",
       "reports": "Reports",
       "admin": "Admin",
-      "settings": "Settings"
+      "apiKey": "API key",
+      "apiGuide": "API guide"
     },
     "language": "Language",
     "languageUnavailable": "{{language}} translation is not available yet",
@@ -508,7 +512,8 @@
         "workspace": "How it works",
         "backtesting": "Test a strategy",
         "newsEvents": "News & events",
-        "aboutUs": "About us"
+        "aboutUs": "About us",
+        "developers": "Developers"
       },
       "openAccount": "Create account",
       "signIn": "Sign in",
@@ -1110,5 +1115,108 @@
     "light": "Light",
     "dark": "Dark",
     "system": "System"
+  },
+  "apiKeyPage": {
+    "eyebrow": "For developers",
+    "title": "API key",
+    "description": "Read TradeIQ market data from your own code"
+  },
+  "developerApi": {
+    "title": "Your key",
+    "infoTip": "Lets your own code read TradeIQ market data",
+    "guideLink": "API guide",
+    "loading": "Updating your developer key",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyKey": "Copy key",
+    "errors": {
+      "load": "Couldn’t load your developer key",
+      "retry": "Try again",
+      "create": "Couldn’t create your key · Try again",
+      "action": "Couldn’t complete that · Try again"
+    },
+    "noKey": {
+      "description": "One key per account · Replace or remove it any time",
+      "labelPlaceholder": "What it's for",
+      "create": "Create API key"
+    },
+    "justCreated": {
+      "saveNow": "Save it now · You won’t see it again",
+      "done": "Done"
+    },
+    "facts": {
+      "key": "Key",
+      "label": "Label",
+      "created": "Created",
+      "lastUsed": "Last used",
+      "neverUsed": "Not used yet"
+    },
+    "usage": {
+      "title": "Used this hour",
+      "value": "{{used}} of {{limit}} · Resets at {{time}}",
+      "unavailable": "This can’t be shown right now",
+      "none": "No requests yet",
+      "chartLabel": "Requests per day · Last 30 days",
+      "tableDate": "Date",
+      "tableCount": "Requests",
+      "tooltip_one": "{{count}} request on {{date}}",
+      "tooltip_other": "{{count}} requests on {{date}}"
+    },
+    "actions": {
+      "regenerate": "Regenerate key",
+      "revoke": "Revoke key",
+      "cancel": "Cancel"
+    },
+    "regenerateDialog": {
+      "title": "Regenerate key?",
+      "description": "Your current key stops working straight away",
+      "confirm": "Regenerate"
+    },
+    "revokeDialog": {
+      "title": "Revoke key?",
+      "description": "Apps using it stop working straight away",
+      "confirm": "Revoke"
+    }
+  },
+  "developers": {
+    "hero": {
+      "eyebrow": "Developers",
+      "heading": "Use TradeIQ market data in your own code",
+      "facts": "Free to use · Read-only · 100 requests an hour",
+      "limitLabel": "the rate limit",
+      "limitTip": "Going over this returns an error saying when to try again · Resets on the hour",
+      "reference": "Full API reference"
+    },
+    "reads": {
+      "heading": "What you can read",
+      "items": {
+        "companies": "Companies",
+        "prices": "Daily, weekly and monthly prices",
+        "indices": "Indices",
+        "eod": "Each day's closing prices for every company"
+      }
+    },
+    "start": {
+      "heading": "Get started",
+      "step": "Step {{number}}",
+      "create": {
+        "title": "Create an API key",
+        "link": "Get your key"
+      },
+      "send": {
+        "title": "Send it with every request",
+        "copyLabel": "Copy header"
+      },
+      "read": {
+        "title": "Read the data",
+        "tabsLabel": "Code language",
+        "copyLabel": "Copy code",
+        "tabs": {
+          "curl": "curl",
+          "python": "Python",
+          "javascript": "JavaScript"
+        }
+      }
+    }
   }
 }

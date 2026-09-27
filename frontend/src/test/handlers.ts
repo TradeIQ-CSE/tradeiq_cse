@@ -51,6 +51,11 @@ export const handlers = [
 
   http.delete('*/watchlist/:symbol', () => new HttpResponse(null, { status: 204 })),
 
+  // docs/api/public-api-v1.md §7. Stateless "no key yet" default; ApiKey's
+  // own test suite overrides these with server.use(...) per scenario.
+  http.get('*/developer/key', () => HttpResponse.json({ data: null })),
+  http.get('*/developer/usage', () => HttpResponse.json({ data: null })),
+
   http.get('*/market/overview', () => {
     return HttpResponse.json({ data: marketOverviewFixture });
   }),

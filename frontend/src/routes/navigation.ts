@@ -1,10 +1,12 @@
 import type { ComponentType } from 'react';
 import {
   RiBarChartGroupedLine,
+  RiBookOpenLine,
   RiDashboardLine,
   RiFileChartLine,
   RiFlaskLine,
   RiHistoryLine,
+  RiKey2Line,
   RiLineChartLine,
   RiPieChartLine,
   RiShieldUserLine,
@@ -13,7 +15,7 @@ import {
   RiSwapLine,
 } from '@remixicon/react';
 
-export type NavGroupKey = 'markets' | 'portfolio' | 'trading' | 'research' | 'utilities';
+export type NavGroupKey = 'markets' | 'portfolio' | 'trading' | 'research' | 'utilities' | 'developers';
 
 type IconComponent = ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>;
 
@@ -37,6 +39,7 @@ export const NAV_GROUPS: { key: NavGroupKey; labelKey: string }[] = [
   { key: 'trading', labelKey: 'nav.sections.trading' },
   { key: 'research', labelKey: 'nav.sections.analysis' },
   { key: 'utilities', labelKey: 'nav.sections.utilities' },
+  { key: 'developers', labelKey: 'nav.groups.developers' },
 ];
 
 /** Single source of truth for the sidebar, the command palette, and breadcrumbs. */
@@ -85,6 +88,20 @@ export const NAV_ROUTES: NavRoute[] = [
     icon: RiShieldUserLine,
     group: 'utilities',
     adminOnly: true,
+  },
+  {
+    key: 'apiKey',
+    labelKey: 'nav.items.apiKey',
+    path: '/api-key',
+    icon: RiKey2Line,
+    group: 'developers',
+  },
+  {
+    key: 'apiGuide',
+    labelKey: 'nav.items.apiGuide',
+    path: '/developers',
+    icon: RiBookOpenLine,
+    group: 'developers',
   },
 ];
 

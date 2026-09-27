@@ -4,6 +4,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { configureMarketTradingApp } from './app.setup';
 import { buildCorsOptionsDelegate } from './common/cors';
+import { setupPublicApiDocs } from './public-api/openapi/public-api-docs';
 
 async function bootstrap() {
   // Install the JSON parser in app.setup with the ingestion contract's 2 MiB
@@ -36,6 +37,10 @@ async function bootstrap() {
   app.enableCors(
     buildCorsOptionsDelegate(config.getOrThrow<string[]>('app.corsOrigins')),
   );
+
+  // docs/api/public-api-v1.md §9 — hosted Swagger UI and raw OpenAPI JSON for
+  // the six public routes only, no key required.
+  setupPublicApiDocs(app);
 
   const port = config.getOrThrow<number>('app.port');
   await app.listen(port);

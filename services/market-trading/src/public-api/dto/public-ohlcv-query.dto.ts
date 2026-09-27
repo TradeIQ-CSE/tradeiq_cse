@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsCalendarDate } from '../../common/validation/is-calendar-date';
 
 export type PublicOhlcvTimeframe = 'daily' | 'weekly' | 'monthly';
@@ -9,24 +10,44 @@ export type PublicOhlcvTimeframe = 'daily' | 'weekly' | 'monthly';
 // resolved from stored data, so it is checked once the final range is known
 // (PublicSecuritiesService reuses SecuritiesService.ohlcv() for that).
 export class PublicOhlcvQueryDto {
+  @ApiPropertyOptional({
+    enum: ['daily', 'weekly', 'monthly'],
+    default: 'daily',
+  })
   @IsOptional()
   @IsIn(['daily', 'weekly', 'monthly'])
   timeframe: PublicOhlcvTimeframe = 'daily';
 
+  @ApiPropertyOptional({
+    description: 'Range start (inclusive). Defaults to `to` minus 1 year.',
+    example: '2025-01-01',
+  })
   @IsOptional()
   @IsCalendarDate({ message: 'must be a calendar date in YYYY-MM-DD form' })
   from?: string;
 
+  @ApiPropertyOptional({
+    description:
+      'Range end (inclusive). Defaults to the latest completed session.',
+    example: '2025-01-03',
+  })
   @IsOptional()
   @IsCalendarDate({ message: 'must be a calendar date in YYYY-MM-DD form' })
   to?: string;
 
+  @ApiPropertyOptional({ type: 'integer', minimum: 1, default: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   page = 1;
 
+  @ApiPropertyOptional({
+    type: 'integer',
+    minimum: 1,
+    maximum: 1000,
+    default: 500,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
