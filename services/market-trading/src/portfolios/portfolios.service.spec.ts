@@ -174,8 +174,10 @@ describe('PortfoliosService', () => {
   });
 
   describe('remove', () => {
+    // The Postgres driver answers an UPDATE with [rows, affectedCount], so the
+    // mocks use that shape rather than a bare rows array.
     it('throws PortfolioNotFoundException when nothing matched', async () => {
-      repoManagerQuery.mockResolvedValueOnce([]);
+      repoManagerQuery.mockResolvedValueOnce([[], 0]);
 
       await expect(service.remove(userId, portfolioId)).rejects.toBeInstanceOf(
         PortfolioNotFoundException,
@@ -183,7 +185,10 @@ describe('PortfoliosService', () => {
     });
 
     it('resolves when the soft delete matched one row', async () => {
-      repoManagerQuery.mockResolvedValueOnce([{ portfolio_id: portfolioId }]);
+      repoManagerQuery.mockResolvedValueOnce([
+        [{ portfolio_id: portfolioId }],
+        1,
+      ]);
 
       await expect(
         service.remove(userId, portfolioId),
