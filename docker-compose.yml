@@ -19,6 +19,27 @@ services:
       timeout: 5s
       retries: 10
 
+  # No persistence, no eviction concerns beyond what the hourly counters
+  # already need: every key carries its own TTL, so volatile-ttl (evict the
+  # key closest to expiring) is exactly the right policy under the 64mb cap.
+  redis:
+    image: redis:7-alpine
+    command:
+      [
+        "redis-server",
+        "--save", "",
+        "--appendonly", "no",
+        "--maxmemory", "64mb",
+        "--maxmemory-policy", "volatile-ttl",
+      ]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   # The Nest API services apply their own TypeORM migrations at startup
   # (migrationsRun: true) before serving traffic. market-trading's healthcheck
   # doubles as the "market_data schema is ready" signal for the seed job.
@@ -34,6 +55,7 @@ services:
       MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@db:5432/market_data
       MARKET_TRADING_CORS_ORIGINS: ${MARKET_TRADING_CORS_ORIGINS:-http://localhost:5173}
       MARKET_INGESTION_TOKEN: ${MARKET_INGESTION_TOKEN:-}
+      REDIS_URL: redis://redis:6379
       # Verification only: the public half of the key identity-auth signs with,
       # so nothing in this container can mint a token.
       AUTH_JWT_PUBLIC_KEYS: ${AUTH_JWT_PUBLIC_KEYS:-LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUF1NHJEbFFvekVDT28yNEZMbWlHcgpyVGhSQkh5UFUxSlU0MjNEWjdSVlBQbnpFTWV0TElvZ1pGRkVBU1pKMzFDeW9yblNDUEJRY08zV0QzQ3FwT2xNClVUSFdUeHR5YTdxQmpIYzdQNUEzZ3kweHNBWXpDdHMvdWxONHBlVXY2cEN1R1JsNUp4cnpZNHZmZ2ZVQ1MrYk8KUitrRGkvZXVmdmM5V0ZWbGlOYk5tVlg0R05mK1E4dWZTNDhYYzY5OHJXQUVjRTR6RndJenoxazlqZG5jZ1U1bApRQzByQ1luRllTTnVtaFhlUTkzVjFoeWdFZDIreVBJTytCbHgrQXZuSm8yRW1vQThWRzQ4VUphOWEyR0JWVlNTCnNWUnJucGdPSzU2eVVoaVk3UnZlNHoyNXd3U2xzMjJTdGNIOGc3VW1YMjVDUTZ0b2NOYTZHOUI5bGk3bjVlMVAKendJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==}
@@ -42,6 +64,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      # Start order only: the service copes with Redis being down (fail
+      # open, ADR 0010), so it must not wait on Redis's healthcheck.
+      redis:
+        condition: service_started
     healthcheck:
       test:
         [

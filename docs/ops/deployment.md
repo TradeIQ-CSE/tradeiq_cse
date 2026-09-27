@@ -1,8 +1,8 @@
 # Deployment
 
 One VM runs the whole stack, and the whole stack is one `docker compose up` —
-database, both Nest services, the ML service, the frontend, nginx and certbot.
-Nothing is hand-installed on the server except Docker itself.
+database, Redis, both Nest services, the ML service, the frontend, nginx and
+certbot. Nothing is hand-installed on the server except Docker itself.
 
 - **Host**: EC2 `t3.small` (2 vCPU, 2 GiB + 2 GiB swap), Ubuntu 26.04, `ap-south-1`
 - **Address**: Elastic IP, `tradeiqcse.tech` and `www` as A records. The apex
@@ -13,8 +13,8 @@ Nothing is hand-installed on the server except Docker itself.
 - **Exposed to the internet**: nginx on 80 and 443, nothing else
 
 Every other service is reachable only over the private Compose network. The
-database and the internal ingestion route have no host port at all, so they
-cannot be hit from outside even by misconfiguration.
+database, Redis and the internal ingestion route have no host port at all, so
+they cannot be hit from outside even by misconfiguration.
 
 ## Why pull, not push
 

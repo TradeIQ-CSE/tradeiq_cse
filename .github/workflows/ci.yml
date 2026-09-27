@@ -163,9 +163,19 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s --health-timeout 5s --health-retries 10
+      # env.validation.ts only requires REDIS_URL to be set and well formed;
+      # boot itself does not need Redis reachable. This service container
+      # gives the Redis e2e suite below a real Redis to run against.
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@localhost:5432/market_data
       DATA_INGESTION_MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@localhost:5432/market_data
+      REDIS_URL: redis://localhost:6379
     steps:
       - uses: actions/checkout@v4
         with:
