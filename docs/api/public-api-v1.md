@@ -34,7 +34,7 @@ at `/api/market/developer/…`, not under `/api/public/`.
 Every `/api/public/v1` route requires a header:
 
 ```
-X-API-Key: tiq_oHBvRPOIvGrv5iFlbCBFNOgmBjMtpsiaOclRz3Aw
+X-API-Key: tiq_ExampleKeyDoNotUse0000000000000000000000
 ```
 
 The key is `tiq_` followed by 40 base62 characters (`A`–`Z`, `a`–`z`, `0`–`9`).
@@ -450,7 +450,7 @@ or body.
 The active key's metadata, or `null` when the user has none.
 
 ```json
-{ "data": { "prefix": "tiq_oHBv", "label": "My backtesting script",
+{ "data": { "prefix": "tiq_Exam", "label": "My backtesting script",
             "created_at": "2026-08-01T04:00:00.000Z",
             "last_used_at": "2026-09-25T14:12:00.000Z" } }
 ```
@@ -477,8 +477,8 @@ characters.
 `201 Created`:
 
 ```json
-{ "data": { "key": "tiq_oHBvRPOIvGrv5iFlbCBFNOgmBjMtpsiaOclRz3Aw",
-            "prefix": "tiq_oHBv", "label": "My backtesting script",
+{ "data": { "key": "tiq_ExampleKeyDoNotUse0000000000000000000000",
+            "prefix": "tiq_Exam", "label": "My backtesting script",
             "created_at": "2026-09-26T09:00:00.000Z" } }
 ```
 
@@ -524,6 +524,7 @@ Revokes the active key. `204`, idempotent: no active key also answers
 
 This hour's count against the limit, plus the last 30 days. `data` is
 `null` when the user has no active key.
+The example below is shortened to 4 of the 30 `daily` entries.
 
 ```json
 {

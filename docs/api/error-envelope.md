@@ -44,7 +44,7 @@ Success responses never contain `error`; error responses never contain `data`.
 | HTTP | Code | `fields` | Meaning | Client guidance |
 |---|---|---|---|---|
 | 400 | `VALIDATION_FAILED` | required | Boundary validation rejected the request (SRS 3.1.2.3) | Highlight `fields[].field` inputs; do not retry unchanged |
-| 401 | `UNAUTHENTICATED` | — | Missing/invalid/expired access token | Trigger re-auth flow |
+| 401 | `UNAUTHENTICATED` | — | Missing/invalid/expired access token, or on the public API a missing/invalid/revoked API key (public-api-v1.md §2) | SPA: trigger re-auth flow · Public API: check the `X-API-Key` value; don't retry unchanged |
 | 403 | `FORBIDDEN` | — | Authenticated but not allowed (incl. non-admin on admin routes, SRS 3.1.2.2) | Hide the affordance; do not retry |
 | 404 | `NOT_FOUND` | — | No resource at this path | Generic fallback 404 |
 | 404 | `SECURITY_NOT_FOUND` | — | `{symbol}` matches no security | Show "unknown symbol" state |
