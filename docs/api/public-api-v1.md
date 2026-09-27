@@ -63,7 +63,9 @@ resolves to an active key counts against its hour, including ones that go on
 to answer with a 4xx (a bad symbol, a validation failure) — only requests
 that never resolve a key (§2's `401`) are free.
 
-Once a key is resolved, every response — success or 4xx — carries:
+Once a key is resolved, every response — success or 4xx — carries these
+headers (`X-RateLimit-Remaining` is left out when the count can't be read,
+see below):
 
 | Header | Meaning |
 |---|---|
