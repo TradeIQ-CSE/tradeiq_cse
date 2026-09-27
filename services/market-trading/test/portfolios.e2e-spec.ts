@@ -202,6 +202,54 @@ describe('Portfolios (e2e)', () => {
     expect(envelope(otherUsers)).toEqual(envelope(deleted));
     expect(envelope(neverExisted)).toEqual(envelope(deleted));
   });
+
+  // docs/api/paper-trading-v1.md §5.4: a repeated delete is a 404, and so is
+  // deleting a portfolio that never existed or belongs to someone else.
+  it('answers 404 to a delete that matches no active portfolio', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/portfolios')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Idempotency-Key', 'repeat-delete-key')
+      .send({ name: 'Delete twice', starting_capital: 200000 })
+      .expect(201);
+    const portfolioId = created.body.data.portfolio_id;
+
+    await request(app.getHttpServer())
+      .delete(`/portfolios/${portfolioId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(204);
+
+    const repeated = await request(app.getHttpServer())
+      .delete(`/portfolios/${portfolioId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
+    expect(repeated.body.error.code).toBe('PORTFOLIO_NOT_FOUND');
+
+    await request(app.getHttpServer())
+      .delete(`/portfolios/${randomUUID()}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
+
+    const { token: otherToken } = await createUser();
+    const others = await request(app.getHttpServer())
+      .post('/portfolios')
+      .set('Authorization', `Bearer ${otherToken}`)
+      .set('Idempotency-Key', 'others-delete-key')
+      .send({ name: 'Not yours', starting_capital: 200000 })
+      .expect(201);
+    const othersId = others.body.data.portfolio_id;
+
+    await request(app.getHttpServer())
+      .delete(`/portfolios/${othersId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
+
+    // The failed delete must not have touched the owner's portfolio.
+    await request(app.getHttpServer())
+      .get(`/portfolios/${othersId}`)
+      .set('Authorization', `Bearer ${otherToken}`)
+      .expect(200);
+  });
   // docs/api/paper-trading-v1.md §7. The valuation arithmetic is unit-tested in
   // src/portfolios/positions.spec.ts against the §8 vectors, and the full
   // buy-then-sell path is covered in orders.e2e-spec.ts; these cover the HTTP

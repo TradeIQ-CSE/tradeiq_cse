@@ -219,8 +219,12 @@ export class PortfoliosService {
 
   // docs/api/paper-trading-v1.md §5.4 — soft delete; the WHERE clause and the
   // 404 check happen in one statement so there's no read-then-write race.
+  //
+  // TypeORM's Postgres driver resolves an UPDATE to a [rows, affectedCount]
+  // tuple, not the rows array a SELECT or INSERT returns, so the tuple is
+  // destructured before the 404 check.
   async remove(userId: string, portfolioId: string): Promise<void> {
-    const rows: { portfolio_id: string }[] =
+    const [rows]: [{ portfolio_id: string }[], number] =
       await this.portfolios.manager.query(
         `UPDATE market_data.virtual_portfolios SET deleted_at = now()
        WHERE portfolio_id = $1 AND user_id = $2 AND deleted_at IS NULL
