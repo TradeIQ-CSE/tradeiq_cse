@@ -736,8 +736,11 @@ describe('Public developer API (e2e)', () => {
 
       await get('/public/v1/securities?page_size=1', key).expect(200);
 
+      // The recorder writes after the response, usage row first and
+      // last_used_at second, so poll until both writes have landed.
       const usageDate = new Date().toISOString().slice(0, 10);
       let requestCount = 0;
+      let lastUsedAt: Date | null = null;
       for (let attempt = 0; attempt < 20; attempt++) {
         const rows: { request_count: number }[] = await dataSource.query(
           `SELECT request_count FROM market_data.api_key_usage
@@ -745,15 +748,14 @@ describe('Public developer API (e2e)', () => {
           [apiKeyId, usageDate],
         );
         requestCount = rows[0]?.request_count ?? 0;
-        if (requestCount >= 1) break;
+        [{ last_used_at: lastUsedAt }] = await dataSource.query(
+          `SELECT last_used_at FROM market_data.api_keys WHERE api_key_id = $1`,
+          [apiKeyId],
+        );
+        if (requestCount >= 1 && lastUsedAt !== null) break;
         await new Promise((resolve) => setTimeout(resolve, 50));
       }
       expect(requestCount).toBeGreaterThanOrEqual(1);
-
-      const [{ last_used_at: lastUsedAt }] = await dataSource.query(
-        `SELECT last_used_at FROM market_data.api_keys WHERE api_key_id = $1`,
-        [apiKeyId],
-      );
       expect(lastUsedAt).not.toBeNull();
     });
   });
