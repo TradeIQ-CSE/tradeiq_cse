@@ -6,6 +6,8 @@ import request from 'supertest';
 import { createTestSigner, TestSigner } from './access-token';
 import { AccessTokenKeyring } from '../src/auth/access-token-keyring';
 import { JwtAuthGuard } from '../src/auth/jwt-auth.guard';
+import { BacktestPolicyController } from '../src/backtest-runs/backtest-policy.controller';
+import { BacktestPreviewController } from '../src/backtest-runs/backtest-preview.controller';
 import { BacktestRunsController } from '../src/backtest-runs/backtest-runs.controller';
 import { BacktestRunsService } from '../src/backtest-runs/backtest-runs.service';
 import { BacktestRunsRepository } from '../src/backtest-runs/backtest-runs.repository';
@@ -29,8 +31,8 @@ describe('Backtest Runs (e2e)', () => {
 
   const validDto = {
     symbol: 'JKH',
-    startDate: '2026-08-01',
-    endDate: '2026-08-05',
+    startDate: '2025-08-02',
+    endDate: '2025-08-06',
     startingCapital: 1000000,
     rule: {
       buy: { type: 'period_start' },
@@ -41,7 +43,7 @@ describe('Backtest Runs (e2e)', () => {
 
   const sampleBars = [
     {
-      tradeDate: '2026-08-01',
+      tradeDate: '2025-08-02',
       open: '100.00',
       high: '105.00',
       low: '98.00',
@@ -49,7 +51,7 @@ describe('Backtest Runs (e2e)', () => {
       volume: '1000',
     },
     {
-      tradeDate: '2026-08-02',
+      tradeDate: '2025-08-03',
       open: '102.00',
       high: '103.00',
       low: '95.00',
@@ -57,7 +59,7 @@ describe('Backtest Runs (e2e)', () => {
       volume: '1100',
     },
     {
-      tradeDate: '2026-08-03',
+      tradeDate: '2025-08-04',
       open: '96.00',
       high: '108.00',
       low: '95.00',
@@ -65,7 +67,7 @@ describe('Backtest Runs (e2e)', () => {
       volume: '1200',
     },
     {
-      tradeDate: '2026-08-04',
+      tradeDate: '2025-08-05',
       open: '107.00',
       high: '115.00',
       low: '106.00',
@@ -73,7 +75,7 @@ describe('Backtest Runs (e2e)', () => {
       volume: '1300',
     },
     {
-      tradeDate: '2026-08-05',
+      tradeDate: '2025-08-06',
       open: '112.00',
       high: '120.00',
       low: '111.00',
@@ -93,7 +95,20 @@ describe('Backtest Runs (e2e)', () => {
         }
         return null;
       }),
-      findDailyPricesBySecurity: jest.fn().mockResolvedValue(sampleBars),
+      findDailyPricesBySecurity: jest
+        .fn()
+        .mockImplementation(async (_securityId, start, end) => {
+          const history = [
+            ...sampleBars,
+            ...sampleBars.map((bar) => ({
+              ...bar,
+              tradeDate: bar.tradeDate.replace('2025', '2026'),
+            })),
+          ];
+          return history.filter(
+            (bar) => bar.tradeDate >= start && bar.tradeDate <= end,
+          );
+        }),
       findWarmupDailyPrices: jest.fn().mockResolvedValue([]),
       createRun: jest.fn().mockImplementation(async (run) => {
         runsStore.set(run.id, run);
@@ -134,9 +149,17 @@ describe('Backtest Runs (e2e)', () => {
           verifyOptions: { algorithms: ['RS256'] },
         }),
       ],
-      controllers: [BacktestRunsController],
+      controllers: [
+        BacktestPolicyController,
+        BacktestPreviewController,
+        BacktestRunsController,
+      ],
       providers: [
         BacktestRunsService,
+        {
+          provide: ConfigService,
+          useValue: { getOrThrow: () => '2025-12-31' },
+        },
         JwtAuthGuard,
         {
           // The guard picks its verification key out of the ring by the
@@ -178,6 +201,56 @@ describe('Backtest Runs (e2e)', () => {
 
   afterAll(async () => {
     await app.close();
+  });
+
+  it('serves the public policy before the protected run-id route', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/backtests/policy')
+      .expect(200);
+    expect(response.body).toEqual({ maxDate: '2025-12-31' });
+    expect(response.headers['cache-control']).toBe('no-store');
+  });
+
+  it.each(['/api/v1/backtests', '/api/v1/backtests/preview'])(
+    'rejects post-policy dates at %s with structured details and no database work',
+    async (path) => {
+      const findCount = mockRepo.findSecurityBySymbol!.mock.calls.length;
+      const priceCount = mockRepo.findDailyPricesBySecurity!.mock.calls.length;
+      const runCount = mockRepo.createRun!.mock.calls.length;
+      const response = await request(app.getHttpServer())
+        .post(path)
+        .set('Authorization', ownerAuth)
+        .send({ ...validDto, endDate: '2026-01-01' })
+        .expect(400);
+      expect(response.body.error).toMatchObject({
+        code: 'INVALID_DATE_RANGE',
+        details: { field: 'endDate', maxDate: '2025-12-31' },
+      });
+      expect(response.body.error.message).toContain('31 December 2025');
+      expect(mockRepo.findSecurityBySymbol!.mock.calls).toHaveLength(findCount);
+      expect(mockRepo.findDailyPricesBySecurity!.mock.calls).toHaveLength(
+        priceCount,
+      );
+      expect(mockRepo.createRun!.mock.calls).toHaveLength(runCount);
+    },
+  );
+
+  it('accepts the inclusive cutoff with later history present and returns only supported observations', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/backtests/preview')
+      .send({ ...validDto, endDate: '2025-12-31' })
+      .expect(200);
+    expect(response.body.equityCurve.length).toBeGreaterThan(0);
+    expect(
+      response.body.equityCurve.every(
+        (point: { date: string }) => point.date <= '2025-12-31',
+      ),
+    ).toBe(true);
+    expect(
+      response.body.trades.every(
+        (trade: { date: string }) => trade.date <= '2025-12-31',
+      ),
+    ).toBe(true);
   });
 
   it('should process a valid backtest submission, run it in background, and retrieve results', async () => {

@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BacktestRunsService } from '../backtest-runs.service';
 import { BacktestRunsRepository } from '../backtest-runs.repository';
@@ -24,6 +25,8 @@ describe('BacktestRunsService - Unit Tests', () => {
   let repo: jest.Mocked<BacktestRunsRepository>;
   let dataCoverage: jest.Mocked<DataCoverageService>;
 
+  let maxDate = '2025-12-31';
+
   const mockOwnerId = 'owner-uuid';
 
   // Localized definition for testing
@@ -37,8 +40,8 @@ describe('BacktestRunsService - Unit Tests', () => {
 
   const validDto: CreateBacktestRunDto = {
     symbol: 'JKH',
-    startDate: '2026-08-01',
-    endDate: '2026-08-05',
+    startDate: '2025-08-02',
+    endDate: '2025-08-06',
     startingCapital: 1000000,
     rule: {
       buy: { type: 'period_start' },
@@ -50,7 +53,7 @@ describe('BacktestRunsService - Unit Tests', () => {
   const sampleBars: DailyPrice[] = [
     {
       securityId: 'sec-123',
-      tradeDate: '2026-08-01',
+      tradeDate: '2025-08-02',
       open: '100.00',
       high: '105.00',
       low: '98.00',
@@ -60,7 +63,7 @@ describe('BacktestRunsService - Unit Tests', () => {
     },
     {
       securityId: 'sec-123',
-      tradeDate: '2026-08-02',
+      tradeDate: '2025-08-03',
       open: '102.00',
       high: '103.00',
       low: '95.00',
@@ -70,7 +73,7 @@ describe('BacktestRunsService - Unit Tests', () => {
     },
     {
       securityId: 'sec-123',
-      tradeDate: '2026-08-03',
+      tradeDate: '2025-08-04',
       open: '96.00',
       high: '108.00',
       low: '95.00',
@@ -80,7 +83,7 @@ describe('BacktestRunsService - Unit Tests', () => {
     },
     {
       securityId: 'sec-123',
-      tradeDate: '2026-08-04',
+      tradeDate: '2025-08-05',
       open: '107.00',
       high: '115.00',
       low: '106.00',
@@ -90,7 +93,7 @@ describe('BacktestRunsService - Unit Tests', () => {
     },
     {
       securityId: 'sec-123',
-      tradeDate: '2026-08-05',
+      tradeDate: '2025-08-06',
       open: '112.00',
       high: '120.00',
       low: '111.00',
@@ -108,6 +111,7 @@ describe('BacktestRunsService - Unit Tests', () => {
   };
 
   beforeEach(async () => {
+    maxDate = '2025-12-31';
     const mockRepoMethods = {
       createRun: jest.fn(),
       findRunByIdAndOwner: jest.fn(),
@@ -128,6 +132,7 @@ describe('BacktestRunsService - Unit Tests', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BacktestRunsService,
+        { provide: ConfigService, useValue: { getOrThrow: () => maxDate } },
         {
           provide: BacktestRunsRepository,
           useValue: mockRepoMethods,
@@ -162,8 +167,8 @@ describe('BacktestRunsService - Unit Tests', () => {
     it('should reject start date after end date', async () => {
       const invalidDto = {
         ...validDto,
-        startDate: '2026-08-10',
-        endDate: '2026-08-05',
+        startDate: '2025-08-11',
+        endDate: '2025-08-06',
       };
 
       let error: unknown;
@@ -249,10 +254,73 @@ describe('BacktestRunsService - Unit Tests', () => {
     });
   });
 
+  describe('configurable product cutoff', () => {
+    it.each(['submitRun', 'previewRun'] as const)(
+      'rejects both cutoff fields before any repository or coverage work in %s',
+      async (method) => {
+        for (const dates of [
+          { startDate: '2025-08-02', endDate: '2026-01-01' },
+          { startDate: '2026-01-01', endDate: '2026-02-01' },
+        ]) {
+          const call =
+            method === 'submitRun'
+              ? service.submitRun({ ...validDto, ...dates }, mockOwnerId)
+              : service.previewRun({ ...validDto, ...dates });
+          await expect(call).rejects.toMatchObject({
+            code: 'INVALID_DATE_RANGE',
+            details: {
+              field: dates.startDate > maxDate ? 'startDate' : 'endDate',
+              maxDate,
+            },
+          });
+        }
+        expect(dataCoverage.get).not.toHaveBeenCalled();
+        expect(repo.findSecurityBySymbol).not.toHaveBeenCalled();
+        expect(repo.findDailyPricesBySecurity).not.toHaveBeenCalled();
+        expect(repo.createRun).not.toHaveBeenCalled();
+      },
+    );
+
+    it('accepts the inclusive cutoff and excludes later observations', async () => {
+      repo.findSecurityBySymbol.mockResolvedValue(mockSecurity);
+      repo.findDailyPricesBySecurity.mockResolvedValue(sampleBars);
+      repo.findWarmupDailyPrices.mockResolvedValue([]);
+      const result = await service.previewRun({
+        ...validDto,
+        endDate: maxDate,
+      });
+      expect(result.equityCurve.length).toBeGreaterThan(0);
+      expect(result.equityCurve.every((point) => point.date <= maxDate)).toBe(
+        true,
+      );
+    });
+
+    it('extends without engine changes when the configured date is raised', async () => {
+      maxDate = '2026-12-31';
+      repo.findSecurityBySymbol.mockResolvedValue(mockSecurity);
+      repo.findDailyPricesBySecurity.mockResolvedValue(
+        sampleBars.map((bar) => ({
+          ...bar,
+          tradeDate: bar.tradeDate.replace('2025', '2026'),
+        })),
+      );
+      repo.findWarmupDailyPrices.mockResolvedValue([]);
+      const result = await service.previewRun({
+        ...validDto,
+        startDate: '2026-08-02',
+        endDate: '2026-08-06',
+      });
+      expect(result.equityCurve.length).toBeGreaterThan(0);
+      expect(
+        result.equityCurve.every((point) => point.date.startsWith('2026')),
+      ).toBe(true);
+    });
+  });
+
   describe('Data-gap validation (docs/plans/data-gap-handling.md §2)', () => {
     const missingDataGap = {
-      from: '2026-01-01',
-      to: '2026-06-12',
+      from: '2025-01-02',
+      to: '2025-06-13',
       sessions: 117,
       kind: 'missing_data' as const,
     };
@@ -281,7 +349,7 @@ describe('BacktestRunsService - Unit Tests', () => {
         data: {
           prices: {
             from: '2017-01-02',
-            to: '2026-09-23',
+            to: '2025-09-24',
             gaps: [missingDataGap],
           },
           indices: emptyCoverage().data.indices,
@@ -289,8 +357,8 @@ describe('BacktestRunsService - Unit Tests', () => {
       });
       const dto = {
         ...validDto,
-        startDate: '2026-03-01',
-        endDate: '2026-08-01',
+        startDate: '2025-03-02',
+        endDate: '2025-08-02',
       };
 
       let error: unknown;
@@ -302,12 +370,12 @@ describe('BacktestRunsService - Unit Tests', () => {
       expect(error).toBeInstanceOf(BacktestApiError);
       expect((error as BacktestApiError).code).toBe('DATE_IN_DATA_GAP');
       expect((error as BacktestApiError).message).toBe(
-        'No market data from 2026-01-01 to 2026-06-12. Choose a date outside this period.',
+        'No market data from 2025-01-02 to 2025-06-13. Choose a date outside this period.',
       );
       expect((error as BacktestApiError).details).toMatchObject({
         field: 'startDate',
-        from: '2026-01-01',
-        to: '2026-06-12',
+        from: '2025-01-02',
+        to: '2025-06-13',
       });
       expect(repo.createRun).not.toHaveBeenCalled();
     });
@@ -317,7 +385,7 @@ describe('BacktestRunsService - Unit Tests', () => {
         data: {
           prices: {
             from: '2017-01-02',
-            to: '2026-09-23',
+            to: '2025-09-24',
             gaps: [missingDataGap],
           },
           indices: emptyCoverage().data.indices,
@@ -325,8 +393,8 @@ describe('BacktestRunsService - Unit Tests', () => {
       });
       const dto = {
         ...validDto,
-        startDate: '2025-06-01',
-        endDate: '2026-03-01',
+        startDate: '2024-06-02',
+        endDate: '2025-03-02',
       };
 
       let error: unknown;
@@ -339,8 +407,8 @@ describe('BacktestRunsService - Unit Tests', () => {
       expect((error as BacktestApiError).code).toBe('DATE_IN_DATA_GAP');
       expect((error as BacktestApiError).details).toMatchObject({
         field: 'endDate',
-        from: '2026-01-01',
-        to: '2026-06-12',
+        from: '2025-01-02',
+        to: '2025-06-13',
       });
       expect(repo.createRun).not.toHaveBeenCalled();
     });
@@ -350,7 +418,7 @@ describe('BacktestRunsService - Unit Tests', () => {
         data: {
           prices: {
             from: '2017-01-02',
-            to: '2026-09-23',
+            to: '2025-09-24',
             gaps: [missingDataGap],
           },
           indices: emptyCoverage().data.indices,
@@ -358,8 +426,8 @@ describe('BacktestRunsService - Unit Tests', () => {
       });
       const dto = {
         ...validDto,
-        startDate: '2025-06-01',
-        endDate: '2026-08-01',
+        startDate: '2024-06-02',
+        endDate: '2025-08-02',
       };
 
       await service.submitRun(dto, mockOwnerId);
@@ -371,18 +439,18 @@ describe('BacktestRunsService - Unit Tests', () => {
         data: {
           prices: {
             from: '2017-01-02',
-            to: '2026-09-23',
+            to: '2025-09-24',
             gaps: [missingDataGap],
           },
           indices: emptyCoverage().data.indices,
         },
       });
-      // 2025-12-31 and 2026-06-15 are the last/first *present* sessions either
+      // 2025-01-01 and 2025-06-16 are the last/first *present* sessions either
       // side of the gap — neither is one of the missing weekdays it names.
       const dto = {
         ...validDto,
-        startDate: '2025-12-31',
-        endDate: '2026-06-15',
+        startDate: '2025-01-01',
+        endDate: '2025-06-16',
       };
 
       await service.submitRun(dto, mockOwnerId);
@@ -394,18 +462,18 @@ describe('BacktestRunsService - Unit Tests', () => {
         data: {
           prices: {
             from: '2017-01-02',
-            to: '2026-09-23',
+            to: '2025-09-24',
             gaps: [missingDataGap],
           },
           indices: emptyCoverage().data.indices,
         },
       });
-      // Saturday 2026-01-03 and Sunday 2026-06-14 lie outside the gap's
+      // Saturday 2025-01-04 and Sunday 2025-06-15 lie outside the gap's
       // weekday bounds, but the sessions they select (Fri 2 Jan, Fri 12 Jun)
       // are inside it.
       for (const dates of [
-        { startDate: '2025-06-02', endDate: '2026-01-03' },
-        { startDate: '2025-06-02', endDate: '2026-06-14' },
+        { startDate: '2024-06-03', endDate: '2025-01-04' },
+        { startDate: '2024-06-03', endDate: '2025-06-15' },
       ]) {
         await expect(
           service.submitRun({ ...validDto, ...dates }, mockOwnerId),
@@ -419,17 +487,17 @@ describe('BacktestRunsService - Unit Tests', () => {
         data: {
           prices: {
             from: '2017-01-02',
-            to: '2026-09-23',
+            to: '2025-09-24',
             gaps: [missingDataGap],
           },
           indices: emptyCoverage().data.indices,
         },
       });
-      // Saturday 2026-06-13 selects Monday 2026-06-15, which has data.
+      // Saturday 2025-06-14 selects Monday 2025-06-16, which has data.
       const dto = {
         ...validDto,
-        startDate: '2026-06-13',
-        endDate: '2026-08-03',
+        startDate: '2025-06-14',
+        endDate: '2025-08-04',
       };
 
       await service.submitRun(dto, mockOwnerId);
@@ -441,7 +509,7 @@ describe('BacktestRunsService - Unit Tests', () => {
         data: {
           prices: {
             from: '2017-01-02',
-            to: '2026-09-23',
+            to: '2025-09-24',
             gaps: [marketClosedGap],
           },
           indices: emptyCoverage().data.indices,
@@ -468,8 +536,8 @@ describe('BacktestRunsService - Unit Tests', () => {
         ownerId: mockOwnerId,
         status: 'queued',
         symbol: 'JKH',
-        startDate: '2026-08-01',
-        endDate: '2026-08-05',
+        startDate: '2025-08-02',
+        endDate: '2025-08-06',
         startingCapital: 1000000,
         ruleConfig: {
           version: '1.0',
@@ -517,8 +585,8 @@ describe('BacktestRunsService - Unit Tests', () => {
         ownerId: mockOwnerId,
         status: 'queued',
         symbol: 'JKH',
-        startDate: '2026-08-01',
-        endDate: '2026-08-05',
+        startDate: '2025-08-02',
+        endDate: '2025-08-06',
         startingCapital: 1000000,
         ruleConfig: {
           version: '1.0',
@@ -571,8 +639,8 @@ describe('BacktestRunsService - Unit Tests', () => {
           close: parseFloat(b.close),
           volume: parseInt(b.volume, 10),
         })),
-        startDate: '2026-08-01',
-        endDate: '2026-08-05',
+        startDate: '2025-08-02',
+        endDate: '2025-08-06',
         initialCapital: 1000000,
         positionSizing: { type: 'full_capital' },
         feeConfig: DEFAULT_TEST_FEES,
@@ -589,8 +657,8 @@ describe('BacktestRunsService - Unit Tests', () => {
         ownerId: mockOwnerId,
         status: 'queued',
         symbol: 'JKH',
-        startDate: '2026-08-01',
-        endDate: '2026-08-05',
+        startDate: '2025-08-02',
+        endDate: '2025-08-06',
         startingCapital: 1000000,
         ruleConfig: directInput.rules,
         executionAssumptions: {
@@ -638,8 +706,8 @@ describe('BacktestRunsService - Unit Tests', () => {
           close: parseFloat(b.close),
           volume: parseInt(b.volume, 10),
         })),
-        startDate: '2026-08-01',
-        endDate: '2026-08-05',
+        startDate: '2025-08-02',
+        endDate: '2025-08-06',
         initialCapital: 1000000,
         positionSizing: { type: 'full_capital' },
         feeConfig: DEFAULT_TEST_FEES,

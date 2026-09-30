@@ -37,15 +37,15 @@ describe('frontend backtest defaults and restoration', () => {
   });
 
   it.each([
-    [null, null], ['bad-date', 'bad-date'], ['2025-12-31', '2024-01-01'],
+    [null, null], ['bad-date', 'bad-date'],
   ])('falls back safely for missing or invalid coverage: %s, %s', (from, to) => {
     expect(defaultBacktestPeriod(from, to)).toEqual(defaultBacktestPeriod());
   });
 
-  it('keeps the unsnapped window when one gap spans both ends', () => {
+  it('returns no suggested dates when one gap spans both ends', () => {
     const gap: DataGap = { from: '2025-06-02', to: '2025-12-31', sessions: 153, kind: 'missing_data' };
     expect(defaultBacktestPeriod('2025-06-10', '2025-11-28', [gap])).toEqual({
-      startDate: '2025-06-10', endDate: '2025-11-28',
+      startDate: '', endDate: '',
     });
   });
 

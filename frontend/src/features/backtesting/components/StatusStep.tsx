@@ -421,7 +421,11 @@ export function ResultsView({
   );
 }
 
+import { useBacktestPolicy } from "../hooks/useBacktestPolicy";
+import { backtestAvailabilityMessage, previousPeriod } from "../domain/bounds";
+
 export function StatusStep() {
+  const policy = useBacktestPolicy();
   const { runId } = useParams<{ runId: string }>();
   const navigate = useNavigate();
   // Never blocks this page: the equity curve just renders without gap
@@ -525,6 +529,8 @@ export function StatusStep() {
         eyebrow="Backtesting"
         title="Your test"
       />
+
+      {statusData?.endDate && previousPeriod(statusData.startDate ?? '', statusData.endDate, policy.maxDate) && <AppNotice title="Result from a previous supported period">This saved result retains its original dates and calculations. {backtestAvailabilityMessage(policy.maxDate)} New tests must use supported dates.</AppNotice>}
 
       {revealing && results ? (
         <RunReveal onDone={finishReveal} />

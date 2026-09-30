@@ -282,3 +282,32 @@ describe('StatusStep equity curve — data gaps', () => {
     expect(screen.queryByText(new RegExp(`${marketClosureCovid.sessions}\\s+trading days`))).not.toBeInTheDocument();
   });
 });
+
+
+describe('StatusStep supported period', () => {
+  beforeEach(() => vi.restoreAllMocks());
+  it('ignores 2026 gap metadata for a new result ending in 2025', async () => {
+    server.use(http.get('*/coverage', () => HttpResponse.json({ data: dataCoverageWithBothGapsFixture })));
+    vi.spyOn(api, 'getBacktestRunStatus').mockResolvedValue({ id: 'run-2025', status: 'completed', startDate: '2025-01-01', endDate: '2025-12-31' });
+    vi.spyOn(api, 'getBacktestRunResults').mockResolvedValue({ initialCapital: 1_000_000, finalCash: 1_050_000, finalEquity: 1_050_000, trades: [], equityCurve: [
+      { date: '2025-01-02', cash: 1_000_000, positionQuantity: 0, positionMarketValue: 0, totalEquity: 1_000_000 },
+      { date: '2025-12-31', cash: 1_050_000, positionQuantity: 0, positionMarketValue: 0, totalEquity: 1_050_000 },
+    ] });
+    const { container } = renderStatusStep('run-2025');
+    await screen.findByText('Your test is done');
+    await screen.findByText('Trades', { selector: 'p' });
+    expect(screen.queryByText('Data gap')).not.toBeInTheDocument();
+    expect(screen.queryByText(/trading days in a data gap/)).not.toBeInTheDocument();
+    expect(container.querySelector('[data-gap-kind]')).toBeNull();
+    expect(screen.queryByText('Result from a previous supported period')).not.toBeInTheDocument();
+  });
+  it('labels saved results from a previous period without changing calculations', async () => {
+    vi.spyOn(api, 'getBacktestRunStatus').mockResolvedValue({ id: 'legacy', status: 'completed', startDate: '2025-01-01', endDate: '2026-09-30' });
+    const result = { initialCapital: 1_000_000, finalCash: 1_050_000, finalEquity: 1_050_000, trades: [], equityCurve: [] };
+    vi.spyOn(api, 'getBacktestRunResults').mockResolvedValue(result);
+    renderStatusStep('legacy');
+    expect(await screen.findByText('Result from a previous supported period')).toBeInTheDocument();
+    await screen.findByText('Trades', { selector: 'p' });
+    expect(result.finalEquity).toBe(1_050_000);
+  });
+});

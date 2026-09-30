@@ -1,3 +1,4 @@
+import backtestingConfig from './backtesting.config';
 import appConfig from './app.config';
 import authConfig from './auth.config';
 import databaseConfig from './database.config';
@@ -118,6 +119,28 @@ describe('config', () => {
       process.env.PUBLIC_API_HOURLY_LIMIT = '250';
       expect(publicApiConfig().hourlyLimit).toBe(250);
     });
+  });
+
+  describe('backtesting policy', () => {
+    it('defaults to the temporary historical limit', () => {
+      delete process.env.BACKTEST_MAX_DATE;
+      expect(backtestingConfig().maxDate).toBe('2025-12-31');
+    });
+    it('reads an extended historical limit', () => {
+      process.env.BACKTEST_MAX_DATE = '2026-12-31';
+      expect(backtestingConfig().maxDate).toBe('2026-12-31');
+      expect(() =>
+        validate({ ...MINIMAL_ENV, BACKTEST_MAX_DATE: '2026-12-31' }),
+      ).not.toThrow();
+    });
+    it.each(['2026-02-30', '2025-2-03', '2016-12-31', '', 'bad-date'])(
+      'rejects malformed or prehistory limit %s',
+      (value) => {
+        expect(() =>
+          validate({ ...MINIMAL_ENV, BACKTEST_MAX_DATE: value }),
+        ).toThrow('Invalid environment configuration');
+      },
+    );
   });
 
   describe('validate', () => {

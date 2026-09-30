@@ -21,8 +21,11 @@ import {
   BacktestStepHeader,
 } from "./BacktestStepLayout";
 
+import { backtestBounds } from "../domain/bounds";
+
 export function SecurityStep({ embedded = false }: { embedded?: boolean }) {
-  const { config, selectSecurity, getStepErrors } = useBacktestWizard();
+  const { config, selectSecurity, getStepErrors, maxDate } = useBacktestWizard();
+  const bounds = backtestBounds(config.security.dataFrom, config.security.dataTo, maxDate);
   const symbolError = getStepErrors("security").find(
     (error) => error.field === "symbol",
   );
@@ -91,8 +94,8 @@ export function SecurityStep({ embedded = false }: { embedded?: boolean }) {
           companyName={config.security.companyName}
           sector={selectedSector}
           price={config.security.price}
-          historyFrom={config.security.dataFrom}
-          historyTo={config.security.dataTo}
+          historyFrom={bounds.available ? bounds.minimum : null}
+          historyTo={bounds.available ? bounds.maximum : null}
         />
       )}
 

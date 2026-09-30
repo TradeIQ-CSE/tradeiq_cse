@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Button as AriaButton,
   Dialog,
@@ -99,6 +99,9 @@ export interface DateRangePickerProps {
    */
   showsSelectedRange?: boolean;
   labels?: Partial<DateRangePickerLabels>;
+  /** Optional typed-field validation. Other callers retain the existing clamp behavior. */
+  validateTypedDate?: (date: CalendarDate | null, role: "start" | "end") => string | undefined;
+  showsQuickSelect?: boolean;
 }
 
 export interface DateRangePickerLabels {
@@ -267,6 +270,7 @@ function Footer({
   labels,
   minValue,
   maxValue,
+  validateTypedDate,
 }: {
   value: DateRangeValue | null;
   onChange: (value: DateRangeValue) => void;
@@ -275,7 +279,12 @@ function Footer({
   labels: DateRangePickerLabels;
   minValue?: CalendarDate;
   maxValue?: CalendarDate;
+  validateTypedDate?: DateRangePickerProps["validateTypedDate"];
 }) {
+  const [startError, setStartError] = useState<string | undefined>();
+  const [endError, setEndError] = useState<string | undefined>();
+  const updateStartError = useCallback((error: string | undefined) => setStartError(error), []);
+  const updateEndError = useCallback((error: string | undefined) => setEndError(error), []);
   return (
     <div className="flex flex-col gap-3 pt-3 sm:pr-4 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex min-w-0 items-center gap-2.5">
@@ -293,8 +302,10 @@ function Footer({
                 <DateChipInput
                   date={value.start}
                   label={labels.startDate}
+                  validate={validateTypedDate ? (date) => validateTypedDate(date, "start") : undefined}
+                  onValidationChange={updateStartError}
                   onCommit={(nextStart) => {
-                    const start = clampDate(nextStart, minValue, maxValue);
+                    const start = validateTypedDate ? nextStart : clampDate(nextStart, minValue, maxValue);
                     onChange({
                       start,
                       end: start.compare(value.end) > 0 ? start : value.end,
@@ -305,8 +316,10 @@ function Footer({
                 <DateChipInput
                   date={value.end}
                   label={labels.endDate}
+                  validate={validateTypedDate ? (date) => validateTypedDate(date, "end") : undefined}
+                  onValidationChange={updateEndError}
                   onCommit={(nextEnd) => {
-                    const end = clampDate(nextEnd, minValue, maxValue);
+                    const end = validateTypedDate ? nextEnd : clampDate(nextEnd, minValue, maxValue);
                     onChange({
                       start: end.compare(value.start) < 0 ? end : value.start,
                       end,
@@ -325,7 +338,7 @@ function Footer({
         <Button variant="secondary" onClick={onCancel}>
           {labels.cancel}
         </Button>
-        <Button onClick={onApply} disabled={!value}>
+        <Button onClick={onApply} disabled={!value || Boolean(startError || endError)}>
           {labels.apply}
         </Button>
       </div>
@@ -348,6 +361,8 @@ export function DateRangePicker({
   placeholder = "Select date range",
   showsSelectedRange = true,
   labels: labelOverrides,
+  validateTypedDate,
+  showsQuickSelect = true,
 }: DateRangePickerProps) {
   const labels = useMemo(
     () => ({ ...DEFAULT_LABELS, ...labelOverrides }),
@@ -446,7 +461,7 @@ export function DateRangePicker({
               allowsNonContiguousRanges
             >
               <div className="flex flex-col gap-3 lg:flex-row">
-                <div className="hidden pt-4 pl-4 lg:block">
+                {showsQuickSelect && <div className="hidden pt-4 pl-4 lg:block">
                   <QuickSelect
                     value={pendingValue}
                     onSelect={(range) => setPendingValue(range)}
@@ -454,7 +469,7 @@ export function DateRangePicker({
                     minValue={minValue}
                     maxValue={maxValue}
                   />
-                </div>
+                </div>}
                 <div className="flex flex-col px-2 pt-2 pb-3 lg:pr-2 lg:pl-0">
                   <div className="flex gap-2">
                     <MonthPanel offset={0} showPrev showNext={!isWide} />
@@ -466,6 +481,7 @@ export function DateRangePicker({
                     labels={labels}
                     minValue={minValue}
                     maxValue={maxValue}
+                    validateTypedDate={validateTypedDate}
                     onCancel={() => {
                       setPendingValue(committedValue);
                       close();

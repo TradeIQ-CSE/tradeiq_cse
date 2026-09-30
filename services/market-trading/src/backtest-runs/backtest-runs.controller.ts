@@ -49,6 +49,9 @@ export class BacktestRunsController {
     const run = await this.service.getRunStatus(runId, user.userId);
     return {
       id: run.id,
+      symbol: run.symbol,
+      startDate: run.startDate,
+      endDate: run.endDate,
       status: run.status,
       createdAt: run.createdAt,
       startedAt: run.startedAt,

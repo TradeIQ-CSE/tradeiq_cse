@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useState, useContext, useId } from "react";
 import {
   Button as RACButton,
   CalendarCell,
@@ -66,14 +66,15 @@ export function formatChipDate(date: CalendarDate) {
  *  null if the text isn't a valid date (out-of-range day/month is rejected
  *  up front; CalendarDate itself constrains impossible day-in-month combos
  *  like Feb 30). */
-export function parseChipDate(text: string): CalendarDate | null {
+export function parseChipDate(text: string, strict = false): CalendarDate | null {
   const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(text.trim());
   if (!match) return null;
   const day = Number(match[1]);
   const month = Number(match[2]);
   const year = Number(match[3]);
   if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-  return new CalendarDate(year, month, day);
+  const date = new CalendarDate(year, month, day);
+  return strict && (date.year !== year || date.month !== month || date.day !== day) ? null : date;
 }
 
 export function DayCell(props: CalendarCellRenderProps & { isRange: boolean }) {
@@ -251,20 +252,29 @@ export function DateChipInput({
   date,
   label,
   onCommit,
+  validate,
+  onValidationChange,
 }: {
   date: CalendarDate;
   label: string;
   onCommit: (date: CalendarDate) => void;
+  /** Opt-in validation retains invalid typed text instead of reverting it. */
+  validate?: (date: CalendarDate | null) => string | undefined;
+  onValidationChange?: (error: string | undefined) => void;
 }) {
   const formatted = formatChipDate(date);
   const [text, setText] = useState(formatted);
+  const errorId = useId();
+  const error = validate?.(parseChipDate(text, Boolean(validate)));
+  useEffect(() => { onValidationChange?.(error); }, [error, onValidationChange]);
 
   useEffect(() => {
     setText(formatted);
   }, [formatted]);
 
   const commit = () => {
-    const parsed = parseChipDate(text);
+    const parsed = parseChipDate(text, Boolean(validate));
+    if (validate && validate(parsed)) return;
     if (parsed) {
       onCommit(parsed);
     } else {
@@ -273,6 +283,7 @@ export function DateChipInput({
   };
 
   return (
+    <span className="flex flex-col gap-1">
     <input
       type="text"
       inputMode="numeric"
@@ -284,8 +295,12 @@ export function DateChipInput({
         if (event.key === "Escape") setText(formatted);
       }}
       aria-label={label}
+      aria-invalid={Boolean(error) || undefined}
+      aria-describedby={error ? errorId : undefined}
       className="w-[104px] rounded-2lg border border-border-button-default bg-background-primary-default px-2 py-2 text-body-medium text-text-primary shadow-xs outline-none transition-colors duration-100 ease-out focus-visible:border-border-button-active"
     />
+    {error && <span id={errorId} role="alert" className="max-w-48 text-caption-1-regular text-text-error-primary">{error}</span>}
+    </span>
   );
 }
 

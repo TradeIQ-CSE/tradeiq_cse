@@ -82,12 +82,12 @@ function ConfigureSection({
 }
 
 export function SimpleCompanyStep() {
-  const { config, priceGaps } = useBacktestWizard();
-  const suggested = defaultBacktestPeriod(config.security.dataFrom, config.security.dataTo, priceGaps);
+  const { config, priceGaps, maxDate } = useBacktestWizard();
+  const suggested = defaultBacktestPeriod(config.security.dataFrom, config.security.dataTo, priceGaps, maxDate);
   return (
     <div className="flex flex-col gap-6">
       <BacktestStepHeader title="Choose a company and dates"
-        description="Pick a company. Its latest year of prices is chosen for you" />
+        description="Pick a company. A year from its supported backtesting history is chosen for you" />
       <SecurityStep embedded />
       <ConfigureSection section="period" title="Dates"
         info="Both dates are included. Only days the market traded are used."

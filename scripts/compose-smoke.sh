@@ -75,6 +75,7 @@ export SMOKE_AUTH_PORT="$smoke_auth_port"
 export SMOKE_ML_PORT="$smoke_ml_port"
 export SMOKE_FRONTEND_PORT="$smoke_frontend_port"
 export MARKET_INGESTION_TOKEN=smoke-only-market-ingestion-token-123456
+export BACKTEST_MAX_DATE=2025-12-31
 # The published development pair. The smoke stack runs with NODE_ENV
 # unset, so the production-only rejection does not apply, and using the
 # committed pair keeps this script from carrying key material of its own.

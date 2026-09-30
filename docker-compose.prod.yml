@@ -70,6 +70,7 @@ services:
       MARKET_DATA_DATABASE_URL: postgresql://market_data:${MARKET_DATA_DB_PASSWORD:?set MARKET_DATA_DB_PASSWORD}@db:5432/market_data
       MARKET_TRADING_CORS_ORIGINS: https://tradeiqcse.tech
       MARKET_INGESTION_TOKEN: ${MARKET_INGESTION_TOKEN:?set MARKET_INGESTION_TOKEN}
+      BACKTEST_MAX_DATE: ${BACKTEST_MAX_DATE:-2025-12-31}
       REDIS_URL: redis://redis:6379
       # Verification only. The private half lives in identity-auth alone.
       AUTH_JWT_PUBLIC_KEYS: ${AUTH_JWT_PUBLIC_KEYS:?set AUTH_JWT_PUBLIC_KEYS}

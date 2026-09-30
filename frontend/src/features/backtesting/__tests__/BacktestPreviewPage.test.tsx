@@ -8,10 +8,10 @@ import { createDefaultBacktestConfig } from '../domain/defaults';
 import { storeBacktestPreview } from '../domain/preview';
 import { renderWithProviders } from '../../../test/render';
 
-function seedPreview() {
+function seedPreview(endDate = '2025-12-31') {
   const config = createDefaultBacktestConfig();
   config.security.symbol = 'SAMP.N0000';
-  config.period = { startDate: '2025-01-01', endDate: '2025-12-31' };
+  config.period = { startDate: '2025-01-01', endDate };
   storeBacktestPreview({
     config,
     results: {
@@ -67,6 +67,23 @@ describe('BacktestPreviewPage', () => {
       expect.objectContaining({ symbol: 'SAMP.N0000', startDate: '2025-01-01' }),
     );
     expect(sessionStorage.getItem('tradeiq_backtest_preview_v1')).toBeNull();
+  });
+
+  it('preserves a historical preview and requires date repair before saving', async () => {
+    seedPreview('2026-09-30');
+    const original = JSON.parse(sessionStorage.getItem('tradeiq_backtest_preview_v1')!);
+    const submit = vi.spyOn(api, 'submitBacktestRun');
+    renderPage('authenticated');
+    expect(screen.getByText('Result from a previous supported period')).toBeTruthy();
+    expect(screen.getByText('SAMP.N0000 · 2025-01-01 to 2026-09-30')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Save this backtest' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Choose supported dates' }));
+    const draft = JSON.parse(sessionStorage.getItem('tradeiq_backtest_draft_v1')!);
+    expect(draft.period.endDate).toBe('2025-12-31');
+    expect(draft.rules).toEqual(original.config.rules);
+    expect(draft.portfolio).toEqual(original.config.portfolio);
+    expect(JSON.parse(sessionStorage.getItem('tradeiq_backtest_preview_v1')!)).toEqual(original);
+    expect(submit).not.toHaveBeenCalled();
   });
 
   it('sends a visitor with no preview back to the wizard', () => {

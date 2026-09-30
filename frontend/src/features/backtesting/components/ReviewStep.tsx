@@ -25,6 +25,7 @@ export function ReviewStep({ configuration }: { configuration?: ReactNode }) {
   const {
     config,
     priceGaps,
+    maxDate,
     goToStep,
     submitBacktest,
     isSubmitting,
@@ -34,7 +35,7 @@ export function ReviewStep({ configuration }: { configuration?: ReactNode }) {
     validateAllSteps,
   } = useBacktestWizard();
   const { status: authStatus } = useAuth();
-  const reviewValidation = validateBacktestConfig(config, undefined, priceGaps);
+  const reviewValidation = validateBacktestConfig(config, undefined, priceGaps, maxDate);
   const isValid = reviewValidation.isValid;
   const crossedGaps = crossingDataGaps(
     priceGaps,

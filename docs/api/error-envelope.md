@@ -104,3 +104,5 @@ For `market-trading` / `identity-auth` this maps to:
   envelope and attaching `trace_id` from the request-scoped correlation id;
 - `ml-prediction` (FastAPI) produces the identical envelope via its exception
   handlers — the contract is service-agnostic.
+
+Backtesting also returns `400 INVALID_DATE_RANGE` when `startDate` or `endDate` exceeds its configured inclusive limit. `details` contains `{ field, maxDate }`; show the message on that date field and refresh the backtesting policy before choosing a supported period. The maximum is a backtesting product policy, not a claim that Markets or paper trading history ends there.
