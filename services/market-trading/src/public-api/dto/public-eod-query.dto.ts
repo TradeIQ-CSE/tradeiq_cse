@@ -7,7 +7,9 @@ import { IsCalendarDate } from '../../common/validation/is-calendar-date';
 export class PublicEodQueryDto {
   @ApiPropertyOptional({
     description:
-      'The session to return. Defaults to the latest completed session.',
+      'Valid YYYY-MM-DD calendar date for the session to return. Defaults to the latest completed session.',
+    type: 'string',
+    format: 'date',
     example: '2025-12-31',
   })
   @IsOptional()

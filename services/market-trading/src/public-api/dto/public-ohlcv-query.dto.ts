@@ -19,7 +19,10 @@ export class PublicOhlcvQueryDto {
   timeframe: PublicOhlcvTimeframe = 'daily';
 
   @ApiPropertyOptional({
-    description: 'Range start (inclusive). Defaults to `to` minus 1 year.',
+    description:
+      'Valid YYYY-MM-DD calendar date; range start (inclusive). Defaults to `to` minus 1 year.',
+    type: 'string',
+    format: 'date',
     example: '2025-01-01',
   })
   @IsOptional()
@@ -28,7 +31,9 @@ export class PublicOhlcvQueryDto {
 
   @ApiPropertyOptional({
     description:
-      'Range end (inclusive). Defaults to the latest completed session.',
+      'Valid YYYY-MM-DD calendar date; range end (inclusive). Defaults to the latest completed session.',
+    type: 'string',
+    format: 'date',
     example: '2025-01-03',
   })
   @IsOptional()

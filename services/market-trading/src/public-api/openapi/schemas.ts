@@ -13,13 +13,21 @@ import { ApiExtraModels, ApiProperty, getSchemaPath } from '@nestjs/swagger';
 // ---------------------------------------------------------------------------
 
 export class PageMetaSchema {
-  @ApiProperty({ example: 1, description: 'The page returned.' })
+  @ApiProperty({
+    type: 'integer',
+    example: 1,
+    description: 'The page returned.',
+  })
   page!: number;
 
-  @ApiProperty({ example: 50, description: 'Rows per page.' })
+  @ApiProperty({ type: 'integer', example: 50, description: 'Rows per page.' })
   page_size!: number;
 
-  @ApiProperty({ example: 312, description: 'Total rows across every page.' })
+  @ApiProperty({
+    type: 'integer',
+    example: 312,
+    description: 'Total rows across every page.',
+  })
   total!: number;
 }
 
@@ -43,6 +51,7 @@ export class PublicSecuritySchema {
   company_name!: string;
 
   @ApiProperty({
+    type: 'string',
     example: 'COMB.N0000',
     nullable: true,
     description:
@@ -64,6 +73,7 @@ export class PublicSecuritySchema {
   listing_status!: 'listed' | 'suspended' | 'delisted';
 
   @ApiProperty({
+    type: 'integer',
     example: 1467151555,
     nullable: true,
     description: 'Null when unknown.',
@@ -71,6 +81,8 @@ export class PublicSecuritySchema {
   shares_outstanding!: number | null;
 
   @ApiProperty({
+    type: 'string',
+    format: 'date',
     example: '2017-01-02',
     nullable: true,
     description:
@@ -79,6 +91,8 @@ export class PublicSecuritySchema {
   data_from!: string | null;
 
   @ApiProperty({
+    type: 'string',
+    format: 'date',
     example: '2025-12-31',
     nullable: true,
     description: "End of the security's price coverage window.",
@@ -106,10 +120,11 @@ export class PublicSecurityDetailResponseSchema {
 // ---------------------------------------------------------------------------
 
 export class PublicDailyBarSchema {
-  @ApiProperty({ example: '2025-01-02' })
+  @ApiProperty({ format: 'date', example: '2025-01-02' })
   date!: string;
 
   @ApiProperty({
+    type: 'number',
     example: 22.48,
     nullable: true,
     description:
@@ -126,18 +141,19 @@ export class PublicDailyBarSchema {
   @ApiProperty({ example: 22.43 })
   close!: number;
 
-  @ApiProperty({ example: 1631334 })
+  @ApiProperty({ type: 'integer', example: 1631334 })
   volume!: number;
 }
 
 export class PublicAggregateBarSchema {
-  @ApiProperty({ example: '2025-01-06' })
+  @ApiProperty({ format: 'date', example: '2025-01-06' })
   period_start!: string;
 
-  @ApiProperty({ example: '2025-01-10' })
+  @ApiProperty({ format: 'date', example: '2025-01-10' })
   period_end!: string;
 
   @ApiProperty({
+    type: 'number',
     example: 22.43,
     nullable: true,
     description:
@@ -154,7 +170,7 @@ export class PublicAggregateBarSchema {
   @ApiProperty({ example: 22.73 })
   close!: number;
 
-  @ApiProperty({ example: 5186409 })
+  @ApiProperty({ type: 'integer', example: 5186409 })
   volume!: number;
 }
 
@@ -166,10 +182,20 @@ export class PublicOhlcvDataSchema {
   @ApiProperty({ enum: ['daily', 'weekly', 'monthly'], example: 'daily' })
   timeframe!: 'daily' | 'weekly' | 'monthly';
 
-  @ApiProperty({ example: '2025-01-01', nullable: true })
+  @ApiProperty({
+    type: 'string',
+    format: 'date',
+    example: '2025-01-01',
+    nullable: true,
+  })
   from!: string | null;
 
-  @ApiProperty({ example: '2025-01-03', nullable: true })
+  @ApiProperty({
+    type: 'string',
+    format: 'date',
+    example: '2025-01-03',
+    nullable: true,
+  })
   to!: string | null;
 
   @ApiProperty({
@@ -199,20 +225,21 @@ export class PublicOhlcvResponseSchema {
 // ---------------------------------------------------------------------------
 
 export class PublicIndexLatestSchema {
-  @ApiProperty({ example: '2025-01-10' })
+  @ApiProperty({ format: 'date', example: '2025-01-10' })
   date!: string;
 
   @ApiProperty({ example: 15736.91 })
   close!: number;
 
   @ApiProperty({
+    type: 'number',
     example: -87.4,
     nullable: true,
     description: 'Null when there is no previous value to compare with.',
   })
   change!: number | null;
 
-  @ApiProperty({ example: -0.55, nullable: true })
+  @ApiProperty({ type: 'number', example: -0.55, nullable: true })
   change_pct!: number | null;
 }
 
@@ -240,7 +267,7 @@ export class PublicIndexListResponseSchema {
 }
 
 export class PublicIndexValueSchema {
-  @ApiProperty({ example: '2025-01-02' })
+  @ApiProperty({ format: 'date', example: '2025-01-02' })
   date!: string;
 
   @ApiProperty({ example: 4732.06 })
@@ -254,10 +281,20 @@ export class PublicIndexValuesDataSchema {
   @ApiProperty({ example: 'S&P Sri Lanka 20' })
   name!: string;
 
-  @ApiProperty({ example: '2025-01-02', nullable: true })
+  @ApiProperty({
+    type: 'string',
+    format: 'date',
+    example: '2025-01-02',
+    nullable: true,
+  })
   from!: string | null;
 
-  @ApiProperty({ example: '2025-01-03', nullable: true })
+  @ApiProperty({
+    type: 'string',
+    format: 'date',
+    example: '2025-01-03',
+    nullable: true,
+  })
   to!: string | null;
 
   @ApiProperty({ type: [PublicIndexValueSchema] })
@@ -280,10 +317,10 @@ export class PublicEodRowSchema {
   @ApiProperty({ example: 'COMB.N0000' })
   symbol!: string;
 
-  @ApiProperty({ example: '2025-12-31' })
+  @ApiProperty({ format: 'date', example: '2025-12-31' })
   date!: string;
 
-  @ApiProperty({ example: 90.1, nullable: true })
+  @ApiProperty({ type: 'number', example: 90.1, nullable: true })
   open!: number | null;
 
   @ApiProperty({ example: 90.55 })
@@ -295,31 +332,34 @@ export class PublicEodRowSchema {
   @ApiProperty({ example: 89.7 })
   close!: number;
 
-  @ApiProperty({ example: 512800 })
+  @ApiProperty({ type: 'integer', example: 512800 })
   volume!: number;
 
   @ApiProperty({
+    type: 'number',
     example: -0.8,
     nullable: true,
     description: 'Null when there is no previous session to compare with.',
   })
   change!: number | null;
 
-  @ApiProperty({ example: -0.89, nullable: true })
+  @ApiProperty({ type: 'number', example: -0.89, nullable: true })
   change_pct!: number | null;
 }
 
 export class PublicEodMetaSchema {
-  @ApiProperty({ example: 1 })
+  @ApiProperty({ type: 'integer', example: 1 })
   page!: number;
 
-  @ApiProperty({ example: 200 })
+  @ApiProperty({ type: 'integer', example: 200 })
   page_size!: number;
 
-  @ApiProperty({ example: 289 })
+  @ApiProperty({ type: 'integer', example: 289 })
   total!: number;
 
   @ApiProperty({
+    type: 'string',
+    format: 'date',
     example: '2025-12-31',
     nullable: true,
     description:
@@ -424,6 +464,7 @@ class RateLimitedErrorBodySchema {
   message!: string;
 
   @ApiProperty({
+    format: 'date-time',
     example: '2026-09-26T10:00:00Z',
     description: 'RFC 3339 UTC instant the count resets.',
   })
@@ -436,6 +477,31 @@ class RateLimitedErrorBodySchema {
 export class RateLimitedErrorSchema {
   @ApiProperty({ type: RateLimitedErrorBodySchema })
   error!: RateLimitedErrorBodySchema;
+}
+
+// Canonical nginx can emit a per-IP throttle before backend key resolution.
+// anyOf permits either envelope without weakening the per-key reset guarantee.
+export class EdgeRateLimitedErrorBodySchema {
+  @ApiProperty({ enum: ['RATE_LIMITED'], example: 'RATE_LIMITED' })
+  code!: 'RATE_LIMITED';
+  @ApiProperty({
+    example: 'Too many requests. Please wait a minute and try again.',
+  })
+  message!: string;
+  @ApiProperty({ example: 'example-trace-id' })
+  trace_id!: string;
+}
+@ApiExtraModels(RateLimitedErrorSchema, EdgeRateLimitedErrorBodySchema)
+export class ExternalRateLimitedErrorSchema {
+  @ApiProperty({
+    description:
+      'Per-key quota errors include reset_at; edge throttles may omit it and per-key quota headers.',
+    anyOf: [
+      { $ref: getSchemaPath(RateLimitedErrorBodySchema) },
+      { $ref: getSchemaPath(EdgeRateLimitedErrorBodySchema) },
+    ],
+  })
+  error!: RateLimitedErrorBodySchema | EdgeRateLimitedErrorBodySchema;
 }
 
 // ---------------------------------------------------------------------------
@@ -461,7 +527,8 @@ export const RATE_LIMIT_HEADERS = {
 
 export const RETRY_AFTER_HEADER = {
   'Retry-After': {
-    description: 'Seconds until the count resets, mirroring reset_at.',
+    description:
+      'Seconds to wait before retrying. Per-key quotas use time until reset; edge throttles set a retry delay.',
     schema: { type: 'string', example: '1800' },
   },
 } as const;

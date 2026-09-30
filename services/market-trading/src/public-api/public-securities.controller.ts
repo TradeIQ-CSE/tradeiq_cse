@@ -1,3 +1,4 @@
+import { WORKED_EXAMPLES, QUOTA_EXAMPLES } from './openapi/worked-examples';
 import {
   Controller,
   Get,
@@ -28,7 +29,7 @@ import {
   SecurityNotFoundErrorSchema,
   UnauthenticatedErrorSchema,
   ValidationFailedErrorSchema,
-  RateLimitedErrorSchema,
+  ExternalRateLimitedErrorSchema,
 } from './openapi/schemas';
 
 // docs/api/public-api-v1.md §6.1–§6.3.
@@ -47,6 +48,7 @@ export class PublicSecuritiesController {
     status: 200,
     description: 'A page of securities, ordered by symbol.',
     type: PublicSecurityListResponseSchema,
+    examples: WORKED_EXAMPLES['/public/v1/securities'],
     headers: RATE_LIMIT_HEADERS,
   })
   @ApiResponse({
@@ -54,6 +56,7 @@ export class PublicSecuritiesController {
     description:
       'Bad sector code, empty search, or page/page_size out of range.',
     type: ValidationFailedErrorSchema,
+    headers: RATE_LIMIT_HEADERS,
   })
   @ApiResponse({
     status: 401,
@@ -62,8 +65,10 @@ export class PublicSecuritiesController {
   })
   @ApiResponse({
     status: 429,
-    description: 'The key has used up its hourly quota.',
-    type: RateLimitedErrorSchema,
+    description:
+      'Per-key hourly quota exhausted or per-IP edge throttle. Edge responses may omit reset_at and per-key quota headers.',
+    examples: QUOTA_EXAMPLES,
+    type: ExternalRateLimitedErrorSchema,
     headers: { ...RATE_LIMIT_HEADERS, ...RETRY_AFTER_HEADER },
   })
   @Get()
@@ -77,6 +82,7 @@ export class PublicSecuritiesController {
   })
   @ApiParam({
     name: 'symbol',
+    schema: { type: 'string', minLength: 1, maxLength: 20 },
     description: 'Matched case-insensitively.',
     example: 'JKH.N0000',
   })
@@ -84,13 +90,15 @@ export class PublicSecuritiesController {
     status: 200,
     description: 'The bar series for the requested range.',
     type: PublicOhlcvResponseSchema,
+    examples: WORKED_EXAMPLES['/public/v1/securities/{symbol}/ohlcv'],
     headers: RATE_LIMIT_HEADERS,
   })
   @ApiResponse({
     status: 400,
     description:
-      'Bad timeframe, malformed from/to, from after to, or page/page_size out of range.',
+      'Bad timeframe, malformed from/to, from after to, symbol outside 1–20 characters, or page/page_size out of range.',
     type: ValidationFailedErrorSchema,
+    headers: RATE_LIMIT_HEADERS,
   })
   @ApiResponse({
     status: 401,
@@ -101,11 +109,14 @@ export class PublicSecuritiesController {
     status: 404,
     description: 'No security with that symbol.',
     type: SecurityNotFoundErrorSchema,
+    headers: RATE_LIMIT_HEADERS,
   })
   @ApiResponse({
     status: 429,
-    description: 'The key has used up its hourly quota.',
-    type: RateLimitedErrorSchema,
+    description:
+      'Per-key hourly quota exhausted or per-IP edge throttle. Edge responses may omit reset_at and per-key quota headers.',
+    examples: QUOTA_EXAMPLES,
+    type: ExternalRateLimitedErrorSchema,
     headers: { ...RATE_LIMIT_HEADERS, ...RETRY_AFTER_HEADER },
   })
   @Get(':symbol/ohlcv')
@@ -119,6 +130,7 @@ export class PublicSecuritiesController {
   @ApiOperation({ summary: 'Get one security by symbol.' })
   @ApiParam({
     name: 'symbol',
+    schema: { type: 'string', minLength: 1, maxLength: 20 },
     description: 'Matched case-insensitively.',
     example: 'JKH.N0000',
   })
@@ -126,6 +138,13 @@ export class PublicSecuritiesController {
     status: 200,
     description: 'The security.',
     type: PublicSecurityDetailResponseSchema,
+    examples: WORKED_EXAMPLES['/public/v1/securities/{symbol}'],
+    headers: RATE_LIMIT_HEADERS,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Symbol must contain 1–20 characters.',
+    type: ValidationFailedErrorSchema,
     headers: RATE_LIMIT_HEADERS,
   })
   @ApiResponse({
@@ -137,11 +156,14 @@ export class PublicSecuritiesController {
     status: 404,
     description: 'No security with that symbol.',
     type: SecurityNotFoundErrorSchema,
+    headers: RATE_LIMIT_HEADERS,
   })
   @ApiResponse({
     status: 429,
-    description: 'The key has used up its hourly quota.',
-    type: RateLimitedErrorSchema,
+    description:
+      'Per-key hourly quota exhausted or per-IP edge throttle. Edge responses may omit reset_at and per-key quota headers.',
+    examples: QUOTA_EXAMPLES,
+    type: ExternalRateLimitedErrorSchema,
     headers: { ...RATE_LIMIT_HEADERS, ...RETRY_AFTER_HEADER },
   })
   @Get(':symbol')

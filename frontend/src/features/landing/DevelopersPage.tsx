@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   RiBuilding4Line,
   RiCodeSSlashLine,
-  RiExternalLinkLine,
+  RiArrowRightLine,
   RiFileList3Line,
   RiFundsLine,
   RiKeyLine,
@@ -20,7 +20,7 @@ import {
 import { AuroraBackground } from '@/components/ui/aurora-background';
 import {
   PUBLIC_API_BASE_URL,
-  PUBLIC_API_DOCS_URL,
+  PUBLIC_API_REFERENCE_PATH,
   PUBLIC_API_EXAMPLE_PATH,
   PUBLIC_API_KEY_HEADER,
 } from '@/features/developer-api/constants';
@@ -90,11 +90,9 @@ export function DevelopersPage() {
                   </InfoTip>
                 </p>
                 <ButtonLink
-                  href={PUBLIC_API_DOCS_URL}
-                  target="_blank"
-                  rel="noreferrer"
+                  href={PUBLIC_API_REFERENCE_PATH}
                   variant="secondary"
-                  trailingIcon={RiExternalLinkLine}
+                  trailingIcon={RiArrowRightLine}
                   className="mt-6"
                 >
                   {t('developers.hero.reference')}
@@ -136,7 +134,7 @@ export function DevelopersPage() {
                     <StepHeading index={0} title={t('developers.start.create.title')} />
                     <Link
                       to="/api-key"
-                      className="mt-3 inline-flex items-center gap-1 text-body-medium text-status-blue-text hover:underline"
+                      className="mt-3 inline-flex items-center gap-1 text-body-medium text-status-blue-text hover:underline sm:ml-14"
                     >
                       {t('developers.start.create.link')}
                     </Link>
@@ -144,8 +142,9 @@ export function DevelopersPage() {
 
                   <li className="landing-glass-card rounded-3xl p-5 sm:p-6">
                     <StepHeading index={1} title={t('developers.start.send.title')} />
-                    <div className="mt-3">
+                    <div className="mt-3 min-w-0 sm:ml-14">
                       <CodeBlock
+                        className="sm:-ml-[calc(0.75rem+1px)]"
                         code={`${PUBLIC_API_KEY_HEADER}: YOUR_KEY`}
                         copyLabel={t('developers.start.send.copyLabel')}
                       />
@@ -154,8 +153,9 @@ export function DevelopersPage() {
 
                   <li className="landing-glass-card rounded-3xl p-5 sm:p-6">
                     <StepHeading index={2} title={t('developers.start.read.title')} />
-                    <div className="mt-4 flex flex-col gap-3">
+                    <div className="mt-4 flex min-w-0 flex-col gap-3 sm:ml-14">
                       <SegmentedControl
+                        className="max-w-full self-start"
                         aria-label={t('developers.start.read.tabsLabel')}
                         selectedKeys={new Set([tab])}
                         onSelectionChange={(keys) => {
@@ -169,7 +169,7 @@ export function DevelopersPage() {
                           </SegmentedControlItem>
                         ))}
                       </SegmentedControl>
-                      <CodeBlock code={SNIPPETS[tab]} copyLabel={t('developers.start.read.copyLabel')} />
+                      <CodeBlock className="sm:-ml-[calc(0.75rem+1px)]" code={SNIPPETS[tab]} copyLabel={t('developers.start.read.copyLabel')} />
                     </div>
                   </li>
                 </ol>

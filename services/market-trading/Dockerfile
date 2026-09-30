@@ -11,7 +11,8 @@ RUN pnpm install --frozen-lockfile --filter @tradeiq/market-trading...
 FROM base AS build
 COPY --from=deps /app /app
 COPY services/market-trading ./services/market-trading
-RUN pnpm --filter @tradeiq/market-trading run build
+RUN pnpm --filter @tradeiq/market-trading run build \
+    && test -f services/market-trading/dist/main.js
 
 FROM base AS runtime
 ENV NODE_ENV=production

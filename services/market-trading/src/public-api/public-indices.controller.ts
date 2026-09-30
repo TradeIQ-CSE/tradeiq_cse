@@ -1,3 +1,4 @@
+import { WORKED_EXAMPLES, QUOTA_EXAMPLES } from './openapi/worked-examples';
 import {
   Controller,
   Get,
@@ -25,7 +26,7 @@ import {
   PublicIndexValuesResponseSchema,
   RATE_LIMIT_HEADERS,
   RETRY_AFTER_HEADER,
-  RateLimitedErrorSchema,
+  ExternalRateLimitedErrorSchema,
   UnauthenticatedErrorSchema,
   ValidationFailedErrorSchema,
 } from './openapi/schemas';
@@ -44,12 +45,14 @@ export class PublicIndicesController {
     status: 200,
     description: 'A page of indices, ordered by code.',
     type: PublicIndexListResponseSchema,
+    examples: WORKED_EXAMPLES['/public/v1/indices'],
     headers: RATE_LIMIT_HEADERS,
   })
   @ApiResponse({
     status: 400,
     description: 'page/page_size out of range.',
     type: ValidationFailedErrorSchema,
+    headers: RATE_LIMIT_HEADERS,
   })
   @ApiResponse({
     status: 401,
@@ -58,8 +61,10 @@ export class PublicIndicesController {
   })
   @ApiResponse({
     status: 429,
-    description: 'The key has used up its hourly quota.',
-    type: RateLimitedErrorSchema,
+    description:
+      'Per-key hourly quota exhausted or per-IP edge throttle. Edge responses may omit reset_at and per-key quota headers.',
+    examples: QUOTA_EXAMPLES,
+    type: ExternalRateLimitedErrorSchema,
     headers: { ...RATE_LIMIT_HEADERS, ...RETRY_AFTER_HEADER },
   })
   @Get()
@@ -70,6 +75,7 @@ export class PublicIndicesController {
   @ApiOperation({ summary: 'Get the daily close series for one index.' })
   @ApiParam({
     name: 'code',
+    schema: { type: 'string', minLength: 1, maxLength: 20 },
     description: 'Matched case-insensitively but otherwise exactly.',
     example: 'SL20',
   })
@@ -77,6 +83,7 @@ export class PublicIndicesController {
     status: 200,
     description: 'The close series for the requested range.',
     type: PublicIndexValuesResponseSchema,
+    examples: WORKED_EXAMPLES['/public/v1/indices/{code}/values'],
     headers: RATE_LIMIT_HEADERS,
   })
   @ApiResponse({
@@ -84,6 +91,7 @@ export class PublicIndicesController {
     description:
       'Malformed from/to, from after to, code over 20 characters, or page/page_size out of range.',
     type: ValidationFailedErrorSchema,
+    headers: RATE_LIMIT_HEADERS,
   })
   @ApiResponse({
     status: 401,
@@ -94,11 +102,14 @@ export class PublicIndicesController {
     status: 404,
     description: 'No index with that code.',
     type: IndexNotFoundErrorSchema,
+    headers: RATE_LIMIT_HEADERS,
   })
   @ApiResponse({
     status: 429,
-    description: 'The key has used up its hourly quota.',
-    type: RateLimitedErrorSchema,
+    description:
+      'Per-key hourly quota exhausted or per-IP edge throttle. Edge responses may omit reset_at and per-key quota headers.',
+    examples: QUOTA_EXAMPLES,
+    type: ExternalRateLimitedErrorSchema,
     headers: { ...RATE_LIMIT_HEADERS, ...RETRY_AFTER_HEADER },
   })
   @Get(':code/values')

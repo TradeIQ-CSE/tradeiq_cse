@@ -48,7 +48,7 @@ export function CodeBlock({ code, copyLabel, className }: CodeBlockProps) {
         className,
       )}
     >
-      <pre className="min-w-0 flex-1 overflow-x-auto whitespace-pre-wrap break-all font-mono text-body-2-regular text-text-primary">
+      <pre className="min-w-0 flex-1 self-center overflow-x-auto whitespace-pre-wrap break-all font-mono text-body-2-regular text-text-primary">
         {code}
       </pre>
       <Button
