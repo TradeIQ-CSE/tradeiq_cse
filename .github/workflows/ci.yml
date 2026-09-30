@@ -28,6 +28,17 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Public API edge smoke regression tests
+        if: matrix.workspace == '@tradeiq/market-trading'
+        run: |
+          node --test scripts/public-api-smoke.test.mjs
+          bash scripts/deploy-nginx-refresh.test.sh
+          pnpm test:public-api-proxy
+
+      - name: Check bundled public API reference
+        if: matrix.workspace == '@tradeiq/market-trading'
+        run: pnpm api:reference:check
+
       - run: pnpm --filter ${{ matrix.workspace }} run lint
       - run: pnpm --filter ${{ matrix.workspace }} run typecheck
       - run: pnpm --filter ${{ matrix.workspace }} run build
@@ -225,6 +236,12 @@ jobs:
         run: |
           uv sync --all-groups
           uv run pytest tests/test_release_import_db.py
+
+      - name: Published developer examples against disposable fixtures
+        working-directory: services/market-trading
+        env:
+          PUBLIC_API_REFERENCE_FIXTURE_TESTS: '1'
+        run: pnpm run test:e2e --runInBand public-api-examples.e2e-spec.ts
 
       - name: Import the bundled sample twice
         working-directory: pipeline/data-ingestion

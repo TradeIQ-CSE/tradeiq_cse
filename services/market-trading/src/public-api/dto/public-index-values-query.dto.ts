@@ -7,7 +7,10 @@ import { IsCalendarDate } from '../../common/validation/is-calendar-date';
 // docs/api/public-api-v1.md §6.5.
 export class PublicIndexValuesQueryDto {
   @ApiPropertyOptional({
-    description: 'Range start (inclusive). Defaults to `to` minus 1 year.',
+    description:
+      'Valid YYYY-MM-DD calendar date; range start (inclusive). Defaults to `to` minus 1 year.',
+    type: 'string',
+    format: 'date',
     example: '2025-01-02',
   })
   @IsOptional()
@@ -16,7 +19,9 @@ export class PublicIndexValuesQueryDto {
 
   @ApiPropertyOptional({
     description:
-      'Range end (inclusive). Defaults to the latest date any index has a value for.',
+      'Valid YYYY-MM-DD calendar date; range end (inclusive). Defaults to the latest date any index has a value for.',
+    type: 'string',
+    format: 'date',
     example: '2025-01-03',
   })
   @IsOptional()

@@ -28,7 +28,7 @@ export function LandingNav() {
             <ButtonLink href="/signup" variant="primary" className="hidden sm:inline-flex">{t('landing.nav.openAccount')}</ButtonLink>
           </div>
         </div>
-        <nav aria-label={t('landing.nav.label')} className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-separator-border pt-3 lg:hidden">
+        <nav aria-label={t('landing.nav.label')} className="mt-3 grid grid-cols-2 items-center gap-x-4 gap-y-2 border-t border-separator-border pt-3 sm:flex sm:justify-between lg:hidden">
           <Link to="/markets" className="text-body-2-medium text-text-secondary hover:text-status-blue-text">{t('landing.nav.links.market')}</Link>
           <Link to="/how-it-works" className="text-body-2-medium text-text-secondary hover:text-status-blue-text">{t('landing.nav.links.workspace')}</Link>
           <Link to="/backtests/new" className="text-body-2-medium text-text-secondary hover:text-status-blue-text">{t('landing.nav.links.backtesting')}</Link>

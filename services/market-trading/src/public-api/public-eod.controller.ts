@@ -1,3 +1,4 @@
+import { WORKED_EXAMPLES, QUOTA_EXAMPLES } from './openapi/worked-examples';
 import {
   Controller,
   Get,
@@ -19,7 +20,7 @@ import {
   PublicEodResponseSchema,
   RATE_LIMIT_HEADERS,
   RETRY_AFTER_HEADER,
-  RateLimitedErrorSchema,
+  ExternalRateLimitedErrorSchema,
   UnauthenticatedErrorSchema,
   ValidationFailedErrorSchema,
 } from './openapi/schemas';
@@ -42,12 +43,14 @@ export class PublicEodController {
     description:
       'A page of end-of-day rows. An empty page with as_of null when the date has no session.',
     type: PublicEodResponseSchema,
+    examples: WORKED_EXAMPLES['/public/v1/eod'],
     headers: RATE_LIMIT_HEADERS,
   })
   @ApiResponse({
     status: 400,
     description: 'Malformed date, or page/page_size out of range.',
     type: ValidationFailedErrorSchema,
+    headers: RATE_LIMIT_HEADERS,
   })
   @ApiResponse({
     status: 401,
@@ -56,8 +59,10 @@ export class PublicEodController {
   })
   @ApiResponse({
     status: 429,
-    description: 'The key has used up its hourly quota.',
-    type: RateLimitedErrorSchema,
+    description:
+      'Per-key hourly quota exhausted or per-IP edge throttle. Edge responses may omit reset_at and per-key quota headers.',
+    examples: QUOTA_EXAMPLES,
+    type: ExternalRateLimitedErrorSchema,
     headers: { ...RATE_LIMIT_HEADERS, ...RETRY_AFTER_HEADER },
   })
   @Get()

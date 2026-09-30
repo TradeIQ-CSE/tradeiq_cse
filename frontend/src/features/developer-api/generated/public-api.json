@@ -1,0 +1,2437 @@
+{
+  "components": {
+    "schemas": {
+      "ApiErrorFieldSchema": {
+        "properties": {
+          "field": {
+            "example": "page_size",
+            "type": "string"
+          },
+          "reason": {
+            "example": "must not be greater than 200",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "EdgeRateLimitedErrorBodySchema": {
+        "properties": {
+          "code": {
+            "enum": [
+              "RATE_LIMITED"
+            ],
+            "example": "RATE_LIMITED",
+            "type": "string"
+          },
+          "message": {
+            "example": "Too many requests. Please wait a minute and try again.",
+            "type": "string"
+          },
+          "trace_id": {
+            "example": "example-trace-id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "trace_id"
+        ],
+        "type": "object"
+      },
+      "ExternalRateLimitedErrorSchema": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RateLimitedErrorBodySchema"
+              },
+              {
+                "$ref": "#/components/schemas/EdgeRateLimitedErrorBodySchema"
+              }
+            ],
+            "description": "Per-key quota errors include reset_at; edge throttles may omit it and per-key quota headers."
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "type": "object"
+      },
+      "IndexNotFoundErrorBodySchema": {
+        "properties": {
+          "code": {
+            "enum": [
+              "INDEX_NOT_FOUND"
+            ],
+            "example": "INDEX_NOT_FOUND",
+            "type": "string"
+          },
+          "message": {
+            "example": "Index not found.",
+            "type": "string"
+          },
+          "trace_id": {
+            "example": "01J6Z8Y2K0QF3M4X0T8Y0W3B7R",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "trace_id"
+        ],
+        "type": "object"
+      },
+      "IndexNotFoundErrorSchema": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/IndexNotFoundErrorBodySchema"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "type": "object"
+      },
+      "PageMetaSchema": {
+        "properties": {
+          "page": {
+            "description": "The page returned.",
+            "example": 1,
+            "type": "integer"
+          },
+          "page_size": {
+            "description": "Rows per page.",
+            "example": 50,
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total rows across every page.",
+            "example": 312,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "page",
+          "page_size",
+          "total"
+        ],
+        "type": "object"
+      },
+      "PublicAggregateBarSchema": {
+        "properties": {
+          "close": {
+            "example": 22.73,
+            "type": "number"
+          },
+          "high": {
+            "example": 22.84,
+            "type": "number"
+          },
+          "low": {
+            "example": 21.75,
+            "type": "number"
+          },
+          "open": {
+            "description": "Null when no day inside the period has a reliable opening price.",
+            "example": 22.43,
+            "nullable": true,
+            "type": "number"
+          },
+          "period_end": {
+            "example": "2025-01-10",
+            "format": "date",
+            "type": "string"
+          },
+          "period_start": {
+            "example": "2025-01-06",
+            "format": "date",
+            "type": "string"
+          },
+          "volume": {
+            "example": 5186409,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "period_start",
+          "period_end",
+          "open",
+          "high",
+          "low",
+          "close",
+          "volume"
+        ],
+        "type": "object"
+      },
+      "PublicDailyBarSchema": {
+        "properties": {
+          "close": {
+            "example": 22.43,
+            "type": "number"
+          },
+          "date": {
+            "example": "2025-01-02",
+            "format": "date",
+            "type": "string"
+          },
+          "high": {
+            "example": 22.59,
+            "type": "number"
+          },
+          "low": {
+            "example": 22.13,
+            "type": "number"
+          },
+          "open": {
+            "description": "Null when the source data has no reliable opening price for this session.",
+            "example": 22.48,
+            "nullable": true,
+            "type": "number"
+          },
+          "volume": {
+            "example": 1631334,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date",
+          "open",
+          "high",
+          "low",
+          "close",
+          "volume"
+        ],
+        "type": "object"
+      },
+      "PublicEodMetaSchema": {
+        "properties": {
+          "as_of": {
+            "description": "The session actually returned. Null when the requested date has no session.",
+            "example": "2025-12-31",
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "page": {
+            "example": 1,
+            "type": "integer"
+          },
+          "page_size": {
+            "example": 200,
+            "type": "integer"
+          },
+          "total": {
+            "example": 289,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "page",
+          "page_size",
+          "total",
+          "as_of"
+        ],
+        "type": "object"
+      },
+      "PublicEodResponseSchema": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/PublicEodRowSchema"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PublicEodMetaSchema"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "PublicEodRowSchema": {
+        "properties": {
+          "change": {
+            "description": "Null when there is no previous session to compare with.",
+            "example": -0.8,
+            "nullable": true,
+            "type": "number"
+          },
+          "change_pct": {
+            "example": -0.89,
+            "nullable": true,
+            "type": "number"
+          },
+          "close": {
+            "example": 89.7,
+            "type": "number"
+          },
+          "date": {
+            "example": "2025-12-31",
+            "format": "date",
+            "type": "string"
+          },
+          "high": {
+            "example": 90.55,
+            "type": "number"
+          },
+          "low": {
+            "example": 88.9,
+            "type": "number"
+          },
+          "open": {
+            "example": 90.1,
+            "nullable": true,
+            "type": "number"
+          },
+          "symbol": {
+            "example": "COMB.N0000",
+            "type": "string"
+          },
+          "volume": {
+            "example": 512800,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "symbol",
+          "date",
+          "open",
+          "high",
+          "low",
+          "close",
+          "volume",
+          "change",
+          "change_pct"
+        ],
+        "type": "object"
+      },
+      "PublicIndexLatestSchema": {
+        "properties": {
+          "change": {
+            "description": "Null when there is no previous value to compare with.",
+            "example": -87.4,
+            "nullable": true,
+            "type": "number"
+          },
+          "change_pct": {
+            "example": -0.55,
+            "nullable": true,
+            "type": "number"
+          },
+          "close": {
+            "example": 15736.91,
+            "type": "number"
+          },
+          "date": {
+            "example": "2025-01-10",
+            "format": "date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "close",
+          "change",
+          "change_pct"
+        ],
+        "type": "object"
+      },
+      "PublicIndexListResponseSchema": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/PublicIndexSchema"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PageMetaSchema"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "PublicIndexSchema": {
+        "properties": {
+          "code": {
+            "example": "ASPI",
+            "type": "string"
+          },
+          "latest": {
+            "description": "Null for an index with no value at all.",
+            "nullable": true,
+            "properties": {
+              "change": {
+                "description": "Null when there is no previous value to compare with.",
+                "example": -87.4,
+                "nullable": true,
+                "type": "number"
+              },
+              "change_pct": {
+                "example": -0.55,
+                "nullable": true,
+                "type": "number"
+              },
+              "close": {
+                "example": 15736.91,
+                "type": "number"
+              },
+              "date": {
+                "example": "2025-01-10",
+                "format": "date",
+                "type": "string"
+              }
+            },
+            "required": [
+              "date",
+              "close",
+              "change",
+              "change_pct"
+            ],
+            "type": "object"
+          },
+          "name": {
+            "example": "All Share Price Index",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "latest"
+        ],
+        "type": "object"
+      },
+      "PublicIndexValueSchema": {
+        "properties": {
+          "close": {
+            "example": 4732.06,
+            "type": "number"
+          },
+          "date": {
+            "example": "2025-01-02",
+            "format": "date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "close"
+        ],
+        "type": "object"
+      },
+      "PublicIndexValuesDataSchema": {
+        "properties": {
+          "code": {
+            "example": "SL20",
+            "type": "string"
+          },
+          "from": {
+            "example": "2025-01-02",
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "example": "S&P Sri Lanka 20",
+            "type": "string"
+          },
+          "to": {
+            "example": "2025-01-03",
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "values": {
+            "items": {
+              "$ref": "#/components/schemas/PublicIndexValueSchema"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "from",
+          "to",
+          "values"
+        ],
+        "type": "object"
+      },
+      "PublicIndexValuesResponseSchema": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PublicIndexValuesDataSchema"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PageMetaSchema"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "PublicOhlcvDataSchema": {
+        "properties": {
+          "bars": {
+            "description": "Ascending by date/period. Daily bars key on `date`; weekly/monthly bars key on `period_start`/`period_end` instead.",
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/PublicDailyBarSchema"
+                },
+                {
+                  "$ref": "#/components/schemas/PublicAggregateBarSchema"
+                }
+              ]
+            },
+            "type": "array"
+          },
+          "from": {
+            "example": "2025-01-01",
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "symbol": {
+            "example": "JKH.N0000",
+            "type": "string"
+          },
+          "timeframe": {
+            "enum": [
+              "daily",
+              "weekly",
+              "monthly"
+            ],
+            "example": "daily",
+            "type": "string"
+          },
+          "to": {
+            "example": "2025-01-03",
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "timeframe",
+          "from",
+          "to",
+          "bars"
+        ],
+        "type": "object"
+      },
+      "PublicOhlcvResponseSchema": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PublicOhlcvDataSchema"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PageMetaSchema"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "PublicSecurityDetailResponseSchema": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PublicSecuritySchema"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "PublicSecurityListResponseSchema": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/PublicSecuritySchema"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PageMetaSchema"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "PublicSecuritySchema": {
+        "properties": {
+          "company_name": {
+            "example": "Commercial Bank of Ceylon PLC",
+            "type": "string"
+          },
+          "cse_code": {
+            "description": "The code CSE publishes for the security, usually identical to symbol. Null when not recorded.",
+            "example": "COMB.N0000",
+            "nullable": true,
+            "type": "string"
+          },
+          "data_from": {
+            "description": "Start of the security's price coverage window. Null when it has no price history yet.",
+            "example": "2017-01-02",
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "data_to": {
+            "description": "End of the security's price coverage window.",
+            "example": "2025-12-31",
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "listing_status": {
+            "enum": [
+              "listed",
+              "suspended",
+              "delisted"
+            ],
+            "example": "listed",
+            "type": "string"
+          },
+          "sector": {
+            "description": "Null for an unclassified security.",
+            "nullable": true,
+            "properties": {
+              "gics_code": {
+                "description": "GICS sector code.",
+                "example": "4010",
+                "type": "string"
+              },
+              "name": {
+                "example": "Banks",
+                "type": "string"
+              }
+            },
+            "required": [
+              "gics_code",
+              "name"
+            ],
+            "type": "object"
+          },
+          "shares_outstanding": {
+            "description": "Null when unknown.",
+            "example": 1467151555,
+            "nullable": true,
+            "type": "integer"
+          },
+          "symbol": {
+            "example": "COMB.N0000",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "company_name",
+          "cse_code",
+          "sector",
+          "listing_status",
+          "shares_outstanding",
+          "data_from",
+          "data_to"
+        ],
+        "type": "object"
+      },
+      "RateLimitedErrorBodySchema": {
+        "properties": {
+          "code": {
+            "enum": [
+              "RATE_LIMITED"
+            ],
+            "example": "RATE_LIMITED",
+            "type": "string"
+          },
+          "message": {
+            "example": "Rate limit exceeded.",
+            "type": "string"
+          },
+          "reset_at": {
+            "description": "RFC 3339 UTC instant the count resets.",
+            "example": "2026-09-26T10:00:00Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "trace_id": {
+            "example": "01J6Z8Y2K0QF3M4X0T8Y0W3B7R",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "reset_at",
+          "trace_id"
+        ],
+        "type": "object"
+      },
+      "RateLimitedErrorSchema": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/RateLimitedErrorBodySchema"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "type": "object"
+      },
+      "SecurityNotFoundErrorBodySchema": {
+        "properties": {
+          "code": {
+            "enum": [
+              "SECURITY_NOT_FOUND"
+            ],
+            "example": "SECURITY_NOT_FOUND",
+            "type": "string"
+          },
+          "message": {
+            "example": "Security not found.",
+            "type": "string"
+          },
+          "trace_id": {
+            "example": "01J6Z8Y2K0QF3M4X0T8Y0W3B7R",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "trace_id"
+        ],
+        "type": "object"
+      },
+      "SecurityNotFoundErrorSchema": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/SecurityNotFoundErrorBodySchema"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "type": "object"
+      },
+      "SecuritySectorSchema": {
+        "properties": {
+          "gics_code": {
+            "description": "GICS sector code.",
+            "example": "4010",
+            "type": "string"
+          },
+          "name": {
+            "example": "Banks",
+            "type": "string"
+          }
+        },
+        "required": [
+          "gics_code",
+          "name"
+        ],
+        "type": "object"
+      },
+      "UnauthenticatedErrorBodySchema": {
+        "properties": {
+          "code": {
+            "enum": [
+              "UNAUTHENTICATED"
+            ],
+            "example": "UNAUTHENTICATED",
+            "type": "string"
+          },
+          "message": {
+            "example": "A valid API key is required",
+            "type": "string"
+          },
+          "trace_id": {
+            "example": "01J6Z8Y2K0QF3M4X0T8Y0W3B7R",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "trace_id"
+        ],
+        "type": "object"
+      },
+      "UnauthenticatedErrorSchema": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/UnauthenticatedErrorBodySchema"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "type": "object"
+      },
+      "ValidationFailedErrorBodySchema": {
+        "properties": {
+          "code": {
+            "enum": [
+              "VALIDATION_FAILED"
+            ],
+            "example": "VALIDATION_FAILED",
+            "type": "string"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/ApiErrorFieldSchema"
+            },
+            "type": "array"
+          },
+          "message": {
+            "example": "Request validation failed.",
+            "type": "string"
+          },
+          "trace_id": {
+            "example": "01J6Z8Y2K0QF3M4X0T8Y0W3B7R",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "fields",
+          "trace_id"
+        ],
+        "type": "object"
+      },
+      "ValidationFailedErrorSchema": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ValidationFailedErrorBodySchema"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "apiKey": {
+        "in": "header",
+        "name": "X-API-Key",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "contact": {},
+    "description": "Read-only Colombo Stock Exchange market data: companies, daily, weekly and monthly prices, indices and end-of-day data. The default quota is 100 requests per key per UTC clock hour; response headers give the limit currently in force. Documentation is key-free.",
+    "title": "TradeIQ public API",
+    "version": "1"
+  },
+  "openapi": "3.0.0",
+  "paths": {
+    "/public/v1/eod": {
+      "get": {
+        "operationId": "PublicEodController_get",
+        "parameters": [
+          {
+            "description": "Valid YYYY-MM-DD calendar date for the session to return. Defaults to the latest completed session.",
+            "in": "query",
+            "name": "date",
+            "required": false,
+            "schema": {
+              "example": "2025-12-31",
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "empty": {
+                    "summary": "An explicit date without a session",
+                    "value": {
+                      "data": [],
+                      "meta": {
+                        "as_of": null,
+                        "page": 1,
+                        "page_size": 200,
+                        "total": 0
+                      }
+                    },
+                    "x-request": "/eod?date=2025-01-04&page=1&page_size=200"
+                  },
+                  "primary": {
+                    "summary": "One session, with no previous observation to compare",
+                    "value": {
+                      "data": [
+                        {
+                          "change": null,
+                          "change_pct": null,
+                          "close": 89.7,
+                          "date": "2025-12-31",
+                          "high": 90.55,
+                          "low": 88.9,
+                          "open": 90.1,
+                          "symbol": "COMB.N0000",
+                          "volume": 512800
+                        }
+                      ],
+                      "meta": {
+                        "as_of": "2025-12-31",
+                        "page": 1,
+                        "page_size": 200,
+                        "total": 1
+                      }
+                    },
+                    "x-request": "/eod?date=2025-12-31&page=1&page_size=200"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/PublicEodResponseSchema"
+                }
+              }
+            },
+            "description": "A page of end-of-day rows. An empty page with as_of null when the date has no session.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "description": "The hourly limit in force for this key.",
+                "schema": {
+                  "example": "100",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Requests left in the current UTC clock hour. Left out if the counter was briefly unavailable.",
+                "schema": {
+                  "example": "99",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "description": "RFC 3339 UTC instant the count resets.",
+                "schema": {
+                  "example": "2026-09-26T10:00:00Z",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationFailedErrorSchema"
+                }
+              }
+            },
+            "description": "Malformed date, or page/page_size out of range.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "description": "The hourly limit in force for this key.",
+                "schema": {
+                  "example": "100",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Requests left in the current UTC clock hour. Left out if the counter was briefly unavailable.",
+                "schema": {
+                  "example": "99",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "description": "RFC 3339 UTC instant the count resets.",
+                "schema": {
+                  "example": "2026-09-26T10:00:00Z",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthenticatedErrorSchema"
+                }
+              }
+            },
+            "description": "A valid API key is required."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "edge": {
+                    "summary": "Per-IP edge throttle (Retry-After header, no reset_at)",
+                    "value": {
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Too many requests. Please wait a minute and try again.",
+                        "trace_id": "example-trace-id"
+                      }
+                    }
+                  },
+                  "perKey": {
+                    "summary": "Per-key hourly quota",
+                    "value": {
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Rate limit exceeded.",
+                        "reset_at": "2026-09-30T11:00:00Z",
+                        "trace_id": "example-trace-id"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalRateLimitedErrorSchema"
+                }
+              }
+            },
+            "description": "Per-key hourly quota exhausted or per-IP edge throttle. Edge responses may omit reset_at and per-key quota headers.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying. Per-key quotas use time until reset; edge throttles set a retry delay.",
+                "schema": {
+                  "example": "1800",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The hourly limit in force for this key.",
+                "schema": {
+                  "example": "100",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Requests left in the current UTC clock hour. Left out if the counter was briefly unavailable.",
+                "schema": {
+                  "example": "99",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "description": "RFC 3339 UTC instant the count resets.",
+                "schema": {
+                  "example": "2026-09-26T10:00:00Z",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "summary": "Get every security's OHLCV and change for one session, the full end-of-day dataset.",
+        "tags": [
+          "End of day"
+        ]
+      }
+    },
+    "/public/v1/indices": {
+      "get": {
+        "operationId": "PublicIndicesController_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "primary": {
+                    "summary": "Each index has its own latest observation or null",
+                    "value": {
+                      "data": [
+                        {
+                          "code": "ASPI",
+                          "latest": null,
+                          "name": "All Share Price Index"
+                        },
+                        {
+                          "code": "SL20",
+                          "latest": {
+                            "change": 8,
+                            "change_pct": 0.17,
+                            "close": 4740.06,
+                            "date": "2025-01-03"
+                          },
+                          "name": "S&P Sri Lanka 20"
+                        }
+                      ],
+                      "meta": {
+                        "page": 1,
+                        "page_size": 50,
+                        "total": 2
+                      }
+                    },
+                    "x-request": "/indices?page=1&page_size=50"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/PublicIndexListResponseSchema"
+                }
+              }
+            },
+            "description": "A page of indices, ordered by code.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "description": "The hourly limit in force for this key.",
+                "schema": {
+                  "example": "100",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Requests left in the current UTC clock hour. Left out if the counter was briefly unavailable.",
+                "schema": {
+                  "example": "99",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "description": "RFC 3339 UTC instant the count resets.",
+                "schema": {
+                  "example": "2026-09-26T10:00:00Z",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationFailedErrorSchema"
+                }
+              }
+            },
+            "description": "page/page_size out of range.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "description": "The hourly limit in force for this key.",
+                "schema": {
+                  "example": "100",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Requests left in the current UTC clock hour. Left out if the counter was briefly unavailable.",
+                "schema": {
+                  "example": "99",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "description": "RFC 3339 UTC instant the count resets.",
+                "schema": {
+                  "example": "2026-09-26T10:00:00Z",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthenticatedErrorSchema"
+                }
+              }
+            },
+            "description": "A valid API key is required."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "edge": {
+                    "summary": "Per-IP edge throttle (Retry-After header, no reset_at)",
+                    "value": {
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Too many requests. Please wait a minute and try again.",
+                        "trace_id": "example-trace-id"
+                      }
+                    }
+                  },
+                  "perKey": {
+                    "summary": "Per-key hourly quota",
+                    "value": {
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Rate limit exceeded.",
+                        "reset_at": "2026-09-30T11:00:00Z",
+                        "trace_id": "example-trace-id"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalRateLimitedErrorSchema"
+                }
+              }
+            },
+            "description": "Per-key hourly quota exhausted or per-IP edge throttle. Edge responses may omit reset_at and per-key quota headers.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying. Per-key quotas use time until reset; edge throttles set a retry delay.",
+                "schema": {
+                  "example": "1800",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The hourly limit in force for this key.",
+                "schema": {
+                  "example": "100",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Requests left in the current UTC clock hour. Left out if the counter was briefly unavailable.",
+                "schema": {
+                  "example": "99",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "description": "RFC 3339 UTC instant the count resets.",
+                "schema": {
+                  "example": "2026-09-26T10:00:00Z",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "summary": "List every index, each at its own latest value.",
+        "tags": [
+          "Indices"
+        ]
+      }
+    },
+    "/public/v1/indices/{code}/values": {
+      "get": {
+        "operationId": "PublicIndicesController_values",
+        "parameters": [
+          {
+            "description": "Valid YYYY-MM-DD calendar date; range start (inclusive). Defaults to `to` minus 1 year.",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "example": "2025-01-02",
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Valid YYYY-MM-DD calendar date; range end (inclusive). Defaults to the latest date any index has a value for.",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "example": "2025-01-03",
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Matched case-insensitively but otherwise exactly.",
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "maxLength": 20,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "empty": {
+                    "summary": "No values in the requested range",
+                    "value": {
+                      "data": {
+                        "code": "SL20",
+                        "from": "2025-01-04",
+                        "name": "S&P Sri Lanka 20",
+                        "to": "2025-01-05",
+                        "values": []
+                      },
+                      "meta": {
+                        "page": 1,
+                        "page_size": 500,
+                        "total": 0
+                      }
+                    },
+                    "x-request": "/indices/SL20/values?from=2025-01-04&to=2025-01-05&page=1&page_size=500"
+                  },
+                  "primary": {
+                    "summary": "Two daily close observations",
+                    "value": {
+                      "data": {
+                        "code": "SL20",
+                        "from": "2025-01-02",
+                        "name": "S&P Sri Lanka 20",
+                        "to": "2025-01-03",
+                        "values": [
+                          {
+                            "close": 4732.06,
+                            "date": "2025-01-02"
+                          },
+                          {
+                            "close": 4740.06,
+                            "date": "2025-01-03"
+                          }
+                        ]
+                      },
+                      "meta": {
+                        "page": 1,
+                        "page_size": 500,
+                        "total": 2
+                      }
+                    },
+                    "x-request": "/indices/SL20/values?from=2025-01-02&to=2025-01-03&page=1&page_size=500"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/PublicIndexValuesResponseSchema"
+                }
+              }
+            },
+            "description": "The close series for the requested range.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "description": "The hourly limit in force for this key.",
+                "schema": {
+                  "example": "100",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Requests left in the current UTC clock hour. Left out if the counter was briefly unavailable.",
+                "schema": {
+                  "example": "99",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "description": "RFC 3339 UTC instant the count resets.",
+                "schema": {
+                  "example": "2026-09-26T10:00:00Z",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationFailedErrorSchema"
+                }
+              }
+            },
+            "description": "Malformed from/to, from after to, code over 20 characters, or page/page_size out of range.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "description": "The hourly limit in force for this key.",
+                "schema": {
+                  "example": "100",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Requests left in the current UTC clock hour. Left out if the counter was briefly unavailable.",
+                "schema": {
+                  "example": "99",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "description": "RFC 3339 UTC instant the count resets.",
+                "schema": {
+                  "example": "2026-09-26T10:00:00Z",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthenticatedErrorSchema"
+                }
+              }
+            },
+            "description": "A valid API key is required."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexNotFoundErrorSchema"
+                }
+              }
+            },
+            "description": "No index with that code.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "description": "The hourly limit in force for this key.",
+                "schema": {
+                  "example": "100",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Requests left in the current UTC clock hour. Left out if the counter was briefly unavailable.",
+                "schema": {
+                  "example": "99",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "description": "RFC 3339 UTC instant the count resets.",
+                "schema": {
+                  "example": "2026-09-26T10:00:00Z",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "edge": {
+                    "summary": "Per-IP edge throttle (Retry-After header, no reset_at)",
+                    "value": {
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Too many requests. Please wait a minute and try again.",
+                        "trace_id": "example-trace-id"
+                      }
+                    }
+                  },
+                  "perKey": {
+                    "summary": "Per-key hourly quota",
+                    "value": {
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Rate limit exceeded.",
+                        "reset_at": "2026-09-30T11:00:00Z",
+                        "trace_id": "example-trace-id"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalRateLimitedErrorSchema"
+                }
+              }
+            },
+            "description": "Per-key hourly quota exhausted or per-IP edge throttle. Edge responses may omit reset_at and per-key quota headers.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying. Per-key quotas use time until reset; edge throttles set a retry delay.",
+                "schema": {
+                  "example": "1800",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The hourly limit in force for this key.",
+                "schema": {
+                  "example": "100",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Requests left in the current UTC clock hour. Left out if the counter was briefly unavailable.",
+                "schema": {
+                  "example": "99",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "description": "RFC 3339 UTC instant the count resets.",
+                "schema": {
+                  "example": "2026-09-26T10:00:00Z",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "summary": "Get the daily close series for one index.",
+        "tags": [
+          "Indices"
+        ]
+      }
+    },
+    "/public/v1/securities": {
+      "get": {
+        "operationId": "PublicSecuritiesController_list",
+        "parameters": [
+          {
+            "description": "A known GICS sector code, e.g. 4010.",
+            "in": "query",
+            "name": "sector",
+            "required": false,
+            "schema": {
+              "example": "4010",
+              "maxLength": 10,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Case-insensitive: prefix match on symbol, substring match on company name.",
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "maxLength": 100,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "emptyPage": {
+                    "summary": "A page beyond the result set",
+                    "value": {
+                      "data": [],
+                      "meta": {
+                        "page": 2,
+                        "page_size": 50,
+                        "total": 1
+                      }
+                    },
+                    "x-request": "/securities?search=COMB&page=2&page_size=50"
+                  },
+                  "primary": {
+                    "summary": "Search a symbol prefix",
+                    "value": {
+                      "data": [
+                        {
+                          "company_name": "Commercial Bank of Ceylon PLC",
+                          "cse_code": "COMB.N0000",
+                          "data_from": "2025-12-31",
+                          "data_to": "2025-12-31",
+                          "listing_status": "listed",
+                          "sector": {
+                            "gics_code": "4010",
+                            "name": "Banks"
+                          },
+                          "shares_outstanding": 1467151555,
+                          "symbol": "COMB.N0000"
+                        }
+                      ],
+                      "meta": {
+                        "page": 1,
+                        "page_size": 50,
+                        "total": 1
+                      }
+                    },
+                    "x-request": "/securities?search=COMB&page=1&page_size=50"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSecurityListResponseSchema"
+                }
+              }
+            },
+            "description": "A page of securities, ordered by symbol.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "description": "The hourly limit in force for this key.",
+                "schema": {
+                  "example": "100",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Requests left in the current UTC clock hour. Left out if the counter was briefly unavailable.",
+                "schema": {
+                  "example": "99",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "description": "RFC 3339 UTC instant the count resets.",
+                "schema": {
+                  "example": "2026-09-26T10:00:00Z",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationFailedErrorSchema"
+                }
+              }
+            },
+            "description": "Bad sector code, empty search, or page/page_size out of range.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "description": "The hourly limit in force for this key.",
+                "schema": {
+                  "example": "100",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Requests left in the current UTC clock hour. Left out if the counter was briefly unavailable.",
+                "schema": {
+                  "example": "99",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "description": "RFC 3339 UTC instant the count resets.",
+                "schema": {
+                  "example": "2026-09-26T10:00:00Z",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthenticatedErrorSchema"
+                }
+              }
+            },
+            "description": "A valid API key is required."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "edge": {
+                    "summary": "Per-IP edge throttle (Retry-After header, no reset_at)",
+                    "value": {
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Too many requests. Please wait a minute and try again.",
+                        "trace_id": "example-trace-id"
+                      }
+                    }
+                  },
+                  "perKey": {
+                    "summary": "Per-key hourly quota",
+                    "value": {
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Rate limit exceeded.",
+                        "reset_at": "2026-09-30T11:00:00Z",
+                        "trace_id": "example-trace-id"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalRateLimitedErrorSchema"
+                }
+              }
+            },
+            "description": "Per-key hourly quota exhausted or per-IP edge throttle. Edge responses may omit reset_at and per-key quota headers.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying. Per-key quotas use time until reset; edge throttles set a retry delay.",
+                "schema": {
+                  "example": "1800",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The hourly limit in force for this key.",
+                "schema": {
+                  "example": "100",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Requests left in the current UTC clock hour. Left out if the counter was briefly unavailable.",
+                "schema": {
+                  "example": "99",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "description": "RFC 3339 UTC instant the count resets.",
+                "schema": {
+                  "example": "2026-09-26T10:00:00Z",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "summary": "List securities, with their descriptive attributes only.",
+        "tags": [
+          "Securities"
+        ]
+      }
+    },
+    "/public/v1/securities/{symbol}": {
+      "get": {
+        "operationId": "PublicSecuritiesController_detail",
+        "parameters": [
+          {
+            "description": "Matched case-insensitively.",
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "maxLength": 20,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "nullable": {
+                    "summary": "Unavailable classification and share count",
+                    "value": {
+                      "data": {
+                        "company_name": "John Keells Holdings PLC",
+                        "cse_code": "JKH.N0000",
+                        "data_from": "2025-01-02",
+                        "data_to": "2025-01-03",
+                        "listing_status": "listed",
+                        "sector": null,
+                        "shares_outstanding": null,
+                        "symbol": "JKH.N0000"
+                      }
+                    },
+                    "x-request": "/securities/JKH.N0000"
+                  },
+                  "primary": {
+                    "summary": "A classified security",
+                    "value": {
+                      "data": {
+                        "company_name": "Commercial Bank of Ceylon PLC",
+                        "cse_code": "COMB.N0000",
+                        "data_from": "2025-12-31",
+                        "data_to": "2025-12-31",
+                        "listing_status": "listed",
+                        "sector": {
+                          "gics_code": "4010",
+                          "name": "Banks"
+                        },
+                        "shares_outstanding": 1467151555,
+                        "symbol": "COMB.N0000"
+                      }
+                    },
+                    "x-request": "/securities/COMB.N0000"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSecurityDetailResponseSchema"
+                }
+              }
+            },
+            "description": "The security.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "description": "The hourly limit in force for this key.",
+                "schema": {
+                  "example": "100",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Requests left in the current UTC clock hour. Left out if the counter was briefly unavailable.",
+                "schema": {
+                  "example": "99",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "description": "RFC 3339 UTC instant the count resets.",
+                "schema": {
+                  "example": "2026-09-26T10:00:00Z",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationFailedErrorSchema"
+                }
+              }
+            },
+            "description": "Symbol must contain 1–20 characters.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "description": "The hourly limit in force for this key.",
+                "schema": {
+                  "example": "100",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Requests left in the current UTC clock hour. Left out if the counter was briefly unavailable.",
+                "schema": {
+                  "example": "99",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "description": "RFC 3339 UTC instant the count resets.",
+                "schema": {
+                  "example": "2026-09-26T10:00:00Z",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthenticatedErrorSchema"
+                }
+              }
+            },
+            "description": "A valid API key is required."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityNotFoundErrorSchema"
+                }
+              }
+            },
+            "description": "No security with that symbol.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "description": "The hourly limit in force for this key.",
+                "schema": {
+                  "example": "100",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Requests left in the current UTC clock hour. Left out if the counter was briefly unavailable.",
+                "schema": {
+                  "example": "99",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "description": "RFC 3339 UTC instant the count resets.",
+                "schema": {
+                  "example": "2026-09-26T10:00:00Z",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "edge": {
+                    "summary": "Per-IP edge throttle (Retry-After header, no reset_at)",
+                    "value": {
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Too many requests. Please wait a minute and try again.",
+                        "trace_id": "example-trace-id"
+                      }
+                    }
+                  },
+                  "perKey": {
+                    "summary": "Per-key hourly quota",
+                    "value": {
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Rate limit exceeded.",
+                        "reset_at": "2026-09-30T11:00:00Z",
+                        "trace_id": "example-trace-id"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalRateLimitedErrorSchema"
+                }
+              }
+            },
+            "description": "Per-key hourly quota exhausted or per-IP edge throttle. Edge responses may omit reset_at and per-key quota headers.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying. Per-key quotas use time until reset; edge throttles set a retry delay.",
+                "schema": {
+                  "example": "1800",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The hourly limit in force for this key.",
+                "schema": {
+                  "example": "100",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Requests left in the current UTC clock hour. Left out if the counter was briefly unavailable.",
+                "schema": {
+                  "example": "99",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "description": "RFC 3339 UTC instant the count resets.",
+                "schema": {
+                  "example": "2026-09-26T10:00:00Z",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "summary": "Get one security by symbol.",
+        "tags": [
+          "Securities"
+        ]
+      }
+    },
+    "/public/v1/securities/{symbol}/ohlcv": {
+      "get": {
+        "operationId": "PublicSecuritiesController_ohlcv",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "daily",
+              "enum": [
+                "daily",
+                "weekly",
+                "monthly"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Valid YYYY-MM-DD calendar date; range start (inclusive). Defaults to `to` minus 1 year.",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "example": "2025-01-01",
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Valid YYYY-MM-DD calendar date; range end (inclusive). Defaults to the latest completed session.",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "example": "2025-01-03",
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Matched case-insensitively.",
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "maxLength": 20,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "empty": {
+                    "summary": "A valid range without observations",
+                    "value": {
+                      "data": {
+                        "bars": [],
+                        "from": "2025-01-04",
+                        "symbol": "JKH.N0000",
+                        "timeframe": "daily",
+                        "to": "2025-01-05"
+                      },
+                      "meta": {
+                        "page": 1,
+                        "page_size": 500,
+                        "total": 0
+                      }
+                    },
+                    "x-request": "/securities/JKH.N0000/ohlcv?timeframe=daily&from=2025-01-04&to=2025-01-05&page=1&page_size=500"
+                  },
+                  "monthly": {
+                    "summary": "Partial monthly period: earliest non-null open",
+                    "value": {
+                      "data": {
+                        "bars": [
+                          {
+                            "close": 22.73,
+                            "high": 22.84,
+                            "low": 21.75,
+                            "open": 22.43,
+                            "period_end": "2025-01-03",
+                            "period_start": "2025-01-02",
+                            "volume": 3631334
+                          }
+                        ],
+                        "from": "2025-01-02",
+                        "symbol": "JKH.N0000",
+                        "timeframe": "monthly",
+                        "to": "2025-01-03"
+                      },
+                      "meta": {
+                        "page": 1,
+                        "page_size": 500,
+                        "total": 1
+                      }
+                    },
+                    "x-request": "/securities/JKH.N0000/ohlcv?timeframe=monthly&from=2025-01-02&to=2025-01-03&page=1&page_size=500"
+                  },
+                  "primary": {
+                    "summary": "Daily bars with an unavailable opening price",
+                    "value": {
+                      "data": {
+                        "bars": [
+                          {
+                            "close": 22.43,
+                            "date": "2025-01-02",
+                            "high": 22.59,
+                            "low": 22.13,
+                            "open": null,
+                            "volume": 1631334
+                          },
+                          {
+                            "close": 22.73,
+                            "date": "2025-01-03",
+                            "high": 22.84,
+                            "low": 21.75,
+                            "open": 22.43,
+                            "volume": 2000000
+                          }
+                        ],
+                        "from": "2025-01-02",
+                        "symbol": "JKH.N0000",
+                        "timeframe": "daily",
+                        "to": "2025-01-03"
+                      },
+                      "meta": {
+                        "page": 1,
+                        "page_size": 500,
+                        "total": 2
+                      }
+                    },
+                    "x-request": "/securities/JKH.N0000/ohlcv?timeframe=daily&from=2025-01-02&to=2025-01-03&page=1&page_size=500"
+                  },
+                  "weekly": {
+                    "summary": "Partial weekly period: earliest non-null open",
+                    "value": {
+                      "data": {
+                        "bars": [
+                          {
+                            "close": 22.73,
+                            "high": 22.84,
+                            "low": 21.75,
+                            "open": 22.43,
+                            "period_end": "2025-01-03",
+                            "period_start": "2025-01-02",
+                            "volume": 3631334
+                          }
+                        ],
+                        "from": "2025-01-02",
+                        "symbol": "JKH.N0000",
+                        "timeframe": "weekly",
+                        "to": "2025-01-03"
+                      },
+                      "meta": {
+                        "page": 1,
+                        "page_size": 500,
+                        "total": 1
+                      }
+                    },
+                    "x-request": "/securities/JKH.N0000/ohlcv?timeframe=weekly&from=2025-01-02&to=2025-01-03&page=1&page_size=500"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/PublicOhlcvResponseSchema"
+                }
+              }
+            },
+            "description": "The bar series for the requested range.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "description": "The hourly limit in force for this key.",
+                "schema": {
+                  "example": "100",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Requests left in the current UTC clock hour. Left out if the counter was briefly unavailable.",
+                "schema": {
+                  "example": "99",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "description": "RFC 3339 UTC instant the count resets.",
+                "schema": {
+                  "example": "2026-09-26T10:00:00Z",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationFailedErrorSchema"
+                }
+              }
+            },
+            "description": "Bad timeframe, malformed from/to, from after to, symbol outside 1–20 characters, or page/page_size out of range.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "description": "The hourly limit in force for this key.",
+                "schema": {
+                  "example": "100",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Requests left in the current UTC clock hour. Left out if the counter was briefly unavailable.",
+                "schema": {
+                  "example": "99",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "description": "RFC 3339 UTC instant the count resets.",
+                "schema": {
+                  "example": "2026-09-26T10:00:00Z",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthenticatedErrorSchema"
+                }
+              }
+            },
+            "description": "A valid API key is required."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityNotFoundErrorSchema"
+                }
+              }
+            },
+            "description": "No security with that symbol.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "description": "The hourly limit in force for this key.",
+                "schema": {
+                  "example": "100",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Requests left in the current UTC clock hour. Left out if the counter was briefly unavailable.",
+                "schema": {
+                  "example": "99",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "description": "RFC 3339 UTC instant the count resets.",
+                "schema": {
+                  "example": "2026-09-26T10:00:00Z",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "edge": {
+                    "summary": "Per-IP edge throttle (Retry-After header, no reset_at)",
+                    "value": {
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Too many requests. Please wait a minute and try again.",
+                        "trace_id": "example-trace-id"
+                      }
+                    }
+                  },
+                  "perKey": {
+                    "summary": "Per-key hourly quota",
+                    "value": {
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Rate limit exceeded.",
+                        "reset_at": "2026-09-30T11:00:00Z",
+                        "trace_id": "example-trace-id"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalRateLimitedErrorSchema"
+                }
+              }
+            },
+            "description": "Per-key hourly quota exhausted or per-IP edge throttle. Edge responses may omit reset_at and per-key quota headers.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying. Per-key quotas use time until reset; edge throttles set a retry delay.",
+                "schema": {
+                  "example": "1800",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The hourly limit in force for this key.",
+                "schema": {
+                  "example": "100",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Requests left in the current UTC clock hour. Left out if the counter was briefly unavailable.",
+                "schema": {
+                  "example": "99",
+                  "type": "string"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "description": "RFC 3339 UTC instant the count resets.",
+                "schema": {
+                  "example": "2026-09-26T10:00:00Z",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "summary": "Get the bar series for one security at daily, weekly or monthly resolution.",
+        "tags": [
+          "Securities"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Same-origin production API",
+      "url": "/api"
+    }
+  ],
+  "tags": []
+}

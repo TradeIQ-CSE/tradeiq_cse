@@ -18,6 +18,9 @@ const DevelopersPage = lazy(() =>
     default: module.DevelopersPage,
   })),
 );
+const ApiReferencePage = lazy(() =>
+  import('../features/developer-api/ApiReferencePage').then((module) => ({ default: module.ApiReferencePage })),
+);
 const MarketsPage = lazy(() =>
   import('../features/markets/MarketsPage').then((module) => ({
     default: module.MarketsPage,
@@ -147,6 +150,7 @@ export function AppRoutes() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/how-it-works" element={<HowItWorksPage />} />
         <Route path="/developers" element={<DevelopersPage />} />
+        <Route path="/developers/reference" element={<ApiReferencePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
 

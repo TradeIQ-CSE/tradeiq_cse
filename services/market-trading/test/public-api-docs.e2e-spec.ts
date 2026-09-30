@@ -11,7 +11,12 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureMarketTradingApp } from '../src/app.setup';
 import { buildCorsOptionsDelegate } from '../src/common/cors';
-import { setupPublicApiDocs } from '../src/public-api/openapi/public-api-docs';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import {
+  canonicalPublicApiDocument,
+  setupPublicApiDocs,
+} from '../src/public-api/openapi/public-api-docs';
 
 // docs/api/public-api-v1.md §9 — hosted docs, no key required, generated
 // from the public controllers only.
@@ -55,6 +60,20 @@ describe('Public developer API docs (e2e)', () => {
       version: '1',
     });
     expect(response.headers['x-ratelimit-remaining']).toBeUndefined();
+  });
+
+  it('matches the bundled frontend reference generated without services', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/public/v1/openapi.json')
+      .expect(200);
+    const artifact = readFileSync(
+      resolve(
+        __dirname,
+        '../../../frontend/src/features/developer-api/generated/public-api.json',
+      ),
+      'utf8',
+    );
+    expect(canonicalPublicApiDocument(response.body)).toBe(artifact);
   });
 
   it('its paths are exactly the six public routes, nothing else', async () => {

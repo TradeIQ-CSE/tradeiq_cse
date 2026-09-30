@@ -1218,5 +1218,125 @@
         }
       }
     }
+  },
+  "apiReference": {
+    "contents": "On this page",
+    "skip": "Skip to API reference",
+    "back": "Developers",
+    "eyebrow": "DEVELOPER API · v1",
+    "title": "API reference",
+    "intro": "Read-only Colombo Stock Exchange data for your application. Explore six resources, request examples, and the shapes of successful and error responses.",
+    "getKey": "Manage your API key",
+    "explorer": "Interactive explorer",
+    "spec": "OpenAPI JSON",
+    "copyBase": "Copy API base URL",
+    "copyHeader": "Copy API key header",
+    "header": "Header",
+    "description": "Description",
+    "quotaHeaders": "Quota response headers",
+    "authMore": "Create a key after signing in. One key can be active per account, and its full secret is shown only when created or regenerated. Keep it out of URLs, committed source, and public client code. Revocation may take up to 60 seconds to take effect across all requests. The interactive explorer keeps authorization in memory only; Execute sends a real request and uses your quota.",
+    "edgeLimit": "A separate per-IP rate limit can also return 429 with Retry-After. That response may omit reset_at and per-key quota headers. Requests can still succeed when X-RateLimit-Remaining is unavailable; treat a missing count as unknown.",
+    "dates": "Date filters use valid YYYY-MM-DD calendar dates, include both boundaries, and require from ≤ to. End dates default to the latest available session; start dates default to one calendar year earlier. For index history, the default end date is the latest observation across all indices. Defaults depend on stored coverage.",
+    "paginateTitle": "Read all pages",
+    "paginateNote": "Every request uses quota. This Python example stops when meta.total is reached or an empty page is returned; a 429 raises an error so you can wait until the reset rather than retry continuously.",
+    "copyPagination": "Copy pagination example",
+    "aggregateNote": "Daily bars have date; weekly and monthly bars have period_start and period_end. Aggregates only include daily observations inside your requested range, so boundary periods may be partial. Open is the earliest non-null opening price in that period. Series are ascending, gaps are not filled, and index history contains close values only.",
+    "generatedNote": "Endpoint descriptions and field definitions are available in English; guides and navigation follow your selected language.",
+    "parameters": "Parameters",
+    "name": "Name",
+    "type": "Type",
+    "required": "Required",
+    "optional": "Optional",
+    "noParameters": "No path or query parameters. The X-API-Key header is still required.",
+    "parameterTable": "Parameters for {{endpoint}}",
+    "languageFor": "Request language for {{endpoint}}",
+    "request": "Example request",
+    "responseExample": "200 response example",
+    "illustrative": "Example response. Actual values and available dates may differ.",
+    "copyRequest": "Copy request for {{endpoint}}",
+    "copyResponse": "Copy response for {{endpoint}}",
+    "responseFields": "200 response fields",
+    "field": "Field",
+    "schemaTable": "Response fields for {{endpoint}}",
+    "responses": "Response statuses",
+    "status": "Status",
+    "statusTable": "Response statuses for {{endpoint}}",
+    "copyError": "Copy error response example",
+    "errorHandling": "401 means the key was not accepted. 400 includes fields describing invalid inputs. 404 identifies an unknown security or index. For 429, honor Retry-After and inspect reset_at when present. Keep trace_id when reporting an error. An empty successful result is different from an unknown identifier.",
+    "sections": {
+      "overview": {
+        "title": "Overview",
+        "body": "The canonical base URL below exposes GET resources for security descriptions, historical prices, indices, and exact-session end-of-day data. No trading or account operations are exposed. This is historical and latest available end-of-day data; there are no intraday quotes or guaranteed publication times. Documentation and the OpenAPI specification are public, key-free, and uncounted."
+      },
+      "authentication": {
+        "title": "Authentication and keys",
+        "body": "Send an active key in the X-API-Key header on every data request. A key has the form tiq_ followed by 40 letters and digits. Keys in URL query parameters and website sign-in tokens are not accepted. Missing, malformed, unknown, and revoked keys share the same 401 UNAUTHENTICATED response. Public resources allow cross-origin GET requests and key-free, uncounted OPTIONS preflight."
+      },
+      "rate-limits": {
+        "title": "Rate limits",
+        "body": "The default allowance is 100 requests per active key per UTC clock hour. It resets at the next hour, rather than one hour after your first request. The configured allowance can differ: response headers are authoritative. Requests accepted for an active key count even when they return validation or not-found errors. Authentication failures before key resolution do not use that key’s quota. On a per-key 429, Retry-After gives seconds until reset and error.reset_at gives its UTC timestamp."
+      },
+      "pagination": {
+        "title": "Pagination and dates",
+        "body": "Paginated resources accept page (minimum and default 1) and page_size, with each operation’s default and maximum below. meta.total counts all matching rows or bars, not just the current page. Pages beyond the result set return 200 and an empty array. Security lists and EOD are ordered by symbol; index lists by code; histories by ascending date or period."
+      },
+      "data-conventions": {
+        "title": "Data conventions",
+        "body": "Symbols and index codes match case-insensitively and responses use canonical forms. Prices and changes are JSON numbers; volumes and share counts are integers. Percentages use percentage units: 0.47 means 0.47%. Dates are YYYY-MM-DD and timestamps are RFC 3339 UTC. A null value means unavailable, not zero. Use security symbols and index codes to identify resources."
+      },
+      "errors": {
+        "title": "Errors",
+        "body": "Errors use an error object containing code, message, and trace_id. Validation errors add fields; the per-key quota error adds reset_at. Each operation lists its applicable statuses below, and the response schemas include these envelopes. Per-IP rate-limit errors may omit reset_at and per-key quota headers. Check the HTTP status before using data."
+      },
+      "versioning": {
+        "title": "Versioning",
+        "body": "v1 changes are additive. Breaking changes require a separate v2 running alongside v1. Clients should tolerate additional response fields."
+      }
+    },
+    "operations": {
+      "securities": {
+        "title": "List securities",
+        "note": "Returns descriptive attributes without current prices. Search matches a symbol prefix or company-name substring, ignoring case; % and _ are literal characters. Search must contain 1–100 characters. Sector must be a known GICS code. Listings can be listed, suspended, or delisted, and price coverage can be unavailable."
+      },
+      "security": {
+        "title": "Get a security",
+        "note": "Look up one security by symbol, using 1–20 characters. An unknown symbol returns 404; a known security without price history still has a descriptive record, with nullable coverage dates. There is no pagination on this operation."
+      },
+      "ohlcv": {
+        "title": "Security OHLCV",
+        "note": "Returns daily (default), weekly, or monthly bars for a security. The example asks for daily observations in an explicit historical range. Empty ranges return 200 with bars: [] and meta.total: 0. Opening prices can be null for any session. See data conventions for aggregate boundaries and missing sessions."
+      },
+      "indices": {
+        "title": "List indices",
+        "note": "Returns index descriptions and their own latest available observations, which can have different dates. Supported codes include ASPI, ASTRI, SL20, and SL20TRI. Changes compare with the previous available point, even across gaps. latest is null when an index has no observations."
+      },
+      "values": {
+        "title": "Index history",
+        "note": "Returns daily close values for one exact index code, matched without case sensitivity. SL20 and SL20TRI identify different series. Empty ranges return 200 with values: [] and meta.total: 0. Missing dates are not forward-filled; this endpoint does not expose index OHLCV."
+      },
+      "eod": {
+        "title": "End-of-day data",
+        "note": "Returns one session’s security OHLCV and changes, sorted by symbol. date defaults to the latest completed session. An explicit date without data, such as a weekend or holiday, returns 200 with data: [], meta.total: 0, and meta.as_of: null. It does not fall back to the previous session."
+      }
+    },
+    "chooseExample": "Worked examples",
+    "exampleFor": "Worked example for {{endpoint}}",
+    "edge429Example": "Per-IP rate-limit response (429)",
+    "exampleKinds": {
+      "primary": "Standard",
+      "weekly": "Partial week",
+      "monthly": "Partial month",
+      "empty": "Empty range",
+      "emptyPage": "Empty page",
+      "nullable": "Unavailable fields"
+    },
+    "errorFields": "Fields for {{error}}",
+    "errorNames": {
+      "validation": "Validation error",
+      "authentication": "Authentication error",
+      "security": "Security not found",
+      "index": "Index not found",
+      "rateLimit": "Rate-limit error"
+    }
   }
 }

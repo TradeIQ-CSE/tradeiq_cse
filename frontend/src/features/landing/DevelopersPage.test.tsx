@@ -50,12 +50,12 @@ describe('DevelopersPage', () => {
     expect(container.textContent).not.toMatch(/tiq_[A-Za-z0-9]{40}/);
   });
 
-  it('links to the hosted reference, opening in a new tab, from the hero', () => {
+  it('links to the public branded reference from the hero', () => {
     renderWithProviders(<DevelopersPage />);
 
     const link = screen.getByRole('link', { name: t('developers.hero.reference') });
-    expect(link).toHaveAttribute('href', 'https://tradeiqcse.tech/api/public/v1/docs');
-    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('href', '/developers/reference');
+    expect(link).not.toHaveAttribute('target');
   });
 
   it('does not repeat the request limit in its own Limits section', () => {

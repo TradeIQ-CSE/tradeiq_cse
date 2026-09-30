@@ -10,6 +10,13 @@ const t = i18n.t.bind(i18n);
 // findBy* (async) is required, getBy* would race the lazy import.
 
 describe('AppRoutes', () => {
+  it('renders the public API reference on direct loading with a deep link while anonymous', async () => {
+    renderWithProviders(<AppRoutes />, { initialEntries: ['/developers/reference#get-ohlcv'], auth: { status: 'anonymous' } });
+    expect(await screen.findByRole('heading', { name: 'API reference', level: 1 })).toBeInTheDocument();
+    expect(document.getElementById('get-ohlcv')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: t('markets.title') })).not.toBeInTheDocument();
+  });
+
   it('redirects an unknown path to /markets', async () => {
     renderWithProviders(<AppRoutes />, { initialEntries: ['/this-page-does-not-exist'] });
 
