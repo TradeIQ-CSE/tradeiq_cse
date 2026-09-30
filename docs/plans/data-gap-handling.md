@@ -1,3 +1,5 @@
+> Update, 2026-09-30: new backtests are subject to the configurable `BACKTEST_MAX_DATE` policy, initially 2025-12-31. Gap handling still applies within the supported period. The 2026 examples below remain relevant to Markets and historical saved results, and to backtesting after the policy is explicitly extended. New 2025 results naturally exclude 2026 bands because their observations do not span that gap. Market coverage and Markets decisions below are unchanged. See [backtesting-date-cutoff.md](backtesting-date-cutoff.md).
+
 # Data gap handling implementation plan
 
 Saved on 2026-09-24 before implementation. Charts and backtests currently treat

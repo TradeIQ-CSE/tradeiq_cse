@@ -55,6 +55,7 @@ services:
       MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@db:5432/market_data
       MARKET_TRADING_CORS_ORIGINS: ${MARKET_TRADING_CORS_ORIGINS:-http://localhost:5173}
       MARKET_INGESTION_TOKEN: ${MARKET_INGESTION_TOKEN:-}
+      BACKTEST_MAX_DATE: ${BACKTEST_MAX_DATE:-2025-12-31}
       REDIS_URL: redis://redis:6379
       # Verification only: the public half of the key identity-auth signs with,
       # so nothing in this container can mint a token.

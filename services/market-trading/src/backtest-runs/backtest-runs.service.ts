@@ -1,4 +1,6 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { backtestLimitMessage } from '../config/backtesting.config';
 import { EntityManager } from 'typeorm';
 import * as crypto from 'crypto';
 import { BacktestRunsRepository } from './backtest-runs.repository';
@@ -107,6 +109,7 @@ export class BacktestRunsService {
   constructor(
     private readonly repository: BacktestRunsRepository,
     private readonly dataCoverage: DataCoverageService,
+    private readonly config: ConfigService,
   ) {}
 
   // Everything a run needs before the engine: validation, the data-gap check
@@ -134,7 +137,12 @@ export class BacktestRunsService {
 
     const startMs = Date.parse(dto.startDate);
     const endMs = Date.parse(dto.endDate);
-    if (isNaN(startMs) || isNaN(endMs)) {
+    if (
+      isNaN(startMs) ||
+      isNaN(endMs) ||
+      new Date(startMs).toISOString().slice(0, 10) !== dto.startDate ||
+      new Date(endMs).toISOString().slice(0, 10) !== dto.endDate
+    ) {
       throw new BacktestApiError(
         'INVALID_DATE_RANGE',
         'startDate or endDate is an invalid calendar date.',
@@ -145,6 +153,17 @@ export class BacktestRunsService {
         'INVALID_DATE_RANGE',
         'startDate cannot be after endDate.',
       );
+    }
+
+    const maxDate = this.config.getOrThrow<string>('backtesting.maxDate');
+    for (const field of ['startDate', 'endDate'] as const) {
+      if (dto[field] > maxDate) {
+        throw new BacktestApiError(
+          'INVALID_DATE_RANGE',
+          backtestLimitMessage(maxDate),
+          { field, maxDate },
+        );
+      }
     }
 
     if (dto.startingCapital <= 0) {

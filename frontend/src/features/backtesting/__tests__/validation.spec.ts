@@ -121,13 +121,13 @@ describe('validateBacktestConfig', () => {
       );
     });
 
-    it('accepts an end date after 2025 within the security coverage', () => {
+    it('rejects an end date after 2025 even within security coverage', () => {
       const config = createDefaultBacktestConfig();
       config.security = { ...config.security, symbol: 'JKH.N0000', dataFrom: '2017-01-02', dataTo: '2026-09-23' };
       config.period = { startDate: '2026-06-15', endDate: '2026-09-23' };
 
       const result = validateBacktestConfig(config, 'period');
-      expect(result.errors.filter((error) => error.field === 'endDate')).toEqual([]);
+      expect(result.errors.filter((error) => error.field === 'endDate')).toEqual([expect.objectContaining({ message: expect.stringContaining('Backtesting is available through') })]);
     });
 
     it('should reject dates outside security-specific coverage window', () => {

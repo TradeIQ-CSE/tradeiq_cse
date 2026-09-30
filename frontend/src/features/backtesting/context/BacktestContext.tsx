@@ -14,14 +14,18 @@ import { previewBacktestRun, submitBacktestRun } from '../api/backtestApi';
 import { storeBacktestPreview } from '../domain/preview';
 import { useAuth } from '../../../auth/useAuth';
 import { ApiError } from '../../../lib/api';
-import { DataGap } from '../../../lib/data-gaps';
+import { backtestDateGap, DataGap } from '../../../lib/data-gaps';
 import { useDataCoverage } from '../../markets/useDataCoverage';
 import { ADVANCED_STEPS, SIMPLE_STEPS, simplePageFor, sectionsForPage, workflowLocation, type WorkflowMode } from '../domain/workflow';
+
+import { useBacktestPolicy } from '../hooks/useBacktestPolicy';
 
 const STORAGE_KEY = 'tradeiq_backtest_draft_v1';
 
 export interface BacktestContextValue {
   config: BacktestConfig;
+  maxDate: string;
+  policyIsFallback: boolean;
   /** The selected security's price gaps (from `useDataCoverage`), so a
    * component doesn't have to fetch coverage a second time to grey out a
    * date, snap a preset or show the crossing notice. Empty until coverage
@@ -52,6 +56,18 @@ export interface BacktestContextValue {
   resetConfig: () => void;
 }
 
+interface StoredValidationError extends ValidationError {
+  source?: 'api';
+  inputKey?: string;
+  policyAtResponse?: string;
+  cutoff?: string;
+  coverageAtResponse?: number;
+}
+
+function mergeErrors(errors: ValidationError[]) {
+  return errors.filter((error, index) => errors.findIndex((candidate) => candidate.step === error.step && candidate.field === error.field && (error.step === 'period' || candidate.message === error.message)) === index);
+}
+
 const BacktestContext = createContext<BacktestContextValue | null>(null);
 
 function loadInitialDraft() {
@@ -79,10 +95,14 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
   // validation all need the same gap list. Memoised so its identity only
   // changes when the query's own data does, not on every render — several
   // callbacks below depend on it.
+  const policy = useBacktestPolicy();
+  const maxDate = policy.maxDate;
+  const refreshPolicy = policy.refetch;
   const coverageQuery = useDataCoverage();
   const coverageGaps = coverageQuery.data?.prices.gaps;
   const priceGaps = useMemo(() => coverageGaps ?? [], [coverageGaps]);
-  const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
+  const [storedValidationErrors, setValidationErrors] = useState<StoredValidationError[]>([]);
+  const [periodValidated, setPeriodValidated] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const submissionPending = useRef(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -130,10 +150,10 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
   );
 
   const selectSecurity = useCallback((security: SecuritySelection) => {
-    setDraft((previous) => selectDraftSecurity(previous, security, priceGaps));
+    setDraft((previous) => selectDraftSecurity(previous, security, priceGaps, maxDate));
     setSubmitError(null);
     setSubmitFieldErrors(null);
-  }, [priceGaps]);
+  }, [priceGaps, maxDate]);
 
   // A security picked before coverage loaded got a default period computed
   // with no gaps. Recompute it once the gaps arrive, unless the reader has
@@ -141,31 +161,53 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
   useEffect(() => {
     setDraft((previous) =>
       previous.periodUsesCoverageDefault && previous.config.security.symbol
-        ? selectDraftSecurity(previous, previous.config.security, priceGaps)
+        ? selectDraftSecurity(previous, previous.config.security, priceGaps, maxDate)
         : previous,
     );
-  }, [priceGaps]);
+  }, [priceGaps, maxDate]);
 
+  const periodInputKey = JSON.stringify([config.security.symbol, config.period.startDate, config.period.endDate]);
+  const livePeriodErrors = useMemo(() => validateBacktestConfig(config, 'period', priceGaps, maxDate).errors, [config, priceGaps, maxDate]);
+  const apiPeriodErrorApplies = useCallback((error: StoredValidationError) => {
+    if (error.step !== 'period' || error.source !== 'api') return true;
+    if (error.inputKey !== periodInputKey) return false;
+    const date = error.field === 'endDate' ? config.period.endDate : config.period.startDate;
+    if (error.cutoff && error.policyAtResponse !== maxDate && date <= maxDate) return false;
+    if (error.coverageAtResponse && coverageQuery.dataUpdatedAt > error.coverageAtResponse && !backtestDateGap(priceGaps, date, error.field === 'endDate' ? 'end' : 'start')) return false;
+    return true;
+  }, [periodInputKey, config.period, maxDate, coverageQuery.dataUpdatedAt, priceGaps]);
+  useEffect(() => {
+    setValidationErrors((previous) => {
+      const retained = previous.filter(apiPeriodErrorApplies).map((error) => error.coverageAtResponse === 0 && coverageQuery.dataUpdatedAt > 0 ? { ...error, coverageAtResponse: coverageQuery.dataUpdatedAt } : error);
+      return retained.length === previous.length && retained.every((error, index) => error === previous[index]) ? previous : retained;
+    });
+  }, [apiPeriodErrorApplies, coverageQuery.dataUpdatedAt]);
+  const validationErrors = useMemo(() => {
+    const retained = storedValidationErrors.filter((error) => error.step !== 'period' || (error.source === 'api' && apiPeriodErrorApplies(error)));
+    return mergeErrors([...retained, ...(periodValidated ? livePeriodErrors : [])]);
+  }, [storedValidationErrors, apiPeriodErrorApplies, periodValidated, livePeriodErrors]);
   const getStepErrors = useCallback(
-    (step: StepKey) => validationErrors.filter((e) => e.step === step),
-    [validationErrors],
+    (step: StepKey) => mergeErrors([...validationErrors.filter((error) => error.step === step), ...(step === 'period' ? livePeriodErrors : [])]),
+    [validationErrors, livePeriodErrors],
   );
 
   const validateCurrentStep = useCallback(() => {
     const sections = sectionsForPage(mode, currentStep);
-    const errors = sections.flatMap((step) => validateBacktestConfig(config, step, priceGaps).errors);
+    if (sections.includes('period')) setPeriodValidated(true);
+    const errors = sections.flatMap((step) => validateBacktestConfig(config, step, priceGaps, maxDate).errors);
     setValidationErrors((prev) => {
-      const otherErrors = prev.filter((e) => !sections.includes(e.step));
+      const otherErrors = prev.filter((e) => !sections.includes(e.step) || (e.source === 'api' && e.step === 'period' && apiPeriodErrorApplies(e)));
       return [...otherErrors, ...errors];
     });
-    return errors.length === 0;
-  }, [config, currentStep, mode, priceGaps]);
+    return errors.length === 0 && !storedValidationErrors.some((error) => error.step === 'period' && error.source === 'api' && sections.includes(error.step) && apiPeriodErrorApplies(error));
+  }, [config, currentStep, mode, priceGaps, maxDate, apiPeriodErrorApplies, storedValidationErrors]);
 
   const validateAllSteps = useCallback(() => {
-    const result = validateBacktestConfig(config, undefined, priceGaps);
-    setValidationErrors(result.errors);
-    return result.isValid;
-  }, [config, priceGaps]);
+    setPeriodValidated(true);
+    const result = validateBacktestConfig(config, undefined, priceGaps, maxDate);
+    setValidationErrors((previous) => [...previous.filter((error) => error.step === 'period' && error.source === 'api' && apiPeriodErrorApplies(error)), ...result.errors]);
+    return result.isValid && !storedValidationErrors.some((error) => error.step === 'period' && error.source === 'api' && apiPeriodErrorApplies(error));
+  }, [config, priceGaps, maxDate, apiPeriodErrorApplies, storedValidationErrors]);
 
   const goToStep = useCallback(
     (step: StepKey, openSection = true) => {
@@ -208,7 +250,8 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
     }
 
     // Comprehensive client-side validation check
-    const validation = validateBacktestConfig(config, undefined, priceGaps);
+    setPeriodValidated(true);
+    const validation = validateBacktestConfig(config, undefined, priceGaps, maxDate);
     setValidationErrors(validation.errors);
 
     if (!validation.isValid) {
@@ -254,7 +297,8 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
         // here at all means coverage changed between load and submit.
         // Surface it exactly like any other period error: on the field the
         // API named, with the API's own message.
-        if (err.body.code === 'DATE_IN_DATA_GAP') {
+        if (err.body.code === 'DATE_IN_DATA_GAP' || (err.body.code === 'INVALID_DATE_RANGE' && err.body.details?.maxDate)) {
+          if (err.body.code === 'INVALID_DATE_RANGE') void refreshPolicy();
           const field = (err.body.details as { field?: string } | undefined)?.field;
           setValidationErrors((prev) => [
             ...prev,
@@ -262,13 +306,18 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
               step: 'period',
               field: field === 'endDate' ? 'endDate' : 'startDate',
               message: err.body.message,
+              source: 'api',
+              inputKey: periodInputKey,
+              policyAtResponse: maxDate,
+              cutoff: err.body.code === 'INVALID_DATE_RANGE' ? String(err.body.details?.maxDate) : undefined,
+              coverageAtResponse: err.body.code === 'DATE_IN_DATA_GAP' ? coverageQuery.dataUpdatedAt : undefined,
             },
           ]);
         }
 
         // Map backend validation field errors to UI steps
         if (err.body.fields && err.body.fields.length > 0) {
-          const apiValidationErrors: ValidationError[] = err.body.fields.map((f) => {
+          const apiValidationErrors: StoredValidationError[] = err.body.fields.map((f) => {
             let step: StepKey = 'review';
             if (f.field.includes('symbol')) step = 'security';
             else if (f.field.includes('Date')) step = 'period';
@@ -280,6 +329,8 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
               step,
               field: f.field,
               message: f.reason,
+              source: 'api',
+              inputKey: periodInputKey,
             };
           });
 
@@ -294,12 +345,13 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
       submissionPending.current = false;
       setIsSubmitting(false);
     }
-  }, [authStatus, config, navigate, priceGaps]);
+  }, [authStatus, config, navigate, priceGaps, maxDate, refreshPolicy, periodInputKey, coverageQuery.dataUpdatedAt]);
 
   const resetConfig = useCallback(() => {
     if (submissionPending.current) return;
-    setDraft(createFreshBacktestDraft());
+    setDraft(createFreshBacktestDraft(maxDate));
     setValidationErrors([]);
+    setPeriodValidated(false);
     setSubmitError(null);
     setSubmitFieldErrors(null);
     try {
@@ -308,10 +360,12 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
       // Ignore
     }
     navigate(workflowLocation(mode, 'security'));
-  }, [navigate, mode]);
+  }, [navigate, mode, maxDate]);
 
   const value: BacktestContextValue = {
     config,
+    maxDate,
+    policyIsFallback: policy.isFallback,
     priceGaps,
     mode,
     setMode,

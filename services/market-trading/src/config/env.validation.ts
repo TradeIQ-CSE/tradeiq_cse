@@ -11,6 +11,7 @@ import {
   validateSync,
 } from 'class-validator';
 import { IsAccessTokenPublicKeyRing } from './jwt-keys';
+import { isBacktestPolicyDate } from './backtesting.config';
 
 class EnvironmentVariables {
   @IsOptional()
@@ -73,6 +74,14 @@ class EnvironmentVariables {
 }
 
 export function validate(config: Record<string, unknown>) {
+  if (
+    config.BACKTEST_MAX_DATE !== undefined &&
+    !isBacktestPolicyDate(config.BACKTEST_MAX_DATE)
+  ) {
+    throw new Error(
+      'Invalid environment configuration: BACKTEST_MAX_DATE must be a real YYYY-MM-DD date on or after 2017-01-01',
+    );
+  }
   const validatedConfig = plainToInstance(EnvironmentVariables, config, {
     enableImplicitConversion: true,
   });

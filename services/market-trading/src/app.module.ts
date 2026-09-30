@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import appConfig from './config/app.config';
+import backtestingConfig from './config/backtesting.config';
 import authConfig from './config/auth.config';
 import databaseConfig from './config/database.config';
 import ingestionConfig from './config/ingestion.config';
@@ -32,6 +33,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
       cache: true,
       load: [
         appConfig,
+        backtestingConfig,
         authConfig,
         databaseConfig,
         ingestionConfig,

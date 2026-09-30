@@ -1,6 +1,7 @@
 import { formatDay } from './descriptions';
 import { BacktestConfig, StepKey, ValidationError, ValidationResult } from './types';
 import { CSE_DATASET_MIN_DATE } from './defaults';
+import { backtestBounds, backtestAvailabilityMessage, FALLBACK_BACKTEST_MAX_DATE, validBacktestDate } from './bounds';
 import { backtestDateGap, dateInGapMessage, DataGap } from '../../../lib/data-gaps';
 
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
@@ -19,6 +20,7 @@ export function validateBacktestConfig(
   config: BacktestConfig,
   targetStep?: StepKey,
   gaps: readonly DataGap[] = [],
+  maxDate = FALLBACK_BACKTEST_MAX_DATE,
 ): ValidationResult {
   const errors: ValidationError[] = [];
 
@@ -38,6 +40,11 @@ export function validateBacktestConfig(
   // 2. Period Validation
   if (shouldValidate('period')) {
     const { startDate, endDate } = config.period || {};
+    const bounds = backtestBounds(config.security?.dataFrom, config.security?.dataTo, maxDate);
+    if (!bounds.available) errors.push({ step: 'period', field: 'startDate', message: 'This company has no eligible backtesting period. Choose another company.' });
+    for (const [field, date] of [['startDate', startDate], ['endDate', endDate]] as const) {
+      if (validBacktestDate(date) && date > maxDate) errors.push({ step: 'period', field, message: `${backtestAvailabilityMessage(maxDate)} Choose an earlier date.` });
+    }
 
     if (!startDate || !startDate.trim()) {
       errors.push({
@@ -45,7 +52,7 @@ export function validateBacktestConfig(
         field: 'startDate',
         message: 'Pick a start date',
       });
-    } else if (!ISO_DATE_REGEX.test(startDate) || isNaN(Date.parse(startDate))) {
+    } else if (!validBacktestDate(startDate)) {
       errors.push({
         step: 'period',
         field: 'startDate',
@@ -59,7 +66,7 @@ export function validateBacktestConfig(
         field: 'endDate',
         message: 'Pick an end date',
       });
-    } else if (!ISO_DATE_REGEX.test(endDate) || isNaN(Date.parse(endDate))) {
+    } else if (!validBacktestDate(endDate)) {
       errors.push({
         step: 'period',
         field: 'endDate',
@@ -79,9 +86,7 @@ export function validateBacktestConfig(
         });
       }
 
-      // The dataset has no prices before 2017. There is no fixed upper
-      // bound: daily ingestion extends coverage past the 2017–2025 seed, and
-      // each security's own `dataTo` below is the real ceiling.
+      // Retain the existing lower history bound independently of policy.
       if (startDate < CSE_DATASET_MIN_DATE) {
         errors.push({
           step: 'period',

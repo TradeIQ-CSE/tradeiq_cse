@@ -1,5 +1,6 @@
 import { createDefaultBacktestConfig, defaultBacktestPeriod } from './defaults';
 import type { BacktestConfig, SecuritySelection } from './types';
+import { FALLBACK_BACKTEST_MAX_DATE } from './bounds';
 import type { DataGap } from '../../../lib/data-gaps';
 
 export interface BacktestDraft {
@@ -13,8 +14,8 @@ function object(value: unknown): Record<string, unknown> {
     : {};
 }
 
-export function createFreshBacktestDraft(): BacktestDraft {
-  return { config: createDefaultBacktestConfig(), periodUsesCoverageDefault: true };
+export function createFreshBacktestDraft(maxDate = FALLBACK_BACKTEST_MAX_DATE): BacktestDraft {
+  return { config: createDefaultBacktestConfig(maxDate), periodUsesCoverageDefault: true };
 }
 
 /** Fill missing draft sections without resetting existing custom input values. */
@@ -56,13 +57,14 @@ export function selectDraftSecurity(
   draft: BacktestDraft,
   security: SecuritySelection,
   gaps: readonly DataGap[] = [],
+  maxDate = FALLBACK_BACKTEST_MAX_DATE,
 ): BacktestDraft {
   return {
     config: {
       ...draft.config,
       security,
       period: draft.periodUsesCoverageDefault
-        ? defaultBacktestPeriod(security.dataFrom, security.dataTo, gaps)
+        ? defaultBacktestPeriod(security.dataFrom, security.dataTo, gaps, maxDate)
         : draft.config.period,
     },
     periodUsesCoverageDefault: draft.periodUsesCoverageDefault,

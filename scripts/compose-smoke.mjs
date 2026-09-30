@@ -236,6 +236,70 @@ function bearer(token, extra = {}) {
   return { Authorization: `Bearer ${token}`, ...extra };
 }
 
+function backtestRequest(endDate = '2025-01-10') {
+  return {
+    symbol: 'COMB.N0000',
+    startDate: '2025-01-02',
+    endDate,
+    startingCapital: 1_000_000,
+    rule: { buy: { type: 'period_start' }, sell: [{ type: 'end_of_period' }] },
+  };
+}
+
+function checkBacktestResult(result, label) {
+  check(result?.initialCapital === 1_000_000, `${label}: unexpected initial capital`);
+  checkNumber(result?.finalEquity, `${label} finalEquity`);
+  check(Array.isArray(result?.equityCurve) && result.equityCurve.length === 7,
+    `${label}: expected seven seeded equity observations`);
+  check(result.equityCurve.every((point) => point.date >= '2025-01-02' && point.date <= '2025-01-10'),
+    `${label}: equity observation outside the requested period`);
+  check(Array.isArray(result?.trades) && result.trades.length === 2,
+    `${label}: expected an entry and an end-of-period exit`);
+  check(result.trades.every((trade) => trade.date <= '2025-12-31'),
+    `${label}: trade exceeded the supported period`);
+}
+
+async function checkBacktestCutoff(path, headers = {}) {
+  const { body } = await requestJson('backtest cutoff', origins.market, path, 400,
+    jsonRequest(backtestRequest('2026-01-01'), headers));
+  check(body?.error?.code === 'INVALID_DATE_RANGE', 'backtest cutoff: unexpected error code');
+  check(body.error.details?.field === 'endDate' && body.error.details?.maxDate === '2025-12-31',
+    'backtest cutoff: missing field and configured maximum');
+}
+
+async function checkGuestBacktest() {
+  const { body: policy } = await requestJson('public backtest policy', origins.market,
+    '/api/v1/backtests/policy', 200);
+  check(policy?.maxDate === '2025-12-31', 'backtest policy: unexpected configured maximum');
+  const { body } = await requestJson('guest backtest preview', origins.market,
+    '/api/v1/backtests/preview', 200, jsonRequest(backtestRequest()));
+  checkBacktestResult(body, 'guest backtest preview');
+  await checkBacktestCutoff('/api/v1/backtests/preview');
+  console.log('smoke: guest backtest and configured cutoff passed');
+}
+
+async function checkSavedBacktest(accessToken) {
+  const headers = bearer(accessToken);
+  await checkBacktestCutoff('/api/v1/backtests', headers);
+  const { body: submitted } = await requestJson('saved backtest submission', origins.market,
+    '/api/v1/backtests', 201, jsonRequest(backtestRequest(), headers));
+  checkString(submitted?.id, 'saved backtest id');
+  const path = `/api/v1/backtests/${encodeURIComponent(submitted.id)}`;
+  let completed = false;
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const { body: status } = await requestJson('saved backtest status', origins.market, path, 200,
+      { headers });
+    check(status.status !== 'failed', 'saved backtest execution failed');
+    if (status.status === 'completed') { completed = true; break; }
+    await delay(500);
+  }
+  check(completed, 'saved backtest did not complete');
+  const { body } = await requestJson('saved backtest results', origins.market,
+    `${path}/results`, 200, { headers });
+  checkBacktestResult(body, 'saved backtest results');
+  console.log('smoke: saved backtest persistence and configured cutoff passed');
+}
+
 async function checkAuthenticatedJourney() {
   const unique = randomUUID();
   const email = `compose-smoke-${unique}@example.lk`;
@@ -400,6 +464,7 @@ async function checkAuthenticatedJourney() {
   );
 
   console.log('smoke: authenticated cross-service journey passed');
+  await checkSavedBacktest(accessToken);
 }
 
 async function main() {
@@ -414,6 +479,7 @@ async function main() {
   await checkCors('market-trading', origins.market, '/securities', 'GET', false);
   await checkCors('identity-auth', origins.auth, '/auth/signup', 'POST', true);
   await checkPublicMarketJourney();
+  await checkGuestBacktest();
   await checkAuthenticatedJourney();
 }
 

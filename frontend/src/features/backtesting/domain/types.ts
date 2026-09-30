@@ -134,6 +134,9 @@ export interface CreateBacktestRunResponse {
 
 export interface BacktestStatusResponse {
   id: string;
+  symbol?: string;
+  startDate?: string;
+  endDate?: string;
   status: 'queued' | 'running' | 'completed' | 'failed';
   createdAt?: string;
   startedAt?: string;

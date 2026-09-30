@@ -34,10 +34,15 @@ import { useRunReveal } from "./useRunReveal";
  * reload or a round trip through sign-in. Saving submits the same settings
  * as a normal run, which then lives at /backtests/:runId/status.
  */
+import { useBacktestPolicy } from "../hooks/useBacktestPolicy";
+import { backtestAvailabilityMessage, previousPeriod } from "../domain/bounds";
+import { defaultBacktestPeriod } from "../domain/defaults";
+
 export function BacktestPreviewPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { status: authStatus } = useAuth();
+  const policy = useBacktestPolicy();
   const coverageQuery = useDataCoverage();
   const priceGaps = coverageQuery.data?.prices.gaps ?? [];
   const [preview] = useState<BacktestPreviewRecord | null>(
@@ -54,10 +59,18 @@ export function BacktestPreviewPage() {
   }
 
   const { config } = preview;
+  const historical = previousPeriod(config.period.startDate, config.period.endDate, policy.maxDate);
+  const changeSettings = () => {
+    // Carry this preview's settings into the wizard, preserving all strategy values.
+    const period = historical ? defaultBacktestPeriod(config.security.dataFrom, config.security.dataTo, priceGaps, policy.maxDate) : config.period;
+    try { sessionStorage.setItem('tradeiq_backtest_draft_v1', JSON.stringify({ ...config, period, periodUsesCoverageDefault: historical })); } catch { /* Storage can be unavailable. */ }
+    navigate(workflowLocation('simple', historical ? 'period' : 'review'));
+  };
   const revealing = playing;
   const returnHere = { from: { pathname: "/backtests/preview" } };
 
   const save = async () => {
+    if (historical) { changeSettings(); return; }
     setIsSaving(true);
     setSaveError(null);
     try {
@@ -82,7 +95,9 @@ export function BacktestPreviewPage() {
         description={`${config.security.symbol} · ${config.period.startDate} to ${config.period.endDate}`}
       />
 
-      {authStatus === "authenticated" ? (
+      {historical && <AppNotice title="Result from a previous supported period"><div className="flex flex-col gap-3"><span>This result retains its original dates and calculations. {backtestAvailabilityMessage(policy.maxDate)} Choose supported dates and run again before saving a new result.</span><Button variant="secondary" onClick={changeSettings}>Choose supported dates</Button></div></AppNotice>}
+
+      {authStatus === "authenticated" && !historical ? (
         <AppNotice title="This result isn't saved yet">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <span>Save it to your account to come back to it later</span>
@@ -96,7 +111,7 @@ export function BacktestPreviewPage() {
             </Button>
           </div>
         </AppNotice>
-      ) : (
+      ) : authStatus === "authenticated" ? null : (
         <AppNotice title="Want to keep this result?">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <span>
@@ -138,7 +153,7 @@ export function BacktestPreviewPage() {
         <Button
           variant="secondary"
           leadingIcon={RiArrowLeftLine}
-          onClick={() => navigate(workflowLocation("simple", "review"))}
+          onClick={changeSettings}
           className="w-full sm:w-auto"
         >
           Change settings

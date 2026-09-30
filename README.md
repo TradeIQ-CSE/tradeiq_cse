@@ -215,3 +215,9 @@ the service's `.env.example`, `src/config/env.validation.ts`, and the matching
 
 - Branch naming: `username/tiq-N-short-title`
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/)
+
+### Supported backtesting period
+
+New guest previews and saved backtests currently support dates through **31 December 2025**, inclusive. The market-trading `BACKTEST_MAX_DATE` setting controls this temporary product limit; the website reads `GET /api/v1/backtests/policy` for calendars, suggested dates, and validation. If policy loading fails, it uses a conservative December 2025 fallback while the backend always validates its configured limit.
+
+To extend the period, import and verify the additional historical prices first, then raise `BACKTEST_MAX_DATE` to the supported YYYY-MM-DD date and restart/redeploy market-trading. Existing prices, saved results, paper trading, Markets charts, and developer data APIs are unchanged. Existing results beyond the new limit retain their original calculations; a new run or saving an old preview requires supported dates. No engine change, frontend date edit, or migration is required.

@@ -1,45 +1,10 @@
 import { BacktestConfig, FeeConfig, PeriodConfig } from './types';
-import { parseDate } from '@internationalized/date';
-import { DataGap, snapOutOfDataGap } from '../../../lib/data-gaps';
+import { FALLBACK_BACKTEST_MAX_DATE, suggestedBacktestPeriod } from './bounds';
+import { DataGap } from '../../../lib/data-gaps';
 
-/**
- * A frontend convenience only: execution still uses the existing API
- * contract. `gaps` (a security's price gaps, from `useDataCoverage`) is
- * optional and defaults to none, so every existing caller that predates the
- * data-gap plan keeps computing the same suggestion; a caller that has
- * coverage loaded passes it so the suggested start/end never lands inside a
- * `missing_data` gap (docs/plans/data-gap-handling.md §5) — the default
- * still stays "the most recent year" even when that year crosses a gap in
- * the middle, only a boundary landing *inside* one moves.
- */
-export function defaultBacktestPeriod(
-  dataFrom?: string | null,
-  dataTo?: string | null,
-  gaps: readonly DataGap[] = [],
-): PeriodConfig {
-  const parseCoverage = (value: string | null | undefined, fallback: string) => {
-    try {
-      return parseDate(value ?? fallback);
-    } catch {
-      return parseDate(fallback);
-    }
-  };
-  const minimum = parseCoverage(dataFrom, CSE_DATASET_MIN_DATE);
-  const maximum = parseCoverage(dataTo, CSE_DATASET_MAX_DATE);
-  // Invalid coverage must not create an inverted draft. The coverage/error UI
-  // remains responsible for explaining unavailable history.
-  if (minimum.compare(maximum) > 0) return defaultBacktestPeriod();
-  const yearStart = maximum.subtract({ years: 1 }).add({ days: 1 });
-  const startDate = (yearStart.compare(minimum) < 0 ? minimum : yearStart).toString();
-  const endDate = maximum.toString();
-  const snapped = {
-    startDate: snapOutOfDataGap(gaps, startDate, 'start'),
-    endDate: snapOutOfDataGap(gaps, endDate, 'end'),
-  };
-  // A gap spanning both ends would snap them past each other. Keep the
-  // unsnapped window then: validation names the gap instead of the draft
-  // silently holding an inverted period.
-  return snapped.startDate <= snapped.endDate ? snapped : { startDate, endDate };
+/** Suggested trailing year within the current backtesting policy. Empty dates signal unavailable history. */
+export function defaultBacktestPeriod(dataFrom?: string | null, dataTo?: string | null, gaps: readonly DataGap[] = [], maxDate = FALLBACK_BACKTEST_MAX_DATE): PeriodConfig {
+  return suggestedBacktestPeriod(dataFrom, dataTo, gaps, maxDate, 1) ?? { startDate: '', endDate: '' };
 }
 
 /**
@@ -62,11 +27,10 @@ export const DEFAULT_CSE_FEES: FeeConfig = {
 
 /**
  * ADR 0007: the validated seed window is 2017–2025. Daily ingestion extends
- * coverage past it, so the max is only a fallback for a security that
- * reports no coverage, never a validation ceiling.
+ * coverage past it. The backtesting policy supplies a separate temporary ceiling.
  */
 export const CSE_DATASET_MIN_DATE = '2017-01-01';
-export const CSE_DATASET_MAX_DATE = '2025-12-31';
+
 
 export const DEFAULT_STARTING_CAPITAL = 1_000_000; // Rs. 1,000,000 (1M LKR)
 
@@ -88,7 +52,7 @@ export const AVAILABLE_METRICS = [
   { id: 'sharpe_ratio', name: 'Sharpe ratio', description: 'Return compared with how bumpy the ride was', default: false },
 ];
 
-export function createDefaultBacktestConfig(): BacktestConfig {
+export function createDefaultBacktestConfig(maxDate = FALLBACK_BACKTEST_MAX_DATE): BacktestConfig {
   return {
     security: {
       symbol: '',
@@ -99,7 +63,7 @@ export function createDefaultBacktestConfig(): BacktestConfig {
       dataTo: null,
       price: null,
     },
-    period: defaultBacktestPeriod(),
+    period: defaultBacktestPeriod(undefined, undefined, [], maxDate),
     rules: {
       buy: {
         type: 'period_start',

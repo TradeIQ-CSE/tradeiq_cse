@@ -42,7 +42,7 @@ from the verified token. Those moved into `market-trading` with
 [ADR 0009](../adr/0009-market-trading-owns-paper-trading.md); the four endpoints
 below are unaffected by that move.
 
-One backtest route needs no account: `POST /api/v1/backtests/preview` takes the
+Guest backtest execution needs no account: `POST /api/v1/backtests/preview` takes the
 same body as `POST /api/v1/backtests`, applies the same validation (including
 `DATE_IN_DATA_GAP`), runs the engine synchronously and answers `200` with the
 body `GET /api/v1/backtests/{runId}/results` returns — `initialCapital`,
@@ -621,3 +621,11 @@ full design.
 ### Errors
 
 None — this endpoint has no parameters.
+
+## Backtesting date policy
+
+`GET /api/v1/backtests/policy` is unauthenticated and returns `{ "maxDate": "2025-12-31" }` with `Cache-Control: no-store`. The value is the inclusive temporary product limit configured by `BACKTEST_MAX_DATE`; it is separate from `/coverage` and may be raised after new history is verified. The static policy route precedes the authenticated run-ID route.
+
+Both `POST /api/v1/backtests` and `POST /api/v1/backtests/preview` reject either date after this limit before coverage, prices, persistence, or simulation. Requests are not silently truncated. The existing error envelope carries `400 INVALID_DATE_RANGE`, a human-readable supported-date message, and `details: { "field": "endDate", "maxDate": "2025-12-31" }` (or `startDate`). Company availability and data-gap validation still apply inside the supported period.
+
+The authenticated status response includes `symbol`, `startDate`, and `endDate` alongside existing status/timestamps. Existing stored results beyond the current limit remain readable with their complete original output; new executions must use supported dates.

@@ -8,18 +8,14 @@ import {
 import { AppNotice } from "@/components/application/layout/application-layout";
 import { useBacktestWizard } from "../hooks/useBacktestWizard";
 import { formatDay } from "../domain/descriptions";
-import {
-  CSE_DATASET_MAX_DATE,
-  CSE_DATASET_MIN_DATE,
-} from "../domain/defaults";
+import { defaultBacktestPeriod } from "../domain/defaults";
+import { backtestBounds, suggestedBacktestPeriod, backtestAvailabilityMessage } from "../domain/bounds";
 import { crossingNoticeLines } from "../domain/gapNotice";
 import {
   backtestDateGap,
   crossingDataGaps,
   dateInGapMessage,
   isBacktestDateUnavailable,
-  snapOutOfDataGap,
-  type DataGap,
 } from "../../../lib/data-gaps";
 import {
   BacktestFieldError,
@@ -32,72 +28,27 @@ import {
 // own yet — see AGENTS.md's scope for this PR.
 const NOTICE_LOCALE = "en-LK";
 
-function laterDate(left: CalendarDate, right: CalendarDate) {
-  return left.compare(right) > 0 ? left : right;
-}
-
 function parseDateOr(value: string | null | undefined, fallback: CalendarDate) {
-  if (!value) return fallback;
-  try {
-    return parseDate(value);
-  } catch {
-    return fallback;
-  }
-}
-
-/** Snaps a computed preset/full-range boundary off a `missing_data` gap it
- * falls in (docs/plans/data-gap-handling.md §5), same rule the API applies. */
-function gapAwareBound(
-  gaps: readonly DataGap[],
-  date: CalendarDate,
-  role: "start" | "end",
-): CalendarDate {
-  const snapped = snapOutOfDataGap(gaps, date.toString(), role);
-  return snapped === date.toString() ? date : parseDate(snapped);
-}
-
-function buildPresets(
-  minimum: CalendarDate,
-  maximum: CalendarDate,
-  gaps: readonly DataGap[],
-) {
-  return [1, 2, 5].map((years) => ({
-    label: `${years} ${years === 1 ? "year" : "years"}`,
-    value: {
-      start: gapAwareBound(
-        gaps,
-        laterDate(minimum, maximum.subtract({ years }).add({ days: 1 })),
-        "start",
-      ),
-      end: gapAwareBound(gaps, maximum, "end"),
-    },
-  }));
+  try { return parseDate(value ?? fallback.toString()); } catch { return fallback; }
 }
 
 export function PeriodStep({ embedded = false }: { embedded?: boolean }) {
-  const { config, updateConfig, getStepErrors, priceGaps } = useBacktestWizard();
+  const { config, updateConfig, getStepErrors, priceGaps, maxDate, policyIsFallback } = useBacktestWizard();
   const errors = getStepErrors("period");
 
-  const datasetMinimum = parseDate(CSE_DATASET_MIN_DATE);
-  const datasetMaximum = parseDate(CSE_DATASET_MAX_DATE);
-  const reportedMinimum = parseDateOr(
-    config.security.dataFrom,
-    datasetMinimum,
-  );
-  const reportedMaximum = parseDateOr(
-    config.security.dataTo,
-    datasetMaximum,
-  );
-  const hasValidCoverage = reportedMinimum.compare(reportedMaximum) <= 0;
-  const minimum = hasValidCoverage ? reportedMinimum : datasetMinimum;
-  const maximum = hasValidCoverage ? reportedMaximum : datasetMaximum;
-  const gapAwareMinimum = gapAwareBound(priceGaps, minimum, "start");
-  const gapAwareMaximum = gapAwareBound(priceGaps, maximum, "end");
-  const value: DateRangeValue = {
-    start: parseDateOr(config.period.startDate, minimum),
-    end: parseDateOr(config.period.endDate, maximum),
-  };
-  const presets = buildPresets(minimum, maximum, priceGaps);
+  const bounds = backtestBounds(config.security.dataFrom, config.security.dataTo, maxDate);
+  const minimum = parseDate(bounds.minimum);
+  const maximum = parseDate(bounds.maximum);
+  const allDates = suggestedBacktestPeriod(config.security.dataFrom, config.security.dataTo, priceGaps, maxDate);
+  const suggestion = defaultBacktestPeriod(config.security.dataFrom, config.security.dataTo, priceGaps, maxDate);
+  const available = bounds.available && allDates !== null;
+  const value: DateRangeValue = { start: parseDateOr(config.period.startDate, minimum), end: parseDateOr(config.period.endDate, maximum) };
+  const presets = [1, 2, 5].flatMap((years) => {
+    const period = suggestedBacktestPeriod(config.security.dataFrom, config.security.dataTo, priceGaps, maxDate, years);
+    return period ? [{ label: `${years} ${years === 1 ? 'year' : 'years'}`, value: { start: parseDate(period.startDate), end: parseDate(period.endDate) } }] : [];
+  });
+  const gapAwareMinimum = parseDate(allDates?.startDate ?? bounds.minimum);
+  const gapAwareMaximum = parseDate(allDates?.endDate ?? bounds.maximum);
   const crossedGaps = crossingDataGaps(
     priceGaps,
     value.start.toString(),
@@ -135,6 +86,8 @@ export function PeriodStep({ embedded = false }: { embedded?: boolean }) {
     }));
   };
 
+  if (!available) return <div className="flex flex-col gap-6"><BacktestStepHeader embedded={embedded} title="Choose dates" description="Pick the stretch of past prices to test on" /><AppNotice title="No eligible backtesting period">This company has no available history in the supported period. {backtestAvailabilityMessage(maxDate)} Choose another company.</AppNotice></div>;
+
   return (
     <div className="flex flex-col gap-6">
       <BacktestStepHeader
@@ -143,13 +96,15 @@ export function PeriodStep({ embedded = false }: { embedded?: boolean }) {
         description="Pick the stretch of past prices to test on"
       />
 
+      <p className="text-body-2-regular text-text-secondary">{backtestAvailabilityMessage(maxDate)}{policyIsFallback ? ' Using the temporary limit while checking availability.' : ''}</p>
+      {(startError || endError) && suggestion.startDate && <Button variant="secondary" size="small" onClick={() => updateConfig((previous) => ({ ...previous, period: suggestion }))}>Use suggested period</Button>}
       <section className="flex flex-col gap-3">
         <BacktestSectionHeader
           title="Dates"
           description={
             config.security.symbol
-              ? `${config.security.symbol} has prices from ${formatDay(minimum.toString())} to ${formatDay(maximum.toString())}`
-              : `Prices run from ${formatDay(minimum.toString())} to ${formatDay(maximum.toString())}`
+              ? `${config.security.symbol} can be backtested from ${formatDay(minimum.toString())} to ${formatDay(maximum.toString())}`
+              : `Available backtesting period: ${formatDay(minimum.toString())} to ${formatDay(maximum.toString())}`
           }
           info="Both dates are included, and only days the market traded are used. A longer stretch gives more to learn from, but it doesn’t make the future more certain."
         />
@@ -166,6 +121,14 @@ export function PeriodStep({ embedded = false }: { embedded?: boolean }) {
             describedBy="backtest-period-help"
             aria-label="Backtest simulation date range"
             labels={{ apply: "Apply range" }}
+            showsQuickSelect={false}
+            validateTypedDate={(date, role) => {
+              if (!date) return `Enter a real ${role} date in DD/MM/YYYY format.`;
+              if (date.compare(maximum) > 0) return `${backtestAvailabilityMessage(maxDate)} Choose a date on or before ${formatDay(bounds.maximum)}.`;
+              if (date.compare(minimum) < 0) return `Choose a date on or after ${formatDay(bounds.minimum)}.`;
+              const gap = backtestDateGap(priceGaps, date.toString(), role);
+              return gap ? dateInGapMessage(gap) : undefined;
+            }}
           />
           {/* The picker already shows the range; this is its screen-reader
               description only. */}
@@ -201,7 +164,7 @@ export function PeriodStep({ embedded = false }: { embedded?: boolean }) {
       <section className="flex flex-col gap-3">
         <BacktestSectionHeader
           title="Quick picks"
-          info="Each one ends on the latest day with prices for this company."
+          info="Each one ends on the last available day in the supported backtesting period."
         />
         <div className="flex flex-wrap gap-2">
           {presets.map((preset) => {

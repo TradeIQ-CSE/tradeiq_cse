@@ -9,6 +9,7 @@ import { authFetch } from '../../../lib/authed-api';
 import { SecurityListItem } from '../../markets/types';
 
 import { apiUrl } from '../../../lib/api-url';
+import { validBacktestDate, BACKTEST_MIN_DATE } from '../domain/bounds';
 
 const MARKET_TRADING_API_URL =
   import.meta.env.VITE_MARKET_TRADING_API_URL || 'http://localhost:3001';
@@ -159,4 +160,12 @@ export async function getSecuritiesUniverse(
 
   const res = await handleResponse<{ data: SecurityListItem[] }>(response);
   return res.data || [];
+}
+
+/** Shared guest/signed-in policy; mutable configuration is never cached by HTTP. */
+export async function getBacktestPolicy(): Promise<{ maxDate: string }> {
+  const response = await fetch(apiUrl(MARKET_TRADING_API_URL, '/api/v1/backtests/policy').toString(), { cache: 'no-store', headers: { Accept: 'application/json' } });
+  const policy = await handleResponse<{ maxDate?: unknown }>(response);
+  if (!validBacktestDate(policy.maxDate) || policy.maxDate < BACKTEST_MIN_DATE) throw new Error('Invalid backtesting policy');
+  return { maxDate: policy.maxDate };
 }
