@@ -23,21 +23,21 @@ chmod +x "$task_dir/bin/"*
 export PATH="$task_dir/bin:$PATH"
 export APP_DIR="$task_dir/app"
 bash "$repo_root/deploy/tradeiq-deploy.sh" >/dev/null
-rg -q 'run --rm --no-deps --entrypoint /bin/sh nginx' "$DEPLOY_FIXTURE_LOG"
-rg -q 'up -d --no-deps --force-recreate nginx' "$DEPLOY_FIXTURE_LOG"
+grep -Eq 'run --rm --no-deps --entrypoint /bin/sh nginx' "$DEPLOY_FIXTURE_LOG"
+grep -Eq 'up -d --no-deps --force-recreate nginx' "$DEPLOY_FIXTURE_LOG"
 first_digest="$(cat "$APP_DIR/.deploy/nginx-config.sha256")"
 : > "$DEPLOY_FIXTURE_LOG"
 bash "$repo_root/deploy/tradeiq-deploy.sh" >/dev/null
-if rg -q 'force-recreate|run --rm' "$DEPLOY_FIXTURE_LOG"; then echo 'Unchanged config unnecessarily replaced nginx' >&2; exit 1; fi
-rg -q 'exec -T frontend node' "$DEPLOY_FIXTURE_LOG"
+if grep -Eq 'force-recreate|run --rm' "$DEPLOY_FIXTURE_LOG"; then echo 'Unchanged config unnecessarily replaced nginx' >&2; exit 1; fi
+grep -Eq 'exec -T frontend node' "$DEPLOY_FIXTURE_LOG"
 printf 'changed fixture\n' > "$APP_DIR/deploy/nginx/common.conf"
 : > "$DEPLOY_FIXTURE_LOG"
 if DEPLOY_FIXTURE_INVALID=1 bash "$repo_root/deploy/tradeiq-deploy.sh" >/dev/null; then echo 'Invalid candidate was accepted' >&2; exit 1; fi
-if rg -q 'up -d' "$DEPLOY_FIXTURE_LOG"; then echo 'Invalid candidate changed serving containers' >&2; exit 1; fi
+if grep -Eq 'up -d' "$DEPLOY_FIXTURE_LOG"; then echo 'Invalid candidate changed serving containers' >&2; exit 1; fi
 [[ "$(cat "$APP_DIR/.deploy/nginx-config.sha256")" == "$first_digest" ]]
 if DEPLOY_FIXTURE_SMOKE_FAIL=1 bash "$repo_root/deploy/tradeiq-deploy.sh" >/dev/null; then echo 'Failed smoke was accepted' >&2; exit 1; fi
 [[ ! -f "$APP_DIR/.deploy/nginx-config.sha256" ]]
 : > "$DEPLOY_FIXTURE_LOG"
 bash "$repo_root/deploy/tradeiq-deploy.sh" >/dev/null
-rg -q 'force-recreate' "$DEPLOY_FIXTURE_LOG"
+grep -Eq 'force-recreate' "$DEPLOY_FIXTURE_LOG"
 echo 'Nginx deploy flow: PASS (changed-only recreation; invalid candidate rejected)'
