@@ -117,7 +117,7 @@ describe('frontend backtest defaults and restoration', () => {
     expect(restored.config.execution.fees).toMatchObject({ brokerageRate: 0.009, stlRate: 0.003 });
     expect(restored.config.execution.positionSizing).toEqual({ type: 'absolute', value: 200_000 });
     expect(restored.config.portfolio.startingCapital).toBe(1_000_000);
-    expect(validateBacktestConfig(restored.config).errors).toEqual([]);
+    expect(validateBacktestConfig(restored.config).errors).toEqual([expect.objectContaining({ step: 'review', field: 'strategyReview' })]);
   });
 
   it('does not mask invalid custom numbers with fresh defaults', () => {

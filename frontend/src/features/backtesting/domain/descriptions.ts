@@ -17,6 +17,10 @@ export function entryDescription(type: string, value?: number) {
   return V1_BUY_RULES.find((rule) => rule.type === type)?.label || type;
 }
 
+export function reentryDescription(value?: number) {
+  return `Buy again after a ${value ?? 5}% fall from the most recent sale price`;
+}
+
 export function exitDescription(type: string, value?: number) {
   if (type === 'take_profit_pct') return `Take profit after a ${value ?? 10}% rise`;
   if (type === 'stop_loss_pct') return `Stop loss after a ${value ?? 5}% fall`;
@@ -26,7 +30,7 @@ export function exitDescription(type: string, value?: number) {
 }
 
 export function sizingDescription(type: string, value?: number) {
-  if (type === 'percentage') return `${value ?? 50}% of your portfolio per trade`;
+  if (type === 'percentage') return `${value ?? 50}% of available cash per purchase`;
   if (type === 'absolute') return `LKR ${(value ?? 0).toLocaleString('en-LK')} per trade`;
   if (type === 'fixed_quantity') return `${value ?? 0} shares per trade`;
   return 'All available cash per trade';
@@ -47,6 +51,8 @@ export function tradeReason(code: string): { type: string; text: string } {
       return { type, text: 'First trading day' };
     case 'price_falls_pct_from_period_start':
       return { type, text: `Fell ${arg ?? ''} from the first day` };
+    case 'price_falls_pct_from_last_sell':
+      return { type, text: `Fell ${arg ?? ''} from the most recent sale` };
     case 'price_falls_to':
       return { type, text: `Fell to ${lkr(arg)}` };
     case 'take_profit_pct':

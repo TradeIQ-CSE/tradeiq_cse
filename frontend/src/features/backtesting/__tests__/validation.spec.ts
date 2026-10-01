@@ -318,7 +318,7 @@ describe('validateBacktestConfig', () => {
       const result = validateBacktestConfig(config, 'execution');
       expect(result.isValid).toBe(false);
       expect(result.errors[0].field).toBe('positionSizing.value');
-      expect(result.errors[0].message).toContain('between 1% and 100%');
+      expect(result.errors[0].message).toContain('above 0% and up to 100%');
     });
 
     it('should reject non-integer share quantities', () => {

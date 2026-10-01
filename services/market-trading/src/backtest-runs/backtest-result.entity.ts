@@ -13,6 +13,9 @@ export interface BacktestSummaryMetrics {
 
 @Entity({ name: 'backtest_results', schema: 'market_data' })
 export class BacktestResult {
+  // Derived from the owning run, never recalculated from current defaults.
+  strategy?: import('../backtesting/domain/types').RuleSet;
+
   @PrimaryColumn({ name: 'id', type: 'uuid' })
   id!: string;
 

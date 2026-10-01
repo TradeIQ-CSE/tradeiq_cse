@@ -65,6 +65,8 @@ export function createDefaultBacktestConfig(maxDate = FALLBACK_BACKTEST_MAX_DATE
     },
     period: defaultBacktestPeriod(undefined, undefined, [], maxDate),
     rules: {
+      version: '2.0',
+      reentry: { type: 'price_falls_pct_from_last_sell', value: 5 },
       buy: {
         type: 'period_start',
       },

@@ -19,6 +19,8 @@ export function mapToBacktestRequest(config: BacktestConfig): CreateBacktestRunR
     endDate: config.period.endDate.trim(),
     startingCapital: Number(config.portfolio.startingCapital),
     rule: {
+      version: config.rules.version ?? '1.0',
+      ...(config.rules.reentry ? { reentry: { ...config.rules.reentry } } : {}),
       buy: {
         type: config.rules.buy.type,
         ...(buyValue !== undefined ? { value: Number(buyValue) } : {}),

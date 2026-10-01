@@ -4,6 +4,8 @@ import { CSE_DATASET_MIN_DATE } from './defaults';
 import { backtestBounds, backtestAvailabilityMessage, FALLBACK_BACKTEST_MAX_DATE, validBacktestDate } from './bounds';
 import { backtestDateGap, dateInGapMessage, DataGap } from '../../../lib/data-gaps';
 
+const shouldReview = (step?: StepKey) => !step || step === 'review';
+
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
@@ -23,6 +25,9 @@ export function validateBacktestConfig(
   maxDate = FALLBACK_BACKTEST_MAX_DATE,
 ): ValidationResult {
   const errors: ValidationError[] = [];
+  if (shouldReview(targetStep) && config.requiresStrategyReview) {
+    errors.push({ step: 'review', field: 'strategyReview', message: 'Review and accept the new buy-again setting before running this older draft.' });
+  }
 
   const shouldValidate = (step: StepKey) => !targetStep || targetStep === step;
 
@@ -139,6 +144,14 @@ export function validateBacktestConfig(
 
   // 3. Rules Validation (v1 Price DSL)
   if (shouldValidate('rules')) {
+    if (config.rules?.version === '2.0') {
+      const reentry = config.rules.reentry;
+      if (!reentry || reentry.type !== 'price_falls_pct_from_last_sell' || !Number.isFinite(reentry.value) || reentry.value <= 0 || reentry.value >= 100) {
+        errors.push({ step: 'rules', field: 'reentry.value', message: 'Enter a buy-again fall bigger than 0% and smaller than 100%' });
+      }
+    } else if (config.rules?.version !== undefined && config.rules.version !== '1.0' || config.rules?.reentry) {
+      errors.push({ step: 'rules', field: 'version', message: 'These strategy settings are incompatible. Reset the rules and try again.' });
+    }
     const buy = config.rules?.buy;
     const sells = config.rules?.sells;
 
@@ -159,7 +172,7 @@ export function validateBacktestConfig(
         });
       } else {
         if (buy.type === 'price_falls_to') {
-          if (buy.value === undefined || buy.value === null || isNaN(buy.value) || buy.value <= 0) {
+          if (buy.value === undefined || buy.value === null || !Number.isFinite(buy.value) || buy.value <= 0) {
             errors.push({
               step: 'rules',
               field: 'buy.value',
@@ -167,7 +180,7 @@ export function validateBacktestConfig(
             });
           }
         } else if (buy.type === 'price_falls_pct_from_period_start') {
-          if (buy.value === undefined || buy.value === null || isNaN(buy.value) || buy.value <= 0) {
+          if (buy.value === undefined || buy.value === null || !Number.isFinite(buy.value) || buy.value <= 0) {
             errors.push({
               step: 'rules',
               field: 'buy.value',
@@ -217,7 +230,7 @@ export function validateBacktestConfig(
         seenTypes.add(sell.type);
 
         if (sell.type === 'target_price') {
-          if (sell.value === undefined || sell.value === null || isNaN(sell.value) || sell.value <= 0) {
+          if (sell.value === undefined || sell.value === null || !Number.isFinite(sell.value) || sell.value <= 0) {
             errors.push({
               step: 'rules',
               field: `${fieldName}.value`,
@@ -225,7 +238,7 @@ export function validateBacktestConfig(
             });
           }
         } else if (sell.type === 'take_profit_pct') {
-          if (sell.value === undefined || sell.value === null || isNaN(sell.value) || sell.value <= 0) {
+          if (sell.value === undefined || sell.value === null || !Number.isFinite(sell.value) || sell.value <= 0) {
             errors.push({
               step: 'rules',
               field: `${fieldName}.value`,
@@ -239,7 +252,7 @@ export function validateBacktestConfig(
             });
           }
         } else if (sell.type === 'stop_loss_pct') {
-          if (sell.value === undefined || sell.value === null || isNaN(sell.value) || sell.value <= 0) {
+          if (sell.value === undefined || sell.value === null || !Number.isFinite(sell.value) || sell.value <= 0) {
             errors.push({
               step: 'rules',
               field: `${fieldName}.value`,
@@ -284,15 +297,15 @@ export function validateBacktestConfig(
       });
     } else {
       if (sizing.type === 'percentage') {
-        if (sizing.value === undefined || sizing.value === null || isNaN(sizing.value) || sizing.value <= 0 || sizing.value > 100) {
+        if (sizing.value === undefined || sizing.value === null || !Number.isFinite(sizing.value) || sizing.value <= 0 || sizing.value > 100) {
           errors.push({
             step: 'execution',
             field: 'positionSizing.value',
-            message: 'Enter a share of your portfolio between 1% and 100%',
+            message: 'Enter a share of available cash above 0% and up to 100%',
           });
         }
       } else if (sizing.type === 'absolute') {
-        if (sizing.value === undefined || sizing.value === null || isNaN(sizing.value) || sizing.value <= 0) {
+        if (sizing.value === undefined || sizing.value === null || !Number.isFinite(sizing.value) || sizing.value <= 0) {
           errors.push({
             step: 'execution',
             field: 'positionSizing.value',
@@ -300,7 +313,7 @@ export function validateBacktestConfig(
           });
         }
       } else if (sizing.type === 'fixed_quantity') {
-        if (sizing.value === undefined || sizing.value === null || isNaN(sizing.value) || sizing.value <= 0 || !Number.isInteger(sizing.value)) {
+        if (sizing.value === undefined || sizing.value === null || !Number.isFinite(sizing.value) || sizing.value <= 0 || !Number.isSafeInteger(sizing.value)) {
           errors.push({
             step: 'execution',
             field: 'positionSizing.value',
@@ -310,11 +323,14 @@ export function validateBacktestConfig(
       }
     }
 
+    if (config.rules?.version === '2.0' && fees && Object.values(fees).reduce((total, rate) => total + rate, 0) >= 1) {
+      errors.push({ step: 'execution', field: 'fees.brokerageRate', message: 'Total charges per execution must be smaller than 100%' });
+    }
     if (fees) {
       const feeKeys = ['brokerageRate', 'cseRate', 'cdsRate', 'secCessRate', 'stlRate'] as const;
       for (const feeKey of feeKeys) {
         const rate = fees[feeKey];
-        if (rate !== undefined && (isNaN(rate) || rate < 0)) {
+        if (rate !== undefined && (!Number.isFinite(rate) || rate < 0)) {
           errors.push({
             step: 'execution',
             field: `fees.${feeKey}`,

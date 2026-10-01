@@ -66,6 +66,7 @@ export class BacktestRunsController {
   ) {
     const result = await this.service.getRunResults(runId, user.userId);
     return {
+      strategy: result.strategy,
       initialCapital: result.summaryMetrics.initialCapital,
       finalCash: result.summaryMetrics.finalCash,
       finalEquity: result.summaryMetrics.finalEquity,

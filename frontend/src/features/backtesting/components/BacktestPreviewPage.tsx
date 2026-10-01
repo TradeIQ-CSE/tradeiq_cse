@@ -146,7 +146,7 @@ export function BacktestPreviewPage() {
       {revealing ? (
         <RunReveal onDone={finishReveal} />
       ) : (
-        <ResultsView results={preview.results} gaps={priceGaps} />
+        <ResultsView results={{ ...preview.results, strategy: preview.results.strategy ?? { version: config.rules.version ?? '1.0', buyCondition: config.rules.buy, sellConditions: config.rules.sells, reentryCondition: config.rules.reentry } }} gaps={priceGaps} />
       )}
 
       <ResultsFooter>
