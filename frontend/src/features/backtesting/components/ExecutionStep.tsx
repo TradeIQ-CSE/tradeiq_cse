@@ -31,9 +31,9 @@ const SIZING_OPTIONS: Array<{
   },
   {
     type: "percentage",
-    label: "Part of your portfolio",
-    description: "Each buy uses a set percentage of your portfolio",
-    valueLabel: "Share of portfolio (%)",
+    label: "Part of your available cash",
+    description: "Each buy uses a set percentage of your available cash",
+    valueLabel: "Share of available cash (%)",
     min: 1,
     max: 100,
     step: 1,

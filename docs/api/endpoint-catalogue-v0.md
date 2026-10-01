@@ -629,3 +629,5 @@ None — this endpoint has no parameters.
 Both `POST /api/v1/backtests` and `POST /api/v1/backtests/preview` reject either date after this limit before coverage, prices, persistence, or simulation. Requests are not silently truncated. The existing error envelope carries `400 INVALID_DATE_RANGE`, a human-readable supported-date message, and `details: { "field": "endDate", "maxDate": "2025-12-31" }` (or `startDate`). Company availability and data-gap validation still apply inside the supported period.
 
 The authenticated status response includes `symbol`, `startDate`, and `endDate` alongside existing status/timestamps. Existing stored results beyond the current limit remain readable with their complete original output; new executions must use supported dates.
+
+Repeated backtesting strategies and compatibility are described in [Backtesting strategy contract](backtesting-strategies.md). Both preview and saved results include the recorded `strategy`; new clients explicitly send rule version `2.0` with a required last-sale re-entry rule. Missing versions preserve `1.0`.

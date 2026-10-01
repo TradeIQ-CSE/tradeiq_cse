@@ -103,8 +103,8 @@ export function RulesStep({ embedded = false }: { embedded?: boolean }) {
 
       <section className="flex flex-col gap-3">
         <BacktestSectionHeader
-          title="Buy"
-          info="The test buys once, the first time this rule is met. Only price rules are available for now."
+          title="First purchase"
+          info="This rule starts the first position. After selling, the buy-again rule below is checked. Only price rules are available for now."
         />
         <BacktestFieldError>{buyError?.message}</BacktestFieldError>
         <RadioGroup
@@ -152,9 +152,20 @@ export function RulesStep({ embedded = false }: { embedded?: boolean }) {
       </section>
 
       <section className="flex flex-col gap-3 border-t border-separator-border pt-6">
+        <BacktestSectionHeader title="Buy again" info="After each sale, wait for a fall from that actual sale price. The reference stays fixed until the next sale. Checks start on the next available session; no new purchases open on the final session." />
+        <Input type="number" label="Fall from most recent sale (%)"
+          value={Number.isFinite(config.rules.reentry?.value) ? String(config.rules.reentry?.value) : ""}
+          onChange={(value) => updateConfig((previous) => ({ ...previous, rules: { ...previous.rules, version: '2.0', reentry: { type: 'price_falls_pct_from_last_sell', value: Number.parseFloat(value) } } }))}
+          min={0.01} max={99.99} step={0.1}
+          isInvalid={Boolean(getStepErrors("rules").find((error) => error.field === 'reentry.value'))}
+          hint={getStepErrors("rules").find((error) => error.field === 'reentry.value')?.message || 'A 5% setting after a sale at LKR 100 waits for LKR 95 or lower.'}
+          className="max-w-sm" fieldClassName="ring-1 ring-inset ring-border-button-default" />
+      </section>
+
+      <section className="flex flex-col gap-3 border-t border-separator-border pt-6">
         <BacktestSectionHeader
           title="Sell"
-          info="The first sell rule to trigger closes the trade. If stop loss and take profit trigger on the same day, stop loss goes first."
+          info="Each sale closes the current position and starts waiting to buy again. Exit checks begin after the purchase day. Conflicting signals use stop loss, take profit, then target price priority. Any position still held is closed on the last session."
         />
         <BacktestFieldError>{sellsError?.message}</BacktestFieldError>
         <div

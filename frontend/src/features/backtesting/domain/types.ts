@@ -35,6 +35,8 @@ export interface SellCondition {
 }
 
 export interface RulesConfig {
+  version?: '1.0' | '2.0';
+  reentry?: { type: 'price_falls_pct_from_last_sell'; value: number };
   buy: BuyCondition;
   sells: SellCondition[];
 }
@@ -79,6 +81,7 @@ export interface MetricsConfig {
 }
 
 export interface BacktestConfig {
+  requiresStrategyReview?: boolean;
   security: SecuritySelection;
   period: PeriodConfig;
   rules: RulesConfig;
@@ -113,6 +116,8 @@ export interface CreateBacktestRunRequest {
   endDate: string;
   startingCapital: number;
   rule: {
+    version?: '1.0' | '2.0';
+    reentry?: { type: 'price_falls_pct_from_last_sell'; value: number };
     buy: {
       type: string;
       value?: number;
@@ -174,6 +179,12 @@ export interface BacktestEquityPoint {
 }
 
 export interface BacktestResultsResponse {
+  strategy?: {
+    version: string;
+    buyCondition: BuyCondition;
+    sellConditions: SellCondition[];
+    reentryCondition?: { type: 'price_falls_pct_from_last_sell'; value: number };
+  };
   initialCapital: number;
   finalCash: number;
   finalEquity: number;

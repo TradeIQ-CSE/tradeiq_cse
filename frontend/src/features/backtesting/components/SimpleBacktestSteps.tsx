@@ -113,7 +113,7 @@ export function SimpleIdeaStep() {
       <BacktestStepHeader title="When to buy and sell"
         description="Example rules are filled in · Change them or continue" />
       <ConfigureSection section="rules" title="Buy and sell rules" actionLabel="buy and sell rules"
-        info="These are examples to learn with, not advice on when to trade. The first sell rule to trigger closes the trade."
+        info="These are examples to learn with, not advice on when to trade. After each sale, the test waits for your buy-again rule."
         custom={JSON.stringify(config.rules) !== JSON.stringify(defaults.rules)}
         summary={<RuleList rules={config.rules} />}>
         <RulesStep embedded />

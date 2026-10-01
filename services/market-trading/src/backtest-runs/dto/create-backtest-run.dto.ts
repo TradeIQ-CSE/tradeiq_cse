@@ -9,6 +9,7 @@ import {
   IsString,
   Min,
   ValidateNested,
+  ValidateIf,
 } from 'class-validator';
 import { IsCalendarDate } from '../../common/validation/is-calendar-date';
 
@@ -22,6 +23,15 @@ export class RuleConditionDto {
 }
 
 export class RuleConfigDto {
+  @ValidateIf((_object, value) => value !== undefined)
+  @IsString()
+  version?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RuleConditionDto)
+  reentry?: RuleConditionDto;
+
   @IsDefined()
   @ValidateNested()
   @Type(() => RuleConditionDto)

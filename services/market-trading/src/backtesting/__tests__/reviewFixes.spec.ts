@@ -17,7 +17,7 @@ const bar = (date: string, price: number): DailyBar => ({
 // triggers, leaving the forced end-of-period exit as the only way out.
 // sellConditions cannot be empty: validateRule requires at least one.
 const BUY_AND_HOLD: RuleSet = {
-  version: 'v1',
+  version: '1.0',
   buyCondition: { type: 'period_start' },
   sellConditions: [{ type: 'take_profit_pct', value: 500 }],
 };

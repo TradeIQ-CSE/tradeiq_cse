@@ -24,6 +24,7 @@ const NOTICE_LOCALE = "en-LK";
 export function ReviewStep({ configuration }: { configuration?: ReactNode }) {
   const {
     config,
+    updateConfig,
     priceGaps,
     maxDate,
     goToStep,
@@ -57,6 +58,15 @@ export function ReviewStep({ configuration }: { configuration?: ReactNode }) {
         title="Check and run"
         description="Check your settings, then run the test"
       />
+
+      {config.requiresStrategyReview && (
+        <AppNotice title="Review the new buy-again setting">
+          <div className="flex flex-col gap-3">
+            <p>Your company, dates and custom settings are kept. This older draft now waits to buy again after each sale, instead of stopping after one sale. Review the rules below before running.</p>
+            <Button variant="secondary" onClick={() => updateConfig((previous) => ({ ...previous, requiresStrategyReview: false }))}>Accept reviewed settings</Button>
+          </div>
+        </AppNotice>
+      )}
 
       {!isValid && (
         <AppNotice tone="error" title={`Fix ${reviewValidation.errors.length} ${reviewValidation.errors.length === 1 ? "thing" : "things"} before running`}>

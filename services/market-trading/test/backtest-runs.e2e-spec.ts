@@ -1,3 +1,4 @@
+import { runBacktest } from '../src/backtesting/engine/runBacktest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
@@ -253,6 +254,265 @@ describe('Backtest Runs (e2e)', () => {
     ).toBe(true);
   });
 
+  it('preserves repeated strategy metadata and gives preview, direct engine and saved run identical results', async () => {
+    const prices = [100, 110, 100, 110, 100, 110, 100].map((price, index) => ({
+      ...sampleBars[0],
+      tradeDate: `2025-08-${String(index + 2).padStart(2, '0')}`,
+      open: String(price),
+      high: String(price),
+      low: String(price),
+      close: String(price),
+    }));
+    mockRepo
+      .findDailyPricesBySecurity!.mockResolvedValueOnce(prices)
+      .mockResolvedValueOnce(prices);
+    const dto = {
+      ...validDto,
+      endDate: '2025-08-08',
+      rule: {
+        ...validDto.rule,
+        version: '2.0',
+        reentry: { type: 'price_falls_pct_from_last_sell', value: 5 },
+      },
+    };
+    const preview = await request(app.getHttpServer())
+      .post('/api/v1/backtests/preview')
+      .send(dto)
+      .expect(200);
+    expect(preview.body.strategy).toMatchObject({
+      version: '2.0',
+      reentryCondition: { value: 5 },
+    });
+    expect(preview.body.trades).toHaveLength(6);
+    const direct = runBacktest({
+      bars: prices.map((price) => ({
+        date: price.tradeDate,
+        open: Number(price.open),
+        high: Number(price.high),
+        low: Number(price.low),
+        close: Number(price.close),
+        volume: Number(price.volume),
+      })),
+      startDate: dto.startDate,
+      endDate: dto.endDate,
+      initialCapital: dto.startingCapital,
+      positionSizing: { type: 'full_capital' },
+      feeConfig: {
+        brokerageRate: 0.0064,
+        cseRate: 0.00084,
+        cdsRate: 0.00024,
+        secCessRate: 0.00072,
+        stlRate: 0.003,
+      },
+      rules: preview.body.strategy,
+    });
+    expect(preview.body).toEqual({
+      strategy: preview.body.strategy,
+      ...direct,
+    });
+    const submitted = await request(app.getHttpServer())
+      .post('/api/v1/backtests')
+      .set('Authorization', ownerAuth)
+      .send(dto)
+      .expect(201);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const saved = await request(app.getHttpServer())
+      .get(`/api/v1/backtests/${submitted.body.id}/results`)
+      .set('Authorization', ownerAuth)
+      .expect(200);
+    expect(saved.body).toEqual(preview.body);
+    expect(runsStore.get(submitted.body.id)!.ruleConfig).toEqual(
+      preview.body.strategy,
+    );
+    await request(app.getHttpServer())
+      .get(`/api/v1/backtests/${submitted.body.id}/results`)
+      .set('Authorization', otherAuth)
+      .expect(404);
+  });
+
+  it('executes database-style zero opening and low strings without changing stored history', async () => {
+    const prices = [
+      {
+        ...sampleBars[0],
+        tradeDate: '2025-08-02',
+        open: '0.0000',
+        high: '100.0000',
+        low: '0.0000',
+        close: '100.0000',
+      },
+      {
+        ...sampleBars[0],
+        tradeDate: '2025-08-03',
+        open: '110.0000',
+        high: '110.0000',
+        low: '110.0000',
+        close: '110.0000',
+      },
+      {
+        ...sampleBars[0],
+        tradeDate: '2025-08-04',
+        open: '100.0000',
+        high: '100.0000',
+        low: '100.0000',
+        close: '100.0000',
+      },
+    ];
+    const original = JSON.parse(JSON.stringify(prices));
+    mockRepo
+      .findDailyPricesBySecurity!.mockResolvedValueOnce(prices)
+      .mockResolvedValueOnce(prices);
+    const dto = {
+      ...validDto,
+      endDate: '2025-08-04',
+      rule: {
+        ...validDto.rule,
+        version: '2.0',
+        reentry: { type: 'price_falls_pct_from_last_sell', value: 5 },
+      },
+    };
+    const preview = await request(app.getHttpServer())
+      .post('/api/v1/backtests/preview')
+      .send(dto)
+      .expect(200);
+    expect(
+      preview.body.trades.map(
+        (trade: { executionPrice: number }) => trade.executionPrice,
+      ),
+    ).toEqual([100, 110]);
+    const submitted = await request(app.getHttpServer())
+      .post('/api/v1/backtests')
+      .set('Authorization', ownerAuth)
+      .send(dto)
+      .expect(201);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const saved = await request(app.getHttpServer())
+      .get(`/api/v1/backtests/${submitted.body.id}/results`)
+      .set('Authorization', ownerAuth)
+      .expect(200);
+    expect(saved.body).toEqual(preview.body);
+    expect(prices).toEqual(original);
+  });
+
+  it.each([
+    { brokerageRate: 1, cseRate: 0, cdsRate: 0, secCessRate: 0, stlRate: 0 },
+    { brokerageRate: 2 },
+    { brokerageRate: 0.6, cseRate: 0.5 },
+    { brokerageRate: 1e308, cseRate: 1e308 },
+  ])(
+    'rejects invalid aggregate fees before saved persistence and in previews: %j',
+    async (feeConfig) => {
+      const before = runsStore.size;
+      const dto = {
+        ...validDto,
+        feeConfig,
+        rule: {
+          ...validDto.rule,
+          version: '2.0',
+          reentry: { type: 'price_falls_pct_from_last_sell', value: 5 },
+        },
+      };
+      for (const endpoint of [
+        '/api/v1/backtests',
+        '/api/v1/backtests/preview',
+      ]) {
+        const response = await request(app.getHttpServer())
+          .post(endpoint)
+          .set('Authorization', ownerAuth)
+          .send(dto)
+          .expect(400);
+        expect(response.body.error.code).toBe('INVALID_RULE_CONFIGURATION');
+      }
+      expect(runsStore.size).toBe(before);
+    },
+  );
+
+  it('preserves cash and ledger reconciliation for tiny consideration with valid near-100% fees', async () => {
+    const prices = [
+      {
+        ...sampleBars[0],
+        tradeDate: '2025-08-02',
+        open: '0.5000',
+        high: '0.5000',
+        low: '0.5000',
+        close: '0.5000',
+      },
+      {
+        ...sampleBars[0],
+        tradeDate: '2025-08-03',
+        open: '0.0003',
+        high: '0.0003',
+        low: '0.0003',
+        close: '0.0003',
+      },
+    ];
+    mockRepo
+      .findDailyPricesBySecurity!.mockResolvedValueOnce(prices)
+      .mockResolvedValueOnce(prices);
+    const dto = {
+      ...validDto,
+      endDate: '2025-08-03',
+      startingCapital: 1,
+      positionSizing: { type: 'fixed_quantity', value: 1 },
+      feeConfig: {
+        brokerageRate: 0.19999,
+        cseRate: 0.19999,
+        cdsRate: 0.19999,
+        secCessRate: 0.19999,
+        stlRate: 0.19999,
+      },
+      rule: {
+        ...validDto.rule,
+        version: '2.0',
+        reentry: { type: 'price_falls_pct_from_last_sell', value: 5 },
+      },
+    };
+    const preview = await request(app.getHttpServer())
+      .post('/api/v1/backtests/preview')
+      .send(dto)
+      .expect(200);
+    expect(preview.body.finalCash).toBe(0);
+    expect(preview.body.trades[1].fees.total).toBe(0.0003);
+    expect(preview.body.trades[1].netCashFlow).toBe(0);
+    const submitted = await request(app.getHttpServer())
+      .post('/api/v1/backtests')
+      .set('Authorization', ownerAuth)
+      .send(dto)
+      .expect(201);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const saved = await request(app.getHttpServer())
+      .get(`/api/v1/backtests/${submitted.body.id}/results`)
+      .set('Authorization', ownerAuth)
+      .expect(200);
+    expect(saved.body).toEqual(preview.body);
+  });
+
+  it.each([
+    { version: '3.0' },
+    { version: '2.0' },
+    {
+      version: '1.0',
+      reentry: { type: 'price_falls_pct_from_last_sell', value: 5 },
+    },
+    { reentry: { type: 'price_falls_pct_from_last_sell', value: 5 } },
+    {
+      version: '2.0',
+      reentry: { type: 'price_falls_pct_from_last_sell', value: 100 },
+    },
+    { version: null },
+  ])(
+    'rejects incompatible strategy fields %j in preview and saved submission',
+    async (rule) => {
+      const before = runsStore.size;
+      for (const endpoint of ['/api/v1/backtests/preview', '/api/v1/backtests'])
+        await request(app.getHttpServer())
+          .post(endpoint)
+          .set('Authorization', ownerAuth)
+          .send({ ...validDto, rule: { ...validDto.rule, ...rule } })
+          .expect(400);
+      expect(runsStore.size).toBe(before);
+    },
+  );
+
   it('should process a valid backtest submission, run it in background, and retrieve results', async () => {
     const postRes = await request(app.getHttpServer())
       .post('/api/v1/backtests')
@@ -280,6 +540,14 @@ describe('Backtest Runs (e2e)', () => {
       .set('Authorization', ownerAuth)
       .expect(200);
 
+    // Old result rows have no strategy metadata column; it comes from the owning run.
+    expect(resultRes.body.strategy.version).toBe('1.0');
+    expect(resultRes.body.strategy.reentryCondition).toBeUndefined();
+    const originalPreview = await request(app.getHttpServer())
+      .post('/api/v1/backtests/preview')
+      .send(validDto)
+      .expect(200);
+    expect(resultRes.body).toEqual(originalPreview.body);
     expect(resultRes.body).toHaveProperty('initialCapital', 1000000);
     expect(resultRes.body).toHaveProperty('finalCash');
     expect(resultRes.body).toHaveProperty('finalEquity');

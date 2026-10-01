@@ -116,6 +116,8 @@ describe('Simple backtesting workflow', () => {
     const config = seedDraft((draft) => {
       draft.period = { startDate: '2023-01-01', endDate: '2024-12-31' };
       draft.rules.buy = { type: 'price_falls_to', value: 100 };
+      draft.rules.reentry!.value = 7.5;
+      draft.rules.sells = [{ type: 'take_profit_pct', value: 15 }, { type: 'stop_loss_pct', value: 8 }];
       draft.execution.positionSizing = { type: 'fixed_quantity', value: 30 };
       draft.execution.fees.brokerageRate = 0.005;
       draft.portfolio.startingCapital = 500_000;
@@ -126,6 +128,7 @@ describe('Simple backtesting workflow', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/backtests/new/rules?mode=simple');
     expect(screen.getAllByText('Edited')).toHaveLength(2);
     expect(screen.getByText('Buy at or below LKR 100.00')).toBeInTheDocument();
+    expect(screen.getByText('Buy again after a 7.5% fall from the most recent sale price')).toBeInTheDocument();
     expect(screen.getByText(/30 shares per trade/)).toBeInTheDocument();
     expect(mapToBacktestRequest(JSON.parse(sessionStorage.getItem(storageKey)!))).toEqual(mapToBacktestRequest(config));
     await user.click(screen.getByRole('radio', { name: 'Advanced' }));
@@ -135,6 +138,31 @@ describe('Simple backtesting workflow', () => {
     renderWorkflow('/backtests/new/rules?mode=simple');
     expect(screen.getByRole('spinbutton', { name: 'Virtual starting cash (LKR)' })).toHaveValue(500_000);
     expect(mapToBacktestRequest(JSON.parse(sessionStorage.getItem(storageKey)!))).toEqual(mapToBacktestRequest(config));
+  });
+
+  it('requires explicit review of an older draft before upgrading and running', async () => {
+    const draft = seedDraft();
+    delete draft.rules.version; delete draft.rules.reentry;
+    sessionStorage.setItem(storageKey, JSON.stringify(draft));
+    const submit = vi.spyOn(api, 'submitBacktestRun').mockResolvedValue({ id: 'upgraded', status: 'queued' });
+    renderWorkflow('/backtests/new/review?mode=simple');
+    expect(screen.getByRole('button', { name: 'Run backtest' })).toBeDisabled();
+    expect(screen.getByText('Review the new buy-again setting')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Accept reviewed settings' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Run backtest' }));
+    await waitFor(() => expect(submit).toHaveBeenCalled());
+    expect(submit.mock.calls[0][0].rule).toMatchObject({ version: '2.0', reentry: { value: 5 } });
+  });
+
+  it('reveals invalid re-entry in Simple and preserves the value when the initial rule changes', async () => {
+    seedDraft((config) => { config.rules.reentry!.value = 100; });
+    renderWorkflow('/backtests/new/rules?mode=simple');
+    fireEvent.click(screen.getByRole('button', { name: /advance to next step/i }));
+    const field = screen.getByRole('spinbutton', { name: 'Fall from most recent sale (%)' });
+    expect(field).toHaveAttribute('aria-invalid', 'true');
+    fireEvent.change(field, { target: { value: '7.5' } });
+    fireEvent.click(screen.getByRole('radio', { name: /^After a price fall/i }));
+    expect(JSON.parse(sessionStorage.getItem(storageKey)!).rules.reentry.value).toBe(7.5);
   });
 
   it('reveals and marks an invalid custom fee without requiring another configuration action', () => {

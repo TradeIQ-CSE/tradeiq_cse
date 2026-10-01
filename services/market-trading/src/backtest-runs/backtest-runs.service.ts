@@ -11,6 +11,7 @@ import { DailyPrice } from '../db/entities/daily-price.entity';
 import { DataCoverageService } from '../data-coverage/data-coverage.service';
 import { BacktestApiError, mapEngineError } from './errors/backtest-api-error';
 import { runBacktest } from '../backtesting/engine/runBacktest';
+import { validateExecution } from '../backtesting/rules/validateExecution';
 import { validateRule } from '../backtesting/rules/validateRule';
 import {
   BacktestInput,
@@ -20,6 +21,7 @@ import {
   SellConditionType,
   PositionSizingConfig,
   PositionSizingType,
+  ReentryCondition,
 } from '../backtesting/domain/types';
 
 // Validate allowed state transitions
@@ -62,6 +64,7 @@ interface PreparedRun {
 
 /** The results body a preview returns — the same shape as GET :runId/results. */
 export interface BacktestPreview {
+  strategy: RuleSet;
   initialCapital: number;
   finalCash: number;
   finalEquity: number;
@@ -182,7 +185,10 @@ export class BacktestRunsService {
 
     // 2. Rule DSL Mapping and Validation
     const ruleSet: RuleSet = {
-      version: '1.0',
+      version: dto.rule.version ?? '1.0',
+      ...(dto.rule.reentry !== undefined
+        ? { reentryCondition: dto.rule.reentry as ReentryCondition }
+        : {}),
       buyCondition: {
         type: (dto.rule.buy?.type === 'price_fall_pct'
           ? 'price_falls_pct_from_period_start'
@@ -285,6 +291,14 @@ export class BacktestRunsService {
       value: dto.positionSizing?.value,
     };
 
+    if (ruleSet.version === '2.0') {
+      try {
+        validateExecution(positionSizing, feeConfig);
+      } catch (err: unknown) {
+        throw mapEngineError(err);
+      }
+    }
+
     return {
       ruleSet,
       feeConfig,
@@ -366,6 +380,7 @@ export class BacktestRunsService {
       throw mapEngineError(err);
     }
     return {
+      strategy: prepared.ruleSet,
       initialCapital: engineResult.initialCapital,
       finalCash: engineResult.finalCash,
       finalEquity: engineResult.finalEquity,
@@ -423,6 +438,7 @@ export class BacktestRunsService {
       );
     }
 
+    result.strategy = run.ruleConfig;
     return result;
   }
 

@@ -27,6 +27,8 @@ describe('mapToBacktestRequest', () => {
       endDate: '2025-12-31',
       startingCapital: 1000000,
       rule: {
+        version: '2.0',
+        reentry: { type: 'price_falls_pct_from_last_sell', value: 5 },
         buy: {
           type: 'period_start',
         },

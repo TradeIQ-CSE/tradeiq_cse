@@ -11,6 +11,7 @@ import {
   RiTimeLine,
   RiWallet3Line,
 } from "@remixicon/react";
+import { Pagination } from "@/components/base/pagination/pagination";
 import { Button } from "@/components/base/buttons/button";
 import {
   AppNotice,
@@ -35,7 +36,7 @@ import { crossingDataGaps, type DataGap } from "../../../lib/data-gaps";
 import { chartPalette } from "../../../components/charts/chart-theme";
 import { formatDay } from "../domain/descriptions";
 import { RunReveal } from "./RunReveal";
-import { TradeReason } from "./RuleList";
+import { RuleList, TradeReason } from "./RuleList";
 import { useRunReveal } from "./useRunReveal";
 
 const MAX_TRANSIENT_RETRIES = 5;
@@ -295,7 +296,10 @@ export function ResultsFooter({ children }: { children: ReactNode }) {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-body-2-regular text-text-secondary">
-        Based on daily closing prices and your settings · Past results don’t promise future ones
+        Trades use daily opening, high, low and closing prices; portfolio values use closing prices · Past results don’t promise future ones
+      </p>
+      <p className="text-body-2-regular text-text-secondary">
+        For repeated strategies, a missing or zero opening price uses that day’s close. If a daily high or low is unavailable, only the known opening and closing prices are checked. This cannot show the full movement within that day. Exit checks start after the purchase day. If several rules trigger, stop loss goes first, then take profit and target price. Any shares still held after these checks on the final day are sold at the close.
       </p>
       <div className="flex flex-col gap-2 sm:flex-row">{children}</div>
     </div>
@@ -309,8 +313,19 @@ export function ResultsView({
   results: BacktestResultsResponse;
   gaps: DataGap[];
 }) {
+  const [tradePage, setTradePage] = useState(1);
+  const pageSize = 25;
+  const totalPages = Math.max(1, Math.ceil(results.trades.length / pageSize));
+  const page = Math.min(tradePage, totalPages);
+  useEffect(() => { setTradePage(1); }, [results]);
   return (
     <div className="flex flex-col gap-5">
+      {results.strategy && (
+        <section className="rounded-3xl border border-border-button-default p-5">
+          <h3 className="text-headline-medium text-text-primary">{results.strategy.version === '2.0' ? 'Repeated trading strategy' : 'Original single-cycle strategy'}</h3>
+          <RuleList rules={{ version: results.strategy.version === '2.0' ? '2.0' : '1.0', buy: results.strategy.buyCondition, sells: results.strategy.sellConditions, reentry: results.strategy.reentryCondition }} />
+        </section>
+      )}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatSurface
           label="Starting cash"
@@ -365,7 +380,7 @@ export function ResultsView({
         </div>
         {results.trades.length === 0 ? (
           <p className="border-t border-separator-border p-4 text-body-2-regular text-text-secondary sm:p-5">
-            No trades. Your buy rule was never met in these dates
+            No trades. No eligible purchase could be made with your rules, available cash and charges in these dates
           </p>
         ) : (
           <div className="overflow-x-auto border-t border-separator-border">
@@ -382,7 +397,7 @@ export function ResultsView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-separator-border">
-                {results.trades.map((trade) => (
+                {results.trades.slice((page - 1) * pageSize, page * pageSize).map((trade) => (
                   <tr key={trade.id} className="text-body-2-regular text-text-primary">
                     <td className="whitespace-nowrap px-4 py-3">{formatDay(trade.date)}</td>
                     <td className="px-4 py-3">
@@ -416,6 +431,10 @@ export function ResultsView({
             </table>
           </div>
         )}
+        {totalPages > 1 && <div className="flex flex-col gap-3 border-t border-separator-border p-4 sm:p-5">
+          <p className="text-body-2-regular text-text-secondary" aria-live="polite">Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, results.trades.length)} of {results.trades.length} executions</p>
+          <Pagination page={page} totalPages={totalPages} onChange={setTradePage} />
+        </div>}
       </AppPanel>
     </div>
   );

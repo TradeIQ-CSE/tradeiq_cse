@@ -39,10 +39,16 @@ export interface SellCondition {
   value?: number; // threshold price or percentage
 }
 
+export interface ReentryCondition {
+  type: 'price_falls_pct_from_last_sell';
+  value: number;
+}
+
 export interface RuleSet {
   version: string;
   buyCondition: BuyCondition;
   sellConditions: SellCondition[];
+  reentryCondition?: ReentryCondition;
 }
 
 export interface BacktestInput {

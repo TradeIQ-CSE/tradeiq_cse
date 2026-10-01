@@ -69,6 +69,20 @@ describe('BacktestPreviewPage', () => {
     expect(sessionStorage.getItem('tradeiq_backtest_preview_v1')).toBeNull();
   });
 
+  it('saves an old preview under its original single-cycle rules after reload and sign-in', async () => {
+    seedPreview();
+    const old = JSON.parse(sessionStorage.getItem('tradeiq_backtest_preview_v1')!);
+    delete old.config.rules.version; delete old.config.rules.reentry;
+    sessionStorage.setItem('tradeiq_backtest_preview_v1', JSON.stringify(old));
+    const submit = vi.spyOn(api, 'submitBacktestRun').mockResolvedValue({ id: 'legacy', status: 'queued' });
+    renderPage('authenticated');
+    expect(screen.getByText('Original single-cycle strategy')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Save this backtest' }));
+    await waitFor(() => expect(submit).toHaveBeenCalled());
+    expect(submit.mock.calls[0][0].rule.version).toBe('1.0');
+    expect(submit.mock.calls[0][0].rule.reentry).toBeUndefined();
+  });
+
   it('preserves a historical preview and requires date repair before saving', async () => {
     seedPreview('2026-09-30');
     const original = JSON.parse(sessionStorage.getItem('tradeiq_backtest_preview_v1')!);

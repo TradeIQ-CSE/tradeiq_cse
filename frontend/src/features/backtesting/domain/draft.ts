@@ -29,10 +29,14 @@ export function restoreBacktestDraft(value: unknown): BacktestDraft {
   const rules = object(saved.rules);
   const execution = object(saved.execution);
   const metrics = object(saved.metrics);
+  const legacy = rules.version === undefined || rules.version === '1.0';
   const config = {
+    ...(legacy || saved.requiresStrategyReview === true ? { requiresStrategyReview: true } : saved.requiresStrategyReview === false ? { requiresStrategyReview: false } : {}),
     security: { ...defaults.security, ...object(saved.security) },
     period: { ...defaults.period, ...object(saved.period) },
     rules: {
+      version: legacy ? '2.0' : rules.version,
+      reentry: legacy ? defaults.rules.reentry : object(rules.reentry),
       buy: { ...defaults.rules.buy, ...object(rules.buy) },
       sells: Array.isArray(rules.sells) ? rules.sells : defaults.rules.sells,
     },

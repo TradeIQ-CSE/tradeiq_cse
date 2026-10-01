@@ -8,6 +8,7 @@ import {
   SecuritySelection,
 } from '../domain/types';
 import { createFreshBacktestDraft, restoreBacktestDraft, selectDraftSecurity, updateBacktestDraft } from '../domain/draft';
+import { backtestApiValidationFields } from '../domain/apiErrors';
 import { validateBacktestConfig } from '../domain/validation';
 import { mapToBacktestRequest } from '../domain/mapper';
 import { previewBacktestRun, submitBacktestRun } from '../api/backtestApi';
@@ -289,7 +290,8 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
       if (err instanceof ApiError) {
         setSubmitError(err.body.message || 'Backtest submission failed.');
         setSubmitTraceId(err.body.trace_id || null);
-        setSubmitFieldErrors(err.body.fields || null);
+        const apiFields = backtestApiValidationFields(err.body.fields, err.body.details);
+        setSubmitFieldErrors(apiFields.length > 0 ? apiFields : null);
 
         // DATE_IN_DATA_GAP (docs/plans/data-gap-handling.md §2) carries its
         // gap bounds under `details`, not `fields` — the calendar and
@@ -316,23 +318,14 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
         }
 
         // Map backend validation field errors to UI steps
-        if (err.body.fields && err.body.fields.length > 0) {
-          const apiValidationErrors: StoredValidationError[] = err.body.fields.map((f) => {
-            let step: StepKey = 'review';
-            if (f.field.includes('symbol')) step = 'security';
-            else if (f.field.includes('Date')) step = 'period';
-            else if (f.field.includes('rule')) step = 'rules';
-            else if (f.field.includes('fee') || f.field.includes('positionSizing')) step = 'execution';
-            else if (f.field.includes('Capital')) step = 'portfolio';
-
-            return {
-              step,
-              field: f.field,
-              message: f.reason,
-              source: 'api',
-              inputKey: periodInputKey,
-            };
-          });
+        if (apiFields.length > 0) {
+          const apiValidationErrors: StoredValidationError[] = apiFields.map((field) => ({
+            step: field.step,
+            field: field.field,
+            message: field.reason,
+            source: 'api',
+            inputKey: periodInputKey,
+          }));
 
           setValidationErrors((prev) => [...prev, ...apiValidationErrors]);
         }

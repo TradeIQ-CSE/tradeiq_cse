@@ -9,6 +9,7 @@ import {
 import { IconList, type IconListItem } from "@/components/application/icon-list";
 import {
   entryDescription,
+  reentryDescription,
   exitDescription,
   sizingDescription,
   tradeReason,
@@ -17,6 +18,7 @@ import type { BacktestConfig } from "../domain/types";
 
 const SELL_ICON: Record<string, Pick<IconListItem, "icon" | "tone">> = {
   price_falls_pct_from_period_start: { icon: RiShoppingCart2Line },
+  price_falls_pct_from_last_sell: { icon: RiShoppingCart2Line },
   price_falls_to: { icon: RiShoppingCart2Line },
   period_start: { icon: RiShoppingCart2Line },
   take_profit_pct: { icon: RiArrowUpLine, tone: "gain" },
@@ -35,6 +37,7 @@ export function RuleList({ rules }: { rules: BacktestConfig["rules"] }) {
           icon: RiShoppingCart2Line,
           text: entryDescription(rules.buy.type, rules.buy.value),
         },
+        ...(rules.version === '2.0' && rules.reentry ? [{ key: 'reentry', icon: RiShoppingCart2Line, text: reentryDescription(rules.reentry.value) }] : []),
         ...rules.sells.map((sell) => ({
           key: sell.type,
           ...(SELL_ICON[sell.type] ?? { icon: RiFlagLine }),

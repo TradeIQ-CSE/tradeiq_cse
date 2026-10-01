@@ -722,6 +722,11 @@ describe('BacktestRunsService - Unit Tests', () => {
       const preview = await service.previewRun(validDto);
 
       expect(preview).toEqual({
+        strategy: {
+          version: '1.0',
+          buyCondition: { type: 'period_start' },
+          sellConditions: [{ type: 'take_profit_pct', value: 10 }],
+        },
         initialCapital: direct.initialCapital,
         finalCash: direct.finalCash,
         finalEquity: direct.finalEquity,
