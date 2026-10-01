@@ -330,11 +330,11 @@ export function validateBacktestConfig(
       const feeKeys = ['brokerageRate', 'cseRate', 'cdsRate', 'secCessRate', 'stlRate'] as const;
       for (const feeKey of feeKeys) {
         const rate = fees[feeKey];
-        if (rate !== undefined && (!Number.isFinite(rate) || rate < 0)) {
+        if (!Number.isFinite(rate) || rate < 0) {
           errors.push({
             step: 'execution',
             field: `fees.${feeKey}`,
-            message: `Charges can't be below 0%`,
+            message: 'Enter a valid charge of 0% or more',
           });
         }
       }

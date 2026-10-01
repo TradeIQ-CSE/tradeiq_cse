@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { validateBacktestConfig } from '../domain/validation';
 import { createDefaultBacktestConfig as createBlankBacktestConfig } from '../domain/defaults';
+import type { FeeConfig } from '../domain/types';
 import type { DataGap } from '../../../lib/data-gaps';
 
 function createDefaultBacktestConfig() {
@@ -328,6 +329,34 @@ describe('validateBacktestConfig', () => {
       const result = validateBacktestConfig(config, 'execution');
       expect(result.isValid).toBe(false);
       expect(result.errors[0].message).toContain('whole number of shares');
+    });
+
+    it.each(['brokerageRate', 'cseRate', 'cdsRate', 'secCessRate', 'stlRate'] as const)('rejects an omitted required %s with a field error before submission', (feeKey) => {
+      const config = createDefaultBacktestConfig();
+      const incompleteFees: Partial<FeeConfig> = config.execution.fees;
+      delete incompleteFees[feeKey];
+      const result = validateBacktestConfig(config, 'execution');
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContainEqual(expect.objectContaining({ step: 'execution', field: `fees.${feeKey}` }));
+      expect(validateBacktestConfig(config).isValid).toBe(false);
+    });
+
+    it.each([undefined, '0.0064', -0.01, NaN, Infinity])('rejects invalid required fee values without coercion: %s', (rate) => {
+      const config = createDefaultBacktestConfig();
+      Object.assign(config.execution.fees, { brokerageRate: rate });
+      const result = validateBacktestConfig(config, 'execution');
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContainEqual(expect.objectContaining({ step: 'execution', field: 'fees.brokerageRate' }));
+      expect(config.execution.fees.brokerageRate).toBe(rate);
+    });
+
+    it('retains the combined-fee limit for individually valid rates', () => {
+      const config = createDefaultBacktestConfig();
+      config.execution.fees.brokerageRate = 0.6;
+      config.execution.fees.cseRate = 0.5;
+      const result = validateBacktestConfig(config, 'execution');
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContainEqual(expect.objectContaining({ field: 'fees.brokerageRate', message: 'Total charges per execution must be smaller than 100%' }));
     });
 
     it('should reject negative fee rates', () => {
