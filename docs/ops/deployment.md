@@ -139,6 +139,115 @@ Then set `TRADEIQ_INGESTION_API_URL=https://tradeiqcse.tech/api/market` and
 `TRADEIQ_INGESTION_TOKEN` (the `MARKET_INGESTION_TOKEN` value) in the
 `cse-dataset` repository's secrets, so its daily cron delivers EOD prices here.
 
+## Long-trade predictions (`ml-long-trade`)
+
+A one-shot batch job, not a service. It trains the long-trade models for every
+eligible stock, writes that day's predictions to the `ml` database and exits.
+Why and how: [ADR 0011](../adr/0011-long-trade-batch-predictor.md) and
+[`services/ml-prediction/README.md`](../../services/ml-prediction/README.md).
+
+- **Image**: `ghcr.io/tradeiq-cse/tradeiq_cse/ml-long-trade:<branch|sha>`,
+  published by `deploy.yml` like the others.
+- **Compose service**: `ml-long-trade-job` in `docker-compose.prod.yml`, under
+  the `jobs` profile. The deploy timer's `up -d --remove-orphans` never starts
+  it, and its `pull` never updates it; the job's own unit pulls first.
+- **Needs**: `ML_DB_PASSWORD` (already in `.env.production`) and a healthy
+  `market-trading`. It reads prices only over the private network. All other
+  variables are optional tuning (`ML_LONG_TRADE_*`; see the service README) and
+  hold no secrets.
+
+### Run it once by hand
+
+```bash
+cd /opt/tradeiq
+C="docker compose -f docker-compose.prod.yml --env-file .env.production"
+$C --profile jobs pull ml-long-trade-job
+$C --profile jobs run --rm ml-long-trade-job
+# a smoke run on two stocks:
+$C --profile jobs run --rm -e ML_LONG_TRADE_SYMBOLS=COMB.N0000,JKH.N0000 ml-long-trade-job
+echo "exit=$?"
+```
+
+Exit codes: `0` done (some models may have been skipped), `1` nothing could be
+trained, `2` bad `ML_LONG_TRADE_*` configuration, `3` database or market-trading
+unavailable. Anything non-zero makes the systemd unit fail.
+
+### Schedule it (proposed, not yet installed)
+
+`deploy/systemd/tradeiq-ml-long-trade.{service,timer}` run the job at **19:30
+Asia/Colombo, Monday to Friday**. CSE closes at 14:30, and cse-dataset's EOD
+cron starts at 14:45 and can take up to an hour. Please confirm the time before
+enabling it. The deploy script does not install these units:
+
+```bash
+sudo cp deploy/systemd/tradeiq-ml-long-trade.* /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now tradeiq-ml-long-trade.timer
+systemctl list-timers tradeiq-ml-long-trade.timer
+sudo systemctl start tradeiq-ml-long-trade.service     # run now, through systemd
+```
+
+### Logs
+
+The container is removed when it exits (`run --rm`), so `docker compose logs`
+has nothing to show for a finished run. The log lives in journald:
+
+```bash
+journalctl -u tradeiq-ml-long-trade.service -f           # live
+journalctl -u tradeiq-ml-long-trade.service --since today
+```
+
+Per run, look for:
+
+- `Long-trade run <id> started: 27 configurations per stock` at the start.
+- `Selected N of M securities (skipped: ...)`, which shows how big the run is.
+- One `Trained long-trade model symbol=... config=... prob_long=... is_long_signal=...`
+  line per model.
+- `WARNING ... Skipping <symbol>` / `Skipped <symbol> <config>`. These are
+  expected for thin or one-sided histories.
+- `ERROR` lines. `market-trading unavailable` and `Database error` stop the run
+  (exit 3). `Failed <symbol> <config>` with a traceback is a bug and should be
+  reported, but it doesn't stop the run.
+- The closing summary line,
+  `Long-trade run <id> succeeded|partial|failed: stocks=... models_trained=...
+  models_skipped=... models_failed=... elapsed=...s peak_rss_mb=...`.
+
+### Runtime and memory
+
+Measured locally (Docker, one core, 2,118 daily bars of COMB.N0000): about
+**0.3 s per model, so 8 s per stock** for the 27 configurations, with a peak
+RSS of **~215 MB**. The process holds one stock at a time, so memory does not
+grow with the number of stocks. The compose service is capped at
+`mem_limit: 768m`.
+
+On the t3.small, expect a slower core, perhaps **15–20 s per stock**. With a few
+hundred eligible securities, a full run should take **roughly 1–1.5 hours**.
+The unit's `TimeoutStartSec=3h` is the backstop. Use the first real run's
+`elapsed=` to replace this estimate. The job keeps one vCPU busy for its whole
+run, which draws on the t3 CPU-credit balance (check `CPUCreditBalance` in
+CloudWatch after the first week). To shorten it, narrow the universe
+(`ML_LONG_TRADE_SYMBOLS`) or the grid (`ML_LONG_TRADE_GRID`).
+
+### Check the results
+
+```bash
+$C exec db psql -U postgres -d ml -c "
+  SELECT started_at, status, data_as_of, symbols_requested, models_trained,
+         models_skipped, models_failed, completed_at - started_at AS took
+  FROM ml.long_trade_runs ORDER BY started_at DESC LIMIT 5"
+
+$C exec db psql -U postgres -d ml -c "
+  SELECT symbol, config_key, prob_long, is_long_signal
+  FROM ml.long_trade_predictions
+  WHERE data_as_of = (SELECT max(data_as_of) FROM ml.long_trade_predictions)
+  ORDER BY prob_long DESC LIMIT 20"
+```
+
+A run left at `status = 'running'` with no `completed_at` was killed (OOM, a
+reboot, the timeout). The predictions it had already written are kept.
+Re-running the same market day is safe: rows are upserted on
+`(symbol, config_key, data_as_of)`, never duplicated.
+
 ## Everyday operations
 
 All commands assume `cd /opt/tradeiq`. `C` below stands for
@@ -152,6 +261,7 @@ All commands assume `cd /opt/tradeiq`. `C` below stands for
 | What's running | `C ps` |
 | Memory pressure | `free -h` and `docker stats --no-stream` |
 | Pause deploys | `sudo systemctl stop tradeiq-deploy.timer` |
+| Long-trade job log | `journalctl -u tradeiq-ml-long-trade.service --since today` |
 | Check TLS renewal | `C run --rm --entrypoint certbot certbot renew --dry-run` |
 
 ### Rolling back

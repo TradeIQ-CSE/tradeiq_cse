@@ -129,6 +129,37 @@ services:
       ml-prediction-migrate:
         condition: service_completed_successfully
 
+  # The long-trade predictor (ADR 0011). A one-shot job: the "jobs" profile
+  # keeps it out of `up`, so the deploy timer's `up -d --remove-orphans` never
+  # starts it. deploy/systemd/tradeiq-ml-long-trade.timer runs it daily:
+  #   docker compose ... --profile jobs run --rm ml-long-trade-job
+  ml-long-trade-job:
+    image: ghcr.io/tradeiq-cse/tradeiq_cse/ml-long-trade:${IMAGE_TAG:-dev}
+    profiles: ["jobs"]
+    environment:
+      ML_DATABASE_URL: postgresql://ml:${ML_DB_PASSWORD:?set ML_DB_PASSWORD}@db:5432/ml
+      ML_MARKET_TRADING_API_URL: http://market-trading:3001
+      # Optional tuning, none of it secret; empty means the job's default.
+      ML_LONG_TRADE_SYMBOLS: ${ML_LONG_TRADE_SYMBOLS:-}
+      ML_LONG_TRADE_MIN_HISTORY_BARS: ${ML_LONG_TRADE_MIN_HISTORY_BARS:-}
+      ML_LONG_TRADE_TRAIN_LOOKBACK_DAYS: ${ML_LONG_TRADE_TRAIN_LOOKBACK_DAYS:-}
+      ML_LONG_TRADE_GRID: ${ML_LONG_TRADE_GRID:-}
+      ML_LONG_TRADE_N_JOBS: ${ML_LONG_TRADE_N_JOBS:-}
+      ML_LONG_TRADE_HTTP_TIMEOUT_SECONDS: ${ML_LONG_TRADE_HTTP_TIMEOUT_SECONDS:-}
+      ML_LONG_TRADE_LOG_LEVEL: ${ML_LONG_TRADE_LOG_LEVEL:-}
+    # One stock is in memory at a time, so the peak does not grow with the
+    # universe: about 215 MB measured (docs/ops/deployment.md). 768m leaves
+    # over 3x headroom for longer histories, yet a runaway job is OOM-killed
+    # inside its own cgroup instead of pushing Postgres or the API services
+    # into swap on a 2 GiB box.
+    mem_limit: 768m
+    depends_on:
+      ml-prediction-migrate:
+        condition: service_completed_successfully
+      market-trading:
+        condition: service_healthy
+    restart: "no"
+
   frontend:
     # Vite inlines the API origins at BUILD time, so this image is tied to
     # https://tradeiqcse.tech. The publish workflow passes them as build args;

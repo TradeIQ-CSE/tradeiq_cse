@@ -1,0 +1,26 @@
+# PROPOSED: runs the long-trade predictor once. Triggered by
+# tradeiq-ml-long-trade.timer, not enabled itself. Not installed by
+# tradeiq-deploy.sh; installing it is the platform owner's call:
+#
+#   sudo cp deploy/systemd/tradeiq-ml-long-trade.* /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now tradeiq-ml-long-trade.timer
+#
+# Run once now: sudo systemctl start tradeiq-ml-long-trade.service
+# Logs:         journalctl -u tradeiq-ml-long-trade.service -f
+[Unit]
+Description=Train the TradeIQ long-trade models and store today's predictions
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/opt/tradeiq
+# The deploy timer's `pull` skips profiled services, so without this the job
+# would keep running whatever image happened to be pulled first.
+ExecStartPre=/usr/bin/docker compose -f docker-compose.prod.yml --env-file .env.production --profile jobs pull --quiet ml-long-trade-job
+ExecStart=/usr/bin/docker compose -f docker-compose.prod.yml --env-file .env.production --profile jobs run --rm ml-long-trade-job
+# A full run is expected to take roughly 1-1.5 hours (docs/ops/deployment.md);
+# a hung one must not still be running when the next day's timer fires.
+TimeoutStartSec=3h

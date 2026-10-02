@@ -50,6 +50,10 @@ jobs:
           # runs this image on demand to import a price-history release.
           - service: data-ingestion
             dockerfile: pipeline/data-ingestion/Dockerfile
+          # Not a long-running service either: a systemd timer on the server
+          # runs it once a day (deploy/systemd/tradeiq-ml-long-trade.*).
+          - service: ml-long-trade
+            dockerfile: services/ml-prediction/Dockerfile.long-trade
     steps:
       - uses: actions/checkout@v4
 
