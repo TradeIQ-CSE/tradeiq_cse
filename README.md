@@ -18,8 +18,8 @@ CSE (Colombo Stock Exchange) strategy backtesting, paper-trading, and portfolio-
 │   │                        Owns the `market_data` Postgres database.
 │   ├── identity-auth/       NestJS. Auth, users, portfolios, orders, fills, lots, cash.
 │   │                        Owns the `auth` Postgres database.
-│   └── ml-prediction/       Python (FastAPI). Batch PPO directional predictions.
-│                            Owns the `ml` Postgres database.
+│   └── ml-prediction/       Python. FastAPI health API plus the scheduled long-trade predictor
+│                            (a one-shot batch job, ADR 0011). Owns the `ml` Postgres database.
 ├── pipeline/
 │   └── data-ingestion/      Python. Scheduled (not resident) job: fetches, normalises, and
 │                            validates CSE end-of-day data. Run on demand, not always-on.
@@ -35,14 +35,14 @@ CSE (Colombo Stock Exchange) strategy backtesting, paper-trading, and portfolio-
 
 ### Architecture rules (locked)
 
-- Three deployable API microservices (`market-trading`, `identity-auth`, `ml-prediction`) plus one
-  scheduled pipeline job (`data-ingestion`).
+- Three deployable API microservices (`market-trading`, `identity-auth`, `ml-prediction`) plus two
+  scheduled jobs (`data-ingestion`, and `ml-prediction`'s long-trade predictor).
 - **Each service owns its own database exclusively.** All databases live in a single shared
   Postgres instance (see `docker/db/init.sql`), but there is no cross-service database
   access — services only ever talk to each other over REST.
 - **Each service owns its own environment.** Every service has its own `.env.example`;
   one service's secrets are never visible to another.
-- The only ML in the system is the PPO prediction service in `ml-prediction`. No LLM/AI-text
+- The only ML in the system is the long-trade predictor in `ml-prediction` (ADR 0011). No LLM/AI-text
   features anywhere else.
 
 ## Prerequisites
@@ -76,7 +76,7 @@ This starts:
   note the sample lands a few seconds after `market-trading` starts serving.
   The import is idempotent — see [`pipeline/data-ingestion/README.md`](./pipeline/data-ingestion/README.md)
   for how to load the full 2017–2025 release
-- `ml-prediction` — the ML inference API
+- `ml-prediction` — the ML service's API (`/health` only for now)
 - `frontend` — the React SPA
 
 The `data-ingestion` job itself is **not** part of the default `up` — it's a
@@ -84,6 +84,15 @@ one-off/scheduled job, run with:
 
 ```sh
 docker compose run --rm data-ingestion
+```
+
+Nor is the long-trade predictor (`ml-long-trade-job`), which trains its models,
+stores the day's predictions in `ml` and exits. It sits under the `jobs`
+profile, needs real price history (the bundled sample is too short) and is
+described in [`services/ml-prediction/README.md`](./services/ml-prediction/README.md):
+
+```sh
+ML_LONG_TRADE_SYMBOLS=COMB.N0000 docker compose --profile jobs run --rm ml-long-trade-job
 ```
 
 ### Docker Compose smoke test
