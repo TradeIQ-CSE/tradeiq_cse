@@ -35,6 +35,10 @@ jobs:
           bash scripts/deploy-nginx-refresh.test.sh
           pnpm test:public-api-proxy
 
+      - name: Auth session cookie proxy regression
+        if: matrix.workspace == '@tradeiq/identity-auth'
+        run: bash scripts/auth-session-proxy-test.sh
+
       - name: Check bundled public API reference
         if: matrix.workspace == '@tradeiq/market-trading'
         run: pnpm api:reference:check
