@@ -1,0 +1,274 @@
+import {
+  FocusEvent,
+  KeyboardEvent,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
+import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
+import { getEnvelope } from "../../lib/api";
+import { readErrorText } from "../paper-trading/error-text";
+import { SecurityListItem } from "./types";
+import { SecuritySectorIcon } from "./SecuritySectorIcon";
+import { SelectedCompany } from "./SelectedCompany";
+import { InputBase, TextField } from "@/components/base/input/input";
+import { Label } from "@/components/base/input/label";
+import { RiSearchLine } from "@remixicon/react";
+import { cx } from "../../utils/cx";
+
+const SEARCH_DEBOUNCE_MS = 300;
+const MAX_RESULTS = 8;
+
+export interface CompanySearchProps {
+  /** Compact, unlabelled company navigation search in the app topbar. */
+  variant?: "field" | "topbar";
+  placeholder?: string;
+  className?: string;
+  value: string;
+  onChange: (symbol: string) => void;
+  disabled?: boolean;
+  label?: string;
+  showCompanyName?: boolean;
+  /** Called when a result is chosen from the list, not on every keystroke. */
+  onSelect?: (security: SecurityListItem) => void;
+}
+
+/** Shared API-backed company picker for trading forms and Markets navigation. */
+export function CompanySearch({ value, onChange, disabled, label, showCompanyName = false, onSelect, variant = "field", placeholder, className }: CompanySearchProps) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  // The keyboard-highlighted option, independent of `value` — this is what
+  // ArrowUp/ArrowDown move and Enter commits. -1 means nothing is
+  // highlighted (mouse-only interaction, or no results yet).
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [selectedSecurity, setSelectedSecurity] = useState<SecurityListItem | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const baseId = useId();
+  const listboxId = `${baseId}-listbox`;
+
+  useEffect(() => {
+    const handle = setTimeout(
+      () => setDebouncedValue(value),
+      SEARCH_DEBOUNCE_MS,
+    );
+    return () => clearTimeout(handle);
+  }, [value]);
+
+  const trimmed = debouncedValue.trim();
+
+  // A new search term invalidates whatever was previously highlighted — the
+  // list it referred to is about to change (or refetch).
+  useEffect(() => {
+    setActiveIndex(-1);
+  }, [value]);
+
+  useEffect(() => {
+    if (activeIndex >= 0) {
+      document.getElementById(`${listboxId}-option-${activeIndex}`)?.scrollIntoView?.({ block: "nearest" });
+    }
+  }, [activeIndex, listboxId]);
+
+  const { data, isFetching, isError, error } = useQuery({
+    queryKey: [
+      "securities",
+      { search: trimmed, sort: "symbol", page: 1, page_size: MAX_RESULTS },
+    ],
+    queryFn: () =>
+      getEnvelope<SecurityListItem[]>("/securities", {
+        search: trimmed,
+        sort: "symbol",
+        page: 1,
+        page_size: MAX_RESULTS,
+      }),
+    enabled: trimmed.length > 0,
+  });
+
+  const currentTerm = value.trim();
+  const isDebouncing = currentTerm !== trimmed;
+  const showDropdown = open && currentTerm.length > 0;
+  // Hide previous-query options immediately, including during the debounce.
+  const results = isDebouncing ? [] : data?.data ?? [];
+  // Use already-fetched search results, not an additional security request.
+  // Never display the old company's name beside an edited or cleared symbol.
+  const company = selectedSecurity?.symbol === value.trim() ? selectedSecurity
+    : results.find((security) => security.symbol === value.trim());
+  const companyNameId = `${baseId}-company-name`;
+
+  function selectResult(security: SecurityListItem) {
+    setSelectedSecurity(security);
+    onChange(security.symbol);
+    setOpen(false);
+    setActiveIndex(-1);
+    onSelect?.(security);
+  }
+
+  // Standard combobox keyboard behaviour: the input keeps DOM focus the
+  // whole time (nothing in the listbox is separately tabbable — see the
+  // ARIA notes below), and these keys move a *virtual* selection over it.
+  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Escape") {
+      if (!open) return;
+      event.preventDefault();
+      setOpen(false);
+      setActiveIndex(-1);
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      if (currentTerm.length === 0) return;
+      event.preventDefault();
+      if (!showDropdown) {
+        setOpen(true);
+        setActiveIndex(results.length > 0 ? 0 : -1);
+        return;
+      }
+      if (results.length === 0) return;
+      setActiveIndex((index) => (index + 1) % results.length);
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      if (!showDropdown || results.length === 0) return;
+      event.preventDefault();
+      setActiveIndex((index) => (index <= 0 ? results.length - 1 : index - 1));
+      return;
+    }
+
+    if (event.key === "Enter") {
+      // Only intercept Enter (and stop it from submitting the ticket form)
+      // when it is actually committing a highlighted option — otherwise
+      // Enter keeps its normal behaviour (e.g. triggering Confirm).
+      if (!showDropdown || activeIndex < 0 || activeIndex >= results.length)
+        return;
+      event.preventDefault();
+      selectResult(results[activeIndex]);
+    }
+  }
+
+  // Closing on blur has to distinguish "focus left the picker entirely"
+  // from "focus moved to something else inside it" — a plain onBlur on the
+  // input closed the dropdown (and, after the delay, unmounted the <ul>)
+  // regardless of where focus went next, which made any focusable element
+  // inside the results unreachable by keyboard. Checking `relatedTarget`
+  // against the container is the correct fix; nothing here is separately
+  // focusable any more (see the option markup below), but this still holds
+  // if that ever changes.
+  function handleBlur(event: FocusEvent<HTMLDivElement>) {
+    if (containerRef.current?.contains(event.relatedTarget as Node | null))
+      return;
+    setOpen(false);
+    setActiveIndex(-1);
+  }
+
+  return (
+    <div className={cx("relative min-w-0", className)} ref={containerRef} onBlur={handleBlur}>
+      <TextField aria-label={variant === "topbar" ? placeholder : undefined}>
+        {variant === "field" && <Label>{label ?? t("paperTrading.ticket.symbol")}</Label>}
+        <InputBase
+          type="text"
+          leadingIcon={RiSearchLine}
+          fieldClassName={variant === "topbar"
+            ? "rounded-full border border-border-button-default bg-background-primary-default"
+            : "ring-1 ring-inset ring-border-button-default"}
+          role="combobox"
+          aria-expanded={showDropdown}
+          aria-controls={listboxId}
+          aria-autocomplete="list"
+          aria-describedby={showCompanyName && company ? companyNameId : undefined}
+          aria-activedescendant={
+            showDropdown && activeIndex >= 0 && activeIndex < results.length
+              ? `${listboxId}-option-${activeIndex}`
+              : undefined
+          }
+          value={value}
+          disabled={disabled}
+          placeholder={placeholder ?? t("paperTrading.ticket.symbolPlaceholder")}
+          autoComplete="off"
+          required={variant === "field"}
+          onChange={(event) => {
+            onChange(variant === "field" ? event.target.value.toUpperCase() : event.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={handleKeyDown}
+        />
+      </TextField>
+      {showCompanyName && company && (
+        <div className="mt-3">
+          <SelectedCompany
+            symbol={company.symbol}
+            companyName={company.company_name}
+            sector={company.sector}
+            price={company.price}
+            historyFrom={company.data_from}
+            historyTo={company.data_to}
+            nameId={companyNameId}
+          />
+        </div>
+      )}
+
+      {showDropdown && (
+        <ul
+          className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-2lg border border-border-table bg-background-primary-default py-1 shadow-lg"
+          id={listboxId}
+          role="listbox"
+          // Scroll containers are natively tabbable in Chromium; keep focus on the input.
+          tabIndex={-1}
+          aria-label={placeholder ?? label ?? t("paperTrading.ticket.symbol")}
+          aria-busy={isDebouncing || isFetching}
+        >
+          {!isDebouncing && isError ? (
+            <li
+              className="px-3 py-2 text-body-medium text-text-error-primary"
+              role="alert"
+            >
+              {readErrorText(error, t("paperTrading.ticket.symbolError"))}
+            </li>
+          ) : results.length === 0 ? (
+            <li className="px-3 py-2 text-body-medium text-text-secondary">
+              {isDebouncing || isFetching
+                ? t("paperTrading.ticket.symbolSearching")
+                : t("paperTrading.ticket.symbolNoMatches")}
+            </li>
+          ) : (
+            results.map((security, index) => (
+              <li
+                key={security.symbol}
+                id={`${listboxId}-option-${index}`}
+                role="option"
+                aria-selected={index === activeIndex}
+                className={cx(
+                  "flex cursor-pointer items-center gap-2.5 rounded-xl px-2.5 py-2",
+                  index === activeIndex && "bg-background-secondary-hover",
+                )}
+                onMouseEnter={() => setActiveIndex(index)}
+                // Prevents the input from blurring before the click below is
+                // processed — the option is not itself focusable, so without
+                // this the mousedown would move focus (and close the
+                // dropdown) first and the click would land on nothing.
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => selectResult(security)}
+              >
+                <SecuritySectorIcon
+                  sector={security.sector}
+                  className="size-8 rounded-lg"
+                />
+                <span className="flex min-w-0 flex-col">
+                  <span className="text-body-medium text-text-primary">
+                    {security.symbol}
+                  </span>
+                  <span className="truncate text-body-2-medium text-text-secondary">
+                    {security.company_name}
+                  </span>
+                </span>
+              </li>
+            ))
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}

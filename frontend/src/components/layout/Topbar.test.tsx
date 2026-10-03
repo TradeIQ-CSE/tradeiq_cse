@@ -43,7 +43,7 @@ describe('Topbar', () => {
     const onChange = vi.fn();
     renderTopbar(['/markets'], { value: '', onChange });
 
-    const box = screen.getByRole('textbox', { name: t('topbar.searchPlaceholder') });
+    const box = screen.getByRole('combobox', { name: t('topbar.searchPlaceholder') });
     await user.type(box, 'JKH');
 
     expect(onChange).toHaveBeenCalledWith('J');

@@ -213,7 +213,7 @@ describe('MarketsPage', () => {
       ).toBeInTheDocument();
     });
 
-    const searchBox = screen.getByRole('textbox', { name: t('topbar.searchPlaceholder') });
+    const searchBox = screen.getByRole('combobox', { name: t('topbar.searchPlaceholder') });
     await user.type(searchBox, 'JKH');
 
     await waitFor(() => {
