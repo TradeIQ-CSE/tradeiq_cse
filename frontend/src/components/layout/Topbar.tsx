@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import { useLocation } from 'react-router-dom';
-import { RiMenuLine, RiSearchLine } from '@remixicon/react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { RiMenuLine } from '@remixicon/react';
 import { Breadcrumb, BreadcrumbItem } from '../base/breadcrumb/breadcrumb';
 import { Button } from '../base/buttons/button';
-import { Input } from '../base/input/input';
+import { CompanySearch } from '@/features/markets/CompanySearch';
 import { navRouteForPath } from '../../routes/navigation';
 import { useShell } from './ShellContext';
 
@@ -14,11 +14,12 @@ interface TopbarProps {
 export function Topbar({ onMenuClick }: TopbarProps) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const { topbarSearch } = useShell();
   const activeRoute = navRouteForPath(pathname);
 
   return (
-    <header className="app-shell-topbar-glass flex min-h-14 shrink-0 items-center justify-between gap-2 border-b border-app-glass-border px-3 sm:gap-3 sm:px-4">
+    <header className="app-shell-topbar-glass relative z-20 flex min-h-14 shrink-0 items-center justify-between gap-2 border-b border-app-glass-border px-3 sm:gap-3 sm:px-4">
       <div className="flex min-w-0 items-center gap-3">
         <Button
           variant="secondary"
@@ -37,14 +38,13 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
       <div className="flex min-w-0 flex-1 items-center justify-end gap-2 lg:flex-none">
         {topbarSearch && (
-          <Input
-            aria-label={topbarSearch.placeholder ?? t('topbar.searchPlaceholder')}
+          <CompanySearch
+            variant="topbar"
             placeholder={topbarSearch.placeholder ?? t('topbar.searchPlaceholder')}
             value={topbarSearch.value}
             onChange={topbarSearch.onChange}
-            leadingIcon={RiSearchLine}
+            onSelect={(security) => navigate(`/markets/${encodeURIComponent(security.symbol)}`)}
             className="min-w-0 flex-1 sm:w-64 sm:flex-none lg:w-80"
-            fieldClassName="rounded-full border border-border-button-default bg-background-primary-default"
           />
         )}
       </div>
