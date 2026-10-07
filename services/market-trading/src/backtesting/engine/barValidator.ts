@@ -19,8 +19,7 @@ export interface PreparedBars {
  */
 export function isValidDateFormat(dateString: string): boolean {
   return (
-    /^\d{4}-\d{2}-\d{2}$/.test(dateString) &&
-    !isNaN(Date.parse(dateString))
+    /^\d{4}-\d{2}-\d{2}$/.test(dateString) && !isNaN(Date.parse(dateString))
   );
 }
 
@@ -76,10 +75,7 @@ export function normalizeAndSortBars(
 /**
  * Validates individual bars for date uniqueness, date format, and OHLCV price/volume bounds.
  */
-export function validateBarSeries(
-  bars: DailyBar[],
-  isVersion2: boolean,
-): void {
+export function validateBarSeries(bars: DailyBar[], isVersion2: boolean): void {
   const seenDates = new Set<string>();
 
   for (const bar of bars) {

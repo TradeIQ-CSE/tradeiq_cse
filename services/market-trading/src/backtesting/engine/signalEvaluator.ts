@@ -99,7 +99,9 @@ export function evaluateSellSignal(
     params;
 
   const stopLossRule = sellConditions.find((r) => r.type === 'stop_loss_pct');
-  const takeProfitRule = sellConditions.find((r) => r.type === 'take_profit_pct');
+  const takeProfitRule = sellConditions.find(
+    (r) => r.type === 'take_profit_pct',
+  );
   const targetPriceRule = sellConditions.find((r) => r.type === 'target_price');
 
   if (stopLossRule) {

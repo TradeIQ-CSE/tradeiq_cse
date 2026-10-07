@@ -101,10 +101,7 @@ export function calculateMaxBuyAllocation(
   if (positionSizing.type === 'percentage') {
     const baseCapital = isVersion2 ? currentCash : initialCapital;
     const percentage = positionSizing.value ?? 100;
-    return Math.min(
-      currentCash,
-      round4(baseCapital * (percentage / 100)),
-    );
+    return Math.min(currentCash, round4(baseCapital * (percentage / 100)));
   }
   if (positionSizing.type === 'absolute') {
     return Math.min(currentCash, positionSizing.value ?? 0);
