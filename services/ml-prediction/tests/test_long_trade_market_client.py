@@ -1,3 +1,4 @@
+import json
 from datetime import date
 
 import httpx
@@ -121,3 +122,42 @@ def test_other_4xx_is_not_retried():
     with make_client(handler) as client, pytest.raises(MarketTradingError):
         client.daily_bars("COMB.N0000", from_date=date(2017, 1, 2))
     assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        None,
+        [],
+        {"data": [], "meta": None},
+        {"data": [], "meta": []},
+        {"data": {}, "meta": {"total": 1}},
+        {"data": [], "meta": {"total": True}},
+        {"data": [], "meta": {"total": -1}},
+        {"data": [{}], "meta": {"total": 1}},
+        {"data": [None], "meta": {"total": 1}},
+        {"data": [{"symbol": 123}], "meta": {"total": 1}},
+        {"data": [{"symbol": " "}], "meta": {"total": 1}},
+        {"data": [{"symbol": "A.N0000", "data_from": "invalid"}], "meta": {"total": 1}},
+    ],
+)
+def test_malformed_security_response_raises_market_error_without_retry(body):
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(200, content=json.dumps(body))
+
+    with make_client(handler) as client, pytest.raises(MarketTradingError):
+        client.list_securities()
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    "body",
+    [None, [], {"data": None}, {"data": []}, {"data": {"bars": {}}}, {"data": {"bars": [None]}}],
+)
+def test_malformed_bars_response_raises_market_error(body):
+    with make_client(lambda request: httpx.Response(200, content=json.dumps(body))) as client:
+        with pytest.raises(MarketTradingError):
+            client.daily_bars("COMB.N0000", from_date=date(2017, 1, 2))

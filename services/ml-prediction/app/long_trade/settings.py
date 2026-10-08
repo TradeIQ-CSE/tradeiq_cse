@@ -7,6 +7,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from urllib.parse import urlsplit, urlunsplit
 
+import httpx
+
 from .configs import DEFAULT_GRID, GridError, GridPoint, parse_grid
 
 DEFAULT_MIN_HISTORY_BARS = 400
@@ -79,7 +81,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
 
     return Settings(
         database_url=_required(env, "ML_DATABASE_URL"),
-        market_trading_api_url=_required(env, "ML_MARKET_TRADING_API_URL").rstrip("/"),
+        market_trading_api_url=_market_trading_api_url(env),
         symbols=symbols,
         min_history_bars=(
             _optional_int(env, "ML_LONG_TRADE_MIN_HISTORY_BARS", minimum=1)
@@ -91,6 +93,23 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         http_timeout_seconds=timeout,
         log_level=log_level,
     )
+
+
+def _market_trading_api_url(env: Mapping[str, str]) -> str:
+    """Reject invalid API addresses before opening a database run or HTTP client."""
+    value = _required(env, "ML_MARKET_TRADING_API_URL").rstrip("/")
+    try:
+        # Use the same parser as public_summary to reject malformed IPv6 and ports.
+        parts = urlsplit(value)
+        port = parts.port
+        url = httpx.URL(value)
+        valid = url.scheme in ("http", "https") and bool(url.host)
+        valid = valid and (port is None or 1 <= port <= 65535)
+    except (ValueError, httpx.InvalidURL) as exc:
+        raise SettingsError("ML_MARKET_TRADING_API_URL must be a valid HTTP(S) URL") from exc
+    if not valid:
+        raise SettingsError("ML_MARKET_TRADING_API_URL must be a valid HTTP(S) URL")
+    return value
 
 
 def _optional(env: Mapping[str, str], name: str) -> str | None:

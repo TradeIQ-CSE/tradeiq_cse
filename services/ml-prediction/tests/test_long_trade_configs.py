@@ -151,3 +151,27 @@ def test_recorded_settings_carry_no_credentials():
     assert "password" not in recorded
     assert "postgresql" not in recorded
     assert settings.public_summary()["market_trading_api_url"] == "http://market-trading:3001"
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://host:api/",
+        "http://[bad",
+        "not a url",
+        "://invalid",
+        "http:///",
+        "ftp://market-trading:3001",
+        "http://host:65536",
+        "http://host:0",
+    ],
+)
+def test_invalid_market_api_url_is_a_configuration_error(url):
+    with pytest.raises(SettingsError, match="ML_MARKET_TRADING_API_URL"):
+        load_settings({**BASE_ENV, "ML_MARKET_TRADING_API_URL": url})
+
+
+@pytest.mark.parametrize("url", ["http://market-trading:3001", "https://example.test/api/market"])
+def test_valid_market_api_url_preserves_its_path(url):
+    settings = load_settings({**BASE_ENV, "ML_MARKET_TRADING_API_URL": url + "/"})
+    assert settings.market_trading_api_url == url

@@ -3,10 +3,12 @@ import logging
 import uuid
 from datetime import date
 
+import httpx
 from sqlalchemy.exc import OperationalError
 
 from app.long_trade import main as job
 from app.long_trade.market_client import (
+    MarketTradingClient,
     MarketTradingUnavailable,
     MarketTradingUnreachable,
     Security,
@@ -223,3 +225,43 @@ def test_database_lost_mid_run_exits_non_zero():
     )
     assert code == job.EXIT_UNAVAILABLE
     assert repository.finished[0] == "failed"
+
+
+def test_invalid_api_url_exits_2_before_creating_a_run():
+    repository = FakeRepository()
+    assert (
+        run({"ML_MARKET_TRADING_API_URL": "http://host:api/"}, repository=repository)
+        == job.EXIT_CONFIG
+    )
+    assert repository.settings is None
+    assert not hasattr(repository, "definition")
+
+
+def test_malformed_universe_response_finishes_the_run_as_failed():
+    client = MarketTradingClient(
+        "http://market-trading:3001",
+        transport=httpx.MockTransport(lambda request: httpx.Response(200, json=[])),
+    )
+    repository = FakeRepository()
+    assert run(client=client, repository=repository) == job.EXIT_UNAVAILABLE
+    assert repository.finished[0] == "failed"
+
+
+def test_malformed_stock_response_does_not_stop_a_later_stock():
+    def handler(request):
+        body = {"data": []} if "BAD.N0000" in request.url.path else {"data": {"bars": SHORT_BARS}}
+        return httpx.Response(200, json=body)
+
+    client = MarketTradingClient(
+        "http://market-trading:3001", transport=httpx.MockTransport(handler)
+    )
+    repository = FakeRepository()
+    assert (
+        run(
+            {"ML_LONG_TRADE_SYMBOLS": "BAD.N0000,SHORT.N0000"}, client=client, repository=repository
+        )
+        == job.EXIT_NOTHING_TRAINED
+    )
+    counts = repository.finished[2]
+    assert counts.models_failed == 2
+    assert counts.models_skipped == 2

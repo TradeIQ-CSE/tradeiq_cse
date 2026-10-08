@@ -92,17 +92,31 @@ class MarketTradingClient:
         while True:
             body = self._get_json("/securities", {"page": page, "page_size": PAGE_SIZE})
             rows = body.get("data")
-            total = body.get("meta", {}).get("total")
-            if not isinstance(rows, list) or not isinstance(total, int):
-                raise MarketTradingError("GET /securities returned an unexpected shape")
-            securities.extend(
-                Security(
-                    symbol=row["symbol"],
-                    data_from=_parse_date(row.get("data_from")),
-                    data_to=_parse_date(row.get("data_to")),
+            meta = body.get("meta")
+            total = meta.get("total") if isinstance(meta, dict) else None
+            if (
+                not isinstance(rows, list)
+                or type(total) is not int
+                or total < 0
+                or not all(
+                    isinstance(row, dict)
+                    and isinstance(row.get("symbol"), str)
+                    and bool(row["symbol"].strip())
+                    for row in rows
                 )
-                for row in rows
-            )
+            ):
+                raise MarketTradingError("GET /securities returned an unexpected shape")
+            try:
+                securities.extend(
+                    Security(
+                        symbol=row["symbol"],
+                        data_from=_parse_date(row.get("data_from")),
+                        data_to=_parse_date(row.get("data_to")),
+                    )
+                    for row in rows
+                )
+            except ValueError as exc:
+                raise MarketTradingError("GET /securities returned invalid coverage dates") from exc
             # An empty page also ends it: out-of-range pages return 200 with
             # no data, so a total that shrank mid-walk cannot loop forever.
             if not rows or len(securities) >= total:
@@ -121,8 +135,9 @@ class MarketTradingClient:
         if to_date is not None:
             params["to"] = to_date.isoformat()
         body = self._get_json(f"/securities/{quote(symbol, safe='')}/ohlcv", params, symbol=symbol)
-        bars = body.get("data", {}).get("bars")
-        if not isinstance(bars, list):
+        data = body.get("data")
+        bars = data.get("bars") if isinstance(data, dict) else None
+        if not isinstance(bars, list) or not all(isinstance(bar, dict) for bar in bars):
             raise MarketTradingError(f"OHLCV for {symbol} returned an unexpected shape")
         return bars
 
@@ -144,9 +159,12 @@ class MarketTradingClient:
                             f"GET {path} returned {response.status_code}: {response.text[:200]}"
                         )
                     try:
-                        return response.json()
+                        body = response.json()
                     except ValueError as exc:
                         raise MarketTradingError(f"GET {path} returned invalid JSON") from exc
+                    if not isinstance(body, dict):
+                        raise MarketTradingError(f"GET {path} returned an unexpected shape")
+                    return body
                 failure = f"HTTP {response.status_code}"
 
             if attempt >= self._max_retries:
