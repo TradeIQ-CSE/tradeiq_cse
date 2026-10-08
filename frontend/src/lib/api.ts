@@ -14,7 +14,7 @@ export interface ApiErrorBody {
   message: string;
   fields?: { field: string; reason: string }[];
   // A caller-facing payload some codes carry alongside `message` — e.g.
-  // DATE_IN_DATA_GAP's { field, from, to } (docs/plans/data-gap-handling.md
+  // DATE_IN_DATA_GAP's { field, from, to } (docs/api/data-coverage.md
   // §2). Shape depends on `code`, so callers narrow it themselves.
   details?: Record<string, unknown>;
   trace_id: string;

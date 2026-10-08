@@ -89,7 +89,7 @@ describe('AllExceptionsFilter', () => {
     expect(body.error.code).toBe('DEPENDENCY_UNAVAILABLE');
   });
 
-  // docs/plans/data-gap-handling.md §2 — the caller needs the gap's bounds to
+  // docs/api/data-coverage.md §2 — the caller needs the gap's bounds to
   // show a useful message, and error-envelope.md documents `details` for
   // exactly this.
   it('surfaces details on DATE_IN_DATA_GAP', () => {

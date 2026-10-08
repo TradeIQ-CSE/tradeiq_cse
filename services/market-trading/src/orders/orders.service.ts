@@ -17,7 +17,12 @@ import {
   reserveIdempotencyKey,
 } from '../common/idempotency/idempotency';
 import { money, toJsonNumber, toNumericString } from '../common/money/money';
-import { allocateFifo, OpenLot, realizedPnl } from '../common/money/fifo';
+import {
+  allocateFifo,
+  LotAllocation,
+  OpenLot,
+  realizedPnl,
+} from '../common/money/fifo';
 import { PaperTradingQuotesService } from '../paper-trading-quotes/paper-trading-quotes.service';
 import { PricedOrder, priceOrder } from './execution';
 import { SubmitOrderDto } from './dto/submit-order.dto';
@@ -298,8 +303,7 @@ export class OrdersService {
       [orderId, portfolioId, dto.symbol, dto.side, dto.quantity, placedAt],
     );
 
-    // Sells consume lots FIFO; realized P/L is net proceeds less the cost
-    // allocated off those lots (§3.3). Buys realize nothing.
+    // A sell consumes the oldest lots first; buys have no realized profit/loss.
     const allocations =
       dto.side === 'sell'
         ? allocateFifo(
@@ -331,7 +335,56 @@ export class OrdersService {
       ],
     );
 
-    // One row per component, so the schedule applied stays auditable (§3.2).
+    await this.recordFillFees(manager, fillId, priced);
+    await this.recordCashMovement(
+      manager,
+      portfolioId,
+      fillId,
+      dto.side,
+      priced,
+      cashBefore,
+      placedAt,
+    );
+    await this.recordPositionChange(
+      manager,
+      portfolioId,
+      fillId,
+      dto,
+      priced,
+      allocations,
+      placedAt,
+    );
+
+    return {
+      order_id: orderId,
+      portfolio_id: portfolioId,
+      symbol: dto.symbol,
+      side: dto.side,
+      order_type: 'market',
+      quantity: dto.quantity,
+      filled_quantity: dto.quantity,
+      status: 'filled',
+      rejection_code: null,
+      placed_at: placedAt.toISOString(),
+      fill: {
+        fill_id: fillId,
+        fill_date: priced.fillDate,
+        settlement_date: priced.settlementDate,
+        quantity: dto.quantity,
+        price: toJsonNumber(priced.price),
+        gross_consideration: toJsonNumber(priced.gross),
+        fee_total: toJsonNumber(priced.fees.total),
+        cash_effect: toJsonNumber(priced.cashEffect),
+        realized_pnl: realized === null ? null : toJsonNumber(realized),
+      },
+    };
+  }
+
+  private async recordFillFees(
+    manager: EntityManager,
+    fillId: string,
+    priced: PricedOrder,
+  ): Promise<void> {
     for (const component of priced.fees.components) {
       await manager.query(
         `INSERT INTO market_data.fill_fees (fill_fee_id, fill_id, fee_type, rate_percent, amount)
@@ -345,9 +398,18 @@ export class OrdersService {
         ],
       );
     }
+  }
 
-    // Exactly one net cash row per fill. Component fees are never duplicated
-    // as separate cash transactions (§5.5).
+  private async recordCashMovement(
+    manager: EntityManager,
+    portfolioId: string,
+    fillId: string,
+    side: SubmitOrderDto['side'],
+    priced: PricedOrder,
+    cashBefore: ReturnType<typeof money>,
+    placedAt: Date,
+  ): Promise<void> {
+    // Fees are already included in the single net cash movement.
     const cashAfter = cashBefore.plus(priced.cashEffect);
     await manager.query(
       `INSERT INTO market_data.cash_transactions
@@ -357,7 +419,7 @@ export class OrdersService {
       [
         randomUUID(),
         portfolioId,
-        dto.side === 'buy' ? 'buy_debit' : 'sell_credit',
+        side === 'buy' ? 'buy_debit' : 'sell_credit',
         toNumericString(priced.cashEffect),
         fillId,
         priced.fillDate,
@@ -370,10 +432,19 @@ export class OrdersService {
       `UPDATE market_data.virtual_portfolios SET cash_balance = $2 WHERE portfolio_id = $1`,
       [portfolioId, toNumericString(cashAfter)],
     );
+  }
 
+  private async recordPositionChange(
+    manager: EntityManager,
+    portfolioId: string,
+    fillId: string,
+    dto: SubmitOrderDto,
+    priced: PricedOrder,
+    allocations: readonly LotAllocation[],
+    placedAt: Date,
+  ): Promise<void> {
     if (dto.side === 'buy') {
-      // §3.3 — a filled buy creates one lot whose original cost is the gross
-      // plus all buy fees, which is exactly the cash debited.
+      // The buy lot includes fees in its cost basis.
       const lotCost = toNumericString(priced.cashEffect.negated());
       await manager.query(
         `INSERT INTO market_data.position_lots
@@ -421,30 +492,6 @@ export class OrdersService {
         );
       }
     }
-
-    return {
-      order_id: orderId,
-      portfolio_id: portfolioId,
-      symbol: dto.symbol,
-      side: dto.side,
-      order_type: 'market',
-      quantity: dto.quantity,
-      filled_quantity: dto.quantity,
-      status: 'filled',
-      rejection_code: null,
-      placed_at: placedAt.toISOString(),
-      fill: {
-        fill_id: fillId,
-        fill_date: priced.fillDate,
-        settlement_date: priced.settlementDate,
-        quantity: dto.quantity,
-        price: toJsonNumber(priced.price),
-        gross_consideration: toJsonNumber(priced.gross),
-        fee_total: toJsonNumber(priced.fees.total),
-        cash_effect: toJsonNumber(priced.cashEffect),
-        realized_pnl: realized === null ? null : toJsonNumber(realized),
-      },
-    };
   }
 
   // §6.3 — ordered placed_at DESC, then order_id ASC.

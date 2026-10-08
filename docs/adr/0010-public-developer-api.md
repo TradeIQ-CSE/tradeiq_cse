@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-09-26
 - **Source:** SRS v1.1 §3.1.3, §3.4.3, §3.4.5, §3.4.6, §3.6.1, §3.9.1, §3.10.1
-  · SDD Fig. 1, Fig. 5, Fig. 12/13 · `docs/plans/developer-api.md`
+  · SDD Fig. 1, Fig. 5, Fig. 12/13
 - **Contract:** [public-api-v1.md](../api/public-api-v1.md)
 
 ## Context
@@ -118,4 +118,4 @@ Supporting decisions:
 - SDD Fig. 1 (C4), Fig. 5 (use cases), Fig. 12/13
 - [ADR 0009: `market-trading` owns paper trading](./0009-market-trading-owns-paper-trading.md)
 - [Public developer API v1](../api/public-api-v1.md)
-- `docs/plans/developer-api.md`
+- `docs/api/public-api-v1.md`

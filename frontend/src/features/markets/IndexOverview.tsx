@@ -128,7 +128,7 @@ function IndexBlock({
  *
  * The headline value is always the latest close. The charts never open on a
  * window that is mostly gap band: when the trailing year crosses a
- * `missing_data` gap (docs/plans/data-gap-handling.md), one control switches
+ * `missing_data` gap (docs/api/data-coverage.md), one control switches
  * both charts between the latest full year of data and the run since the
  * gap, and a note says plainly which months are missing.
  */
@@ -138,7 +138,7 @@ export function IndexOverview() {
   const { data, isPending, isError, error } = useIndices();
   // Never gates the headline values; only the charts wait for it to settle
   // (load or error), and an error falls back to no gaps and the API's
-  // default range, per docs/plans/data-gap-handling.md §3.
+  // default range, per docs/api/data-coverage.md §3.
   const coverageQuery = useDataCoverage();
   const indexGaps = useMemo(
     () => coverageQuery.data?.indices.gaps ?? [],

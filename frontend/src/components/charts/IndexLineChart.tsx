@@ -33,7 +33,7 @@ interface IndexLineChartProps {
   height?: number;
   /** Drives gap-slot insertion; matches CandlestickChart's own prop. */
   timeframe?: GapTimeframe;
-  /** Coverage gaps to render as slots (docs/plans/data-gap-handling.md §3–4). */
+  /** Coverage gaps to render as slots (docs/api/data-coverage.md §3–4). */
   gaps?: readonly DataGap[];
   /**
    * Reuses CandlestickChart's own gap-label shape rather than three more
@@ -251,7 +251,7 @@ export function IndexLineChart({
               // pan/zoom window to land entirely on a gap the way
               // CandlestickChart does) that recomputation finds nothing, and
               // the axis draws no ticks rather than falling back to
-              // `priceDomain` (docs/plans/data-gap-handling.md §4).
+              // `priceDomain` (docs/api/data-coverage.md §4).
               allowDataOverflow
               width={VALUE_AXIS_WIDTH}
               stroke={chartPalette.axis}

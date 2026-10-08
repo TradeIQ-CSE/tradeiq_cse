@@ -15,7 +15,7 @@ import { PublicIndicesService } from './public-indices.service';
 import { PublicSecuritiesController } from './public-securities.controller';
 import { PublicSecuritiesService } from './public-securities.service';
 
-// docs/api/public-api-v1.md, docs/plans/developer-api.md "Build" step 4 — the
+// docs/api/public-api-v1.md — the
 // six public read-only resources. ApiKeyGuard and RateLimitInterceptor are
 // applied per controller (@UseGuards/@UseInterceptors), not globally, so this
 // module's auth policy stays visible from the controllers themselves — the

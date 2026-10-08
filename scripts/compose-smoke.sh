@@ -225,6 +225,60 @@ compose up --detach --build --remove-orphans 2>&1 | tee "$smoke_log_dir/compose-
 wait_for_completed_job ml-prediction-migrate
 wait_for_completed_job market-data-seed
 
+# Check the actual runtime images after migrations and seeding have succeeded.
+for service in market-trading identity-auth; do
+  compose exec -T "$service" node -e '
+    const assert = require("node:assert/strict");
+    const fs = require("node:fs");
+    for (const path of ["src", "test", "tests", ".env", "tsconfig.json"]) {
+      assert.equal(fs.existsSync(path), false, `${path} leaked into the runtime`);
+    }
+    for (const dependency of ["@nestjs/cli", "jest", "eslint"]) {
+      assert.throws(() => require.resolve(dependency));
+    }
+    assert.ok(fs.readdirSync("dist/db/migrations").some(path => path.endsWith(".js")));
+  '
+done
+compose exec -T identity-auth node -e '
+  const assert = require("node:assert/strict");
+  const argon2 = require("argon2");
+  (async () => {
+    const hash = await argon2.hash("smoke-native-addon-check");
+    assert.equal(await argon2.verify(hash, "smoke-native-addon-check"), true);
+  })().catch(error => { console.error(error); process.exit(1); });
+'
+compose exec -T frontend node -e '
+  const assert = require("node:assert/strict");
+  const fs = require("node:fs");
+  assert.ok(fs.existsSync("dist/index.html"));
+  for (const path of ["src", "test", ".env"]) assert.equal(fs.existsSync(path), false);
+  assert.equal(require("./server/node_modules/serve/package.json").version, "14.2.6");
+  assert.equal(require("./server/node_modules/compression/package.json").version, "1.8.2");
+'
+for service in ml-prediction market-data-seed; do
+  compose run --rm --no-deps --entrypoint python "$service" -c '
+import importlib.metadata as metadata
+import importlib.util
+from pathlib import Path
+for name in ("pytest", "ruff", "uv"):
+    assert importlib.util.find_spec(name) is None, f"{name} leaked into the runtime"
+for path in ("src", "tests", ".env", "pyproject.toml", "uv.lock"):
+    assert not Path(path).exists(), f"{path} leaked into the runtime"
+try:
+    package = metadata.distribution("data-ingestion")
+except metadata.PackageNotFoundError:
+    import app.main
+    assert Path("alembic.ini").is_file()
+    assert any(Path("alembic/versions").glob("*.py"))
+else:
+    import data_ingestion.release_import as release
+    import data_ingestion.artifact as artifact
+    assert release.SAMPLE_ARTIFACT.joinpath("manifest.json").is_file()
+    assert artifact.MANIFEST_SCHEMA_PATH.is_file()
+'
+done
+echo "compose smoke: runtime packaging and native password hashing PASS"
+
 node "$repo_root/scripts/compose-smoke.mjs" 2>&1 | tee "$smoke_log_dir/journey.log"
 
 echo "compose smoke: PASS"

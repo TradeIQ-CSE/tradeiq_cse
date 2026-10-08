@@ -32,7 +32,7 @@ export interface ChartPalette {
   /**
    * Fill for the grey band a data gap draws across the price and volume
    * panels. One token for both `missing_data` and `market_closed`: the two
-   * kinds share the same mechanism (docs/plans/data-gap-handling.md §4) and
+   * kinds share the same mechanism (docs/api/data-coverage.md §4) and
    * are told apart by a lighter fill opacity on `market_closed` rather than
    * a second colour — see GapBands in components/charts/gap-band.tsx.
    */

@@ -25,7 +25,7 @@ import {
 
 // Formatted dates throughout this step follow the rest of the backtesting
 // feature (e.g. ReviewStep's LKR figures), which has no i18n wiring of its
-// own yet — see AGENTS.md's scope for this PR.
+// own yet.
 const NOTICE_LOCALE = "en-LK";
 
 function parseDateOr(value: string | null | undefined, fallback: CalendarDate) {

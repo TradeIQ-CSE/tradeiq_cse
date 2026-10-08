@@ -270,7 +270,7 @@ describe('BacktestWizard Workflow Integration', () => {
     });
   });
 
-  it('maps a DATE_IN_DATA_GAP submission error onto the period step (docs/plans/data-gap-handling.md §5)', async () => {
+  it('maps a DATE_IN_DATA_GAP submission error onto the period step (docs/api/data-coverage.md §5)', async () => {
     seedValidDraft();
     vi.spyOn(api, 'submitBacktestRun').mockRejectedValue(
       new ApiError({

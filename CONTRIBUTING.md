@@ -112,7 +112,7 @@ Example PR description:
 - wires Redis cache with EOD invalidation
 
 ## Validation
-- `pnpm --filter market-trading test`
+- `pnpm --dir services/market-trading run test`
 - `docker compose up` clean-run verified
 
 ## Issue
@@ -122,17 +122,18 @@ Closes #40
 ## Monorepo Ground Rules
 
 - Feature-branch workflow under PR review (SRS 3.5.1). No direct pushes to main.
-- `dev` is the default branch and where all feature PRs land. `main` is the
-  deployment branch: `dev` is squash-merged into it when cutting a release.
+- `dev` is the default branch and where feature PRs land. The image-publishing
+  workflow currently runs on pushes to `dev`; `main` is not its deployment trigger.
 - CodeRabbit reviews PRs into `dev` only. Commits reaching `main` were already
   reviewed on their way into `dev`, so release PRs are left alone — see
   `.coderabbit.yaml`.
 - CI must be green before merge: install, lint, typecheck, build, test.
-- TypeScript/Node changes: use `pnpm` from the repo root (workspace-managed).
+- TypeScript/Node changes: use the owning application's pnpm commands and lockfile.
+  `./scripts/install.sh` and `./scripts/check.sh` run checks across applications.
 - Python changes (`services/ml-prediction`, `pipeline/data-ingestion`): use `uv`.
 - The full stack must stay runnable via a single `docker compose up` — if your
   change adds a service, env var, or migration, update `docker-compose.yml`,
-  the owning service's `.env.example`, and the README accordingly.
+  the root `.env.example`, the owning service's configuration allowlist, and the README accordingly.
 - Each service owns its database exclusively — no cross-service SQL, ever.
   Cross-service data goes through REST APIs only (SRS 3.6.2).
 - Database schema changes come as new migration files in the service's
