@@ -11,7 +11,7 @@ read-only developer API. Market data is end-of-day; paper orders do not reach an
 frontend/                     React, Vite and TypeScript application
 services/market-trading/       Market data, backtesting, paper trading and developer API
 services/identity-auth/        Accounts, authentication and sessions
-services/ml-prediction/        ML API scaffold and database migrations
+services/ml-prediction/        Authenticated ML read API, batch predictor and database migrations
 pipeline/data-ingestion/      Historical dataset release importer
 scripts/                      Local startup, checks and integration smoke tests
 docker/db/                    Local database bootstrap

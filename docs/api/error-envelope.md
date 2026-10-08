@@ -49,6 +49,7 @@ Success responses never contain `error`; error responses never contain `data`.
 | 404 | `NOT_FOUND` | — | No resource at this path | Generic fallback 404 |
 | 404 | `SECURITY_NOT_FOUND` | — | `{symbol}` matches no security | Show "unknown symbol" state |
 | 404 | `INDEX_NOT_FOUND` | — | `{code}` matches no market index | Show "unknown index" state |
+| 405 | `METHOD_NOT_ALLOWED` | — | The route does not support this HTTP method | Use a documented method |
 | 409 | `CONFLICT` | — | State conflict (e.g. duplicate unique value) | Refresh state, surface message |
 | 409 | `API_KEY_EXISTS` | — | The user already has an active public-API key (public-api-v1.md §7.2) | Offer regenerate or revoke instead of create |
 | 422 | `BUSINESS_RULE_VIOLATION` | — | Well-formed request rejected by a domain rule (e.g. insufficient buying power) | Surface `message`; no field highlight |

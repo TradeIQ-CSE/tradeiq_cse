@@ -1,7 +1,7 @@
 [project]
 name = "ml-prediction"
 version = "0.0.0"
-description = "Batch ML predictions: the scheduled long-trade predictor and its health API"
+description = "Batch ML predictions: the scheduled long-trade predictor and its read-only results API"
 requires-python = ">=3.11,<3.13"
 dependencies = [
     "fastapi>=0.115.0",
@@ -9,6 +9,7 @@ dependencies = [
     "sqlalchemy>=2.0.36",
     "alembic>=1.13.3",
     "psycopg2-binary>=2.9.10",
+    "pyjwt[crypto]>=2.10,<3",
 ]
 
 [dependency-groups]
