@@ -4,10 +4,13 @@ Owns the `ml` Postgres database. Two deployables are built from this directory:
 
 | | Image | Runs | Entry point |
 |---|---|---|---|
-| Health API | `ml-prediction` (`Dockerfile`) | always (`docker compose up`) | `uvicorn app.main:app` |
+| Read-only prediction API | `ml-prediction` (`Dockerfile`) | always (`docker compose up`) | `uvicorn app.main:app` |
 | Long-trade job | `ml-long-trade` (`Dockerfile.long-trade`) | on demand; daily schedule requires operator setup | `python -m app.long_trade.main` |
 
-The API currently serves `/health` only. The rest of this README covers the
+The API serves `/health` and authenticated `GET /predictions/configurations`,
+`GET /predictions/status`, and `GET /predictions/{symbol}`. See the
+[read API contract](../../docs/api/ml-predictions-v1.md) for response schemas,
+selection rules, configuration and deployment requirements. The remaining sections cover the
 job. Why it exists and why it looks the way it does:
 [ADR 0011](../../docs/adr/0011-long-trade-batch-predictor.md).
 

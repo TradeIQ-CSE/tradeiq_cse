@@ -19,6 +19,7 @@ MARKET_INGESTION_TOKEN=ingestion-test-value
 POSTGRES_PASSWORD=database-test-value
 REDIS_URL=redis://localhost:6379
 ML_DATABASE_URL=postgresql://ml@example/ml
+ML_PREDICTION_CORS_ORIGINS=http://localhost:5173
 ML_MARKET_TRADING_API_URL=http://localhost:3001
 ML_LONG_TRADE_SYMBOLS=COMB.N0000
 ML_LONG_TRADE_GRID='{"take_profit_pct":[0.01],"stop_loss_pct":[0.005],"horizon_bars":[24],"test_days":[30]}'
@@ -39,6 +40,10 @@ test('local commands receive only their service settings, including inherited ov
       }, file);
       assert.equal(result.PATH, '/tool/path');
       assert.equal(result.POSTGRES_PASSWORD, undefined);
+      assert.equal(result.AUTH_JWT_PUBLIC_KEYS,
+        ['identity-auth', 'market-trading', 'ml-prediction'].includes(name) ? 'public-test-value' : undefined);
+      assert.equal(result.ML_PREDICTION_CORS_ORIGINS,
+        name === 'ml-prediction' ? 'http://localhost:5173' : undefined);
       assert.equal(result.AUTH_JWT_PRIVATE_KEY,
         name === 'identity-auth' ? 'shell-private' : undefined);
       assert.equal(result.MARKET_INGESTION_TOKEN,

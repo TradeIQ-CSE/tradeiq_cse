@@ -62,3 +62,10 @@ def synthetic_window(synthetic_bars) -> tuple[date, date]:
     return date.fromisoformat(synthetic_bars[0]["date"]), date.fromisoformat(
         synthetic_bars[-1]["date"]
     )
+
+
+@pytest.fixture(scope="session")
+def signing_key():
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    return rsa.generate_private_key(public_exponent=65537, key_size=2048)

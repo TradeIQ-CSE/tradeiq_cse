@@ -116,6 +116,9 @@ services:
       context: ./services/ml-prediction
     environment:
       ML_PREDICTION_PORT: 8001
+      NODE_ENV: ${NODE_ENV:-development}
+      AUTH_JWT_PUBLIC_KEYS: ${AUTH_JWT_PUBLIC_KEYS:?copy .env.example to .env}
+      ML_PREDICTION_CORS_ORIGINS: ${ML_PREDICTION_CORS_ORIGINS:-http://localhost:5173}
       ML_DATABASE_URL: postgresql://ml:changeme@db:5432/ml
     ports:
       - "${ML_PREDICTION_PORT:-8001}:8001"
