@@ -15,11 +15,20 @@ export interface PreparedBars {
 }
 
 /**
- * Validates date string format YYYY-MM-DD and parseable date.
+ * Validates a calendar date in YYYY-MM-DD form without accepting date rollover.
  */
 export function isValidDateFormat(dateString: string): boolean {
+  if (
+    typeof dateString !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(dateString)
+  ) {
+    return false;
+  }
+
+  const parsed = new Date(`${dateString}T00:00:00Z`);
   return (
-    /^\d{4}-\d{2}-\d{2}$/.test(dateString) && !isNaN(Date.parse(dateString))
+    !Number.isNaN(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === dateString
   );
 }
 

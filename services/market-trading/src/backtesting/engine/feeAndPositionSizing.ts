@@ -133,17 +133,18 @@ export function calculateBuyPositionExecution(
   );
 
   const totalFeeRate = calculateFeeRate(feeConfig);
+  const affordableQuantity = Math.floor(
+    maxAllocation / (executionPrice * (1 + totalFeeRate)),
+  );
 
   let initialQuantity =
     positionSizing.type === 'fixed_quantity'
       ? Math.floor(positionSizing.value ?? 0)
-      : Math.floor(maxAllocation / (executionPrice * (1 + totalFeeRate)));
+      : affordableQuantity;
 
-  if (isVersion2 && positionSizing.type === 'fixed_quantity') {
-    initialQuantity = Math.min(
-      initialQuantity,
-      Math.floor(maxAllocation / (executionPrice * (1 + totalFeeRate))) + 1,
-    );
+  if (positionSizing.type === 'fixed_quantity') {
+    // Keep one extra share for the rounded affordability check below.
+    initialQuantity = Math.min(initialQuantity, affordableQuantity + 1);
   }
 
   if (isVersion2 && !Number.isSafeInteger(initialQuantity)) {
