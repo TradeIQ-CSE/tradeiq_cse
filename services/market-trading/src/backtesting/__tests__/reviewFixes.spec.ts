@@ -78,6 +78,28 @@ describe('review fixes', () => {
       // 900 covers 89 shares (890 gross + 9.968 fees), not 90.
       expect(result.trades.find((t) => t.type === 'BUY')?.quantity).toBe(89);
     });
+
+    it.each([1e12, Infinity])(
+      'caps a legacy request for %s shares to the affordable quantity',
+      (requestedQuantity) => {
+        const result = runBacktest({
+          rules: BUY_AND_HOLD,
+          bars: [bar('2026-08-03', 10), bar('2026-08-04', 10)],
+          startDate: '2026-08-03',
+          endDate: '2026-08-04',
+          initialCapital: 900,
+          feeConfig: DEFAULT_TEST_FEES,
+          positionSizing: {
+            type: 'fixed_quantity',
+            value: requestedQuantity,
+          },
+        });
+
+        expect(result.trades.map((trade) => trade.quantity)).toEqual([89, 89]);
+        expect(result.finalCash).toBeCloseTo(880.064, 4);
+        expect(result.finalCash).toBe(result.finalEquity);
+      },
+    );
   });
 
   describe('a position opened on the final bar is closed', () => {
