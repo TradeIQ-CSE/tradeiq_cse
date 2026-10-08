@@ -1,8 +1,7 @@
+# Local stack: build applications from source and retain database data in db-data.
 name: tradeiq-cse
 
 services:
-  # Single Postgres instance hosting one database per service.
-  # Databases and users are created by docker/db/init.sql on first boot.
   db:
     image: postgres:16-alpine
     environment:
@@ -19,9 +18,6 @@ services:
       timeout: 5s
       retries: 10
 
-  # No persistence, no eviction concerns beyond what the hourly counters
-  # already need: every key carries its own TTL, so volatile-ttl (evict the
-  # key closest to expiring) is exactly the right policy under the 64mb cap.
   redis:
     image: redis:7-alpine
     command:
@@ -40,33 +36,24 @@ services:
       timeout: 5s
       retries: 10
 
-  # The Nest API services apply their own TypeORM migrations at startup
-  # (migrationsRun: true) before serving traffic. market-trading's healthcheck
-  # doubles as the "market_data schema is ready" signal for the seed job.
-
   market-trading:
-    image: tradeiq/market-trading
     build:
-      context: .
-      dockerfile: services/market-trading/Dockerfile
+      context: ./services/market-trading
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      MARKET_TRADING_PORT: ${MARKET_TRADING_PORT:-3001}
+      MARKET_TRADING_PORT: 3001
       MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@db:5432/market_data
       MARKET_TRADING_CORS_ORIGINS: ${MARKET_TRADING_CORS_ORIGINS:-http://localhost:5173}
       MARKET_INGESTION_TOKEN: ${MARKET_INGESTION_TOKEN:-}
       BACKTEST_MAX_DATE: ${BACKTEST_MAX_DATE:-2025-12-31}
+      PUBLIC_API_HOURLY_LIMIT: ${PUBLIC_API_HOURLY_LIMIT:-100}
       REDIS_URL: redis://redis:6379
-      # Verification only: the public half of the key identity-auth signs with,
-      # so nothing in this container can mint a token.
-      AUTH_JWT_PUBLIC_KEYS: ${AUTH_JWT_PUBLIC_KEYS:-LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUF1NHJEbFFvekVDT28yNEZMbWlHcgpyVGhSQkh5UFUxSlU0MjNEWjdSVlBQbnpFTWV0TElvZ1pGRkVBU1pKMzFDeW9yblNDUEJRY08zV0QzQ3FwT2xNClVUSFdUeHR5YTdxQmpIYzdQNUEzZ3kweHNBWXpDdHMvdWxONHBlVXY2cEN1R1JsNUp4cnpZNHZmZ2ZVQ1MrYk8KUitrRGkvZXVmdmM5V0ZWbGlOYk5tVlg0R05mK1E4dWZTNDhYYzY5OHJXQUVjRTR6RndJenoxazlqZG5jZ1U1bApRQzByQ1luRllTTnVtaFhlUTkzVjFoeWdFZDIreVBJTytCbHgrQXZuSm8yRW1vQThWRzQ4VUphOWEyR0JWVlNTCnNWUnJucGdPSzU2eVVoaVk3UnZlNHoyNXd3U2xzMjJTdGNIOGc3VW1YMjVDUTZ0b2NOYTZHOUI5bGk3bjVlMVAKendJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==}
+      AUTH_JWT_PUBLIC_KEYS: ${AUTH_JWT_PUBLIC_KEYS:?copy .env.example to .env}
     ports:
       - "${MARKET_TRADING_PORT:-3001}:3001"
     depends_on:
       db:
         condition: service_healthy
-      # Start order only: the service copes with Redis being down (fail
-      # open, ADR 0010), so it must not wait on Redis's healthcheck.
       redis:
         condition: service_started
     healthcheck:
@@ -80,15 +67,11 @@ services:
       retries: 12
       start_period: 10s
 
+  # Import the bundled sample, or the release named by CSE_DATASET_ARTIFACT.
   market-data-seed:
     build:
-      context: .
-      dockerfile: pipeline/data-ingestion/Dockerfile
+      context: ./pipeline/data-ingestion
     command: ["python", "-m", "data_ingestion.release_import"]
-    # Imports a cse-dataset release. Unset, CSE_DATASET_ARTIFACT loads the
-    # bundled sample; set it to a release URL for the 2017-2025 history (see
-    # pipeline/data-ingestion/README.md). A local zip is imported from the host
-    # with uv instead.
     environment:
       DATA_INGESTION_MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@db:5432/market_data
       CSE_DATASET_ARTIFACT: ${CSE_DATASET_ARTIFACT:-}
@@ -98,23 +81,17 @@ services:
     restart: "no"
 
   identity-auth:
-    image: tradeiq/identity-auth
     build:
-      context: .
-      dockerfile: services/identity-auth/Dockerfile
+      context: ./services/identity-auth
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      IDENTITY_AUTH_PORT: ${IDENTITY_AUTH_PORT:-3002}
+      IDENTITY_AUTH_PORT: 3002
       AUTH_DATABASE_URL: postgresql://auth:changeme@db:5432/auth
-      # The private half of the pair market-trading verifies with. Kept to this
-      # container alone; a verifier never sees it.
-      AUTH_JWT_PRIVATE_KEY: ${AUTH_JWT_PRIVATE_KEY:-LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRQzdpc09WQ2pNUUk2amIKZ1V1YUlhdXRPRkVFZkk5VFVsVGpiY05udEZVOCtmTVF4NjBzaWlCa1VVUUJKa25mVUxLaXVkSUk4RkJ3N2RZUApjS3FrNlV4Uk1kWlBHM0pydW9HTWR6cy9rRGVETFRHd0JqTUsyeis2VTNpbDVTL3FrSzRaR1hrbkd2TmppOStCCjlRSkw1czVINlFPTDk2NSs5ejFZVldXSTFzMlpWZmdZMS81RHk1OUxqeGR6cjN5dFlBUndUak1YQWpQUFdUMk4KMmR5QlRtVkFMU3NKaWNWaEkyNmFGZDVEM2RYV0hLQVIzYjdJOGc3NEdYSDRDK2NtallTYWdEeFVianhRbHIxcgpZWUZWVkpLeFZHdWVtQTRybnJKU0dKanRHOTdqUGJuREJLV3piWksxd2Z5RHRTWmZia0pEcTJodzFyb2IwSDJXCkx1Zmw3VS9QQWdNQkFBRUNnZ0VBQVUreWZmZnZDN29PMk43QlRHcVZtT2VLTStIbVZwam9pTWtqR3lzeWgzNkUKNDdwandJMEVXclVvYW5pT1hiUnAzN0JvUmtIdERPdnpiN0RiMnVIRVJHWW9iSjFnNXJ4cmNNSjNXZ2dnbmpZNwplTWZNbWlyUkQrMm1NMU9OeXVxeUpkc1lSU2ZiZU41Y0hyeFJubTlOalpJY0pCVG5CMEwwd2QzVkRTL24vNkhuCnIzOHV1Y0N4YmQrdHY1dXVjMjIySzdxUVdSYVRaVWVucG8yTjlGVWJ0M3p6MWZwc1ljWm1SaG5lczlBbkVudzUKT3c1UWF6b0RJN3lYVUtRMnJNTzRnTDdEZnFVbUdreE1sWWpYRld4L1QwVWNJVGZRbnBPVjd4dGZwT0tZUjBaQwpwZjRzMWJnRGJaaDRDdDl5d1doTFVPNWpsRUNvcXV4N0VKcXNZdUNoMFFLQmdRRDlOc1JXbU0veFYzWEU3YmMvClRPdzVBeWZoYW8wbU9KNWhnRzNzVms2OVB4L2EyUVJvZ1d2N0FWMUhrZTh3ckpsNUwyd0h1bnpVSkNDZkJjMnEKb0R5b1I1TXlFYWpqVTZnMEtDZHRPL25TKzl6ZnZwU2Y4aTdUaDFnUnVlUlNHZ2J1eGFubmJUdVZocDVmcTE3WQpHR0sybnVIWlNaNHBhbmRScG1uN1pkVVJud0tCZ1FDOW13U0UwZTFNM0psYWxWTHd3V3AvVXFoemIyNUhTR1RsCnVJVGh5em5iVG9QTWVTazIvM2wrU0ZSNXdoZ3hnK1d1ajhNVjNJMTJZSmVwTGpnQ29OU2VLaU9JM1AvWUZIZFMKTHl4cjBmUDBGdEpnUUp5b0tXaWdOZklqNHRwQ1F6UHFRS3pmeGVLUDFaQjNKd0pPMmx2WjM0d05yR3BLUzcvcwpPZklCTk1EejBRS0JnUUNpSmFMK3pTWkRwcno4bVRrQ0tSRVB4U3lSbGJqRFkvaFArWHpxbmE0WVU4YmpUcHNiCkROMkh3NnptK3RXUGRzZGtxZkJrMW8rL0RVOXlaYlg0OEZsSGJXWWQ1dDhlaTJDbjNacTV3WEZPSVFpa29wYnMKQVpyb3k3K2l3a1lxS1E2TmNqaEZ3VllwZnlZRm4yakJ1b1BqNjhRMmI0VC9nblRiN1ZQcXI2QU1nd0tCZ0VIQgpLT2dIQll6S1ZFU2QxSTI2QmZ6eDVZbGk4NU8wLzRqTFhRb1JPSmRkdTBlR0hVejlmRnpYS0xTeEkwTEl3emF1CmxMRllNNWNDR0phTGVORXdoWXYwZ1M1TnRreHhqSS9yM0RQb00vcEtqOXJoalhLa0theW1DTHQ1U01nQ0ZsYisKNXZVVDQyYU9ZZk53aTlSYzFjM1JRUGpjK2wrWnRZMXU2d2FRRFBxQkFvR0FDQm96SVY3b0RVbUVDcnUrY0NuQQpMVHZmV2VLWS9JUlpqam5VMVZBNHpVeWZEa1JUZmtOQjgwdll0WFI3d2ZSVUtKRVJRaFJJYnRCWThibXozYWp5ClI4NXhyTnVvcE1Rd1hiYmVpMmJ1MTAwQ0YyZUdTTW9LOTRCYm5ZQks2T1hBdVQ1RWtONlZvdngxVDRaRVFROUUKWFdhTFBnSkZybGxyOXhtalhVNXJyeFE9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K}
-      AUTH_EMAIL_ENCRYPTION_KEY: ${AUTH_EMAIL_ENCRYPTION_KEY:-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaShouldChange=}
-      # Compose serves plain HTTP, where a Secure cookie never reaches the app.
+      AUTH_JWT_PRIVATE_KEY: ${AUTH_JWT_PRIVATE_KEY:?copy .env.example to .env}
+      AUTH_EMAIL_ENCRYPTION_KEY: ${AUTH_EMAIL_ENCRYPTION_KEY:?copy .env.example to .env}
       AUTH_REFRESH_COOKIE_SECURE: ${AUTH_REFRESH_COOKIE_SECURE:-false}
-      # Derived from FRONTEND_PORT so moving the frontend does not silently
-      # break every browser call: credentials: true forbids a wildcard origin,
-      # so this list has to name the real one.
+      AUTH_ACCESS_TOKEN_TTL: ${AUTH_ACCESS_TOKEN_TTL:-5m}
+      AUTH_REFRESH_TOKEN_TTL: ${AUTH_REFRESH_TOKEN_TTL:-15d}
       IDENTITY_AUTH_CORS_ORIGINS: ${IDENTITY_AUTH_CORS_ORIGINS:-http://localhost:${FRONTEND_PORT:-5173}}
     ports:
       - "${IDENTITY_AUTH_PORT:-3002}:3002"
@@ -122,11 +99,10 @@ services:
       db:
         condition: service_healthy
 
+  # Apply ML migrations before starting its API.
   ml-prediction-migrate:
-    image: tradeiq/ml-prediction
     build:
-      context: .
-      dockerfile: services/ml-prediction/Dockerfile
+      context: ./services/ml-prediction
     command: ["alembic", "upgrade", "head"]
     environment:
       ML_DATABASE_URL: postgresql://ml:changeme@db:5432/ml
@@ -136,12 +112,10 @@ services:
     restart: "no"
 
   ml-prediction:
-    image: tradeiq/ml-prediction
     build:
-      context: .
-      dockerfile: services/ml-prediction/Dockerfile
+      context: ./services/ml-prediction
     environment:
-      ML_PREDICTION_PORT: ${ML_PREDICTION_PORT:-8001}
+      ML_PREDICTION_PORT: 8001
       ML_DATABASE_URL: postgresql://ml:changeme@db:5432/ml
     ports:
       - "${ML_PREDICTION_PORT:-8001}:8001"
@@ -156,11 +130,12 @@ services:
   # Prices come from market-trading over the private network, never from the
   # market_data database.
   ml-long-trade-job:
-    image: tradeiq/ml-long-trade
     build:
-      context: .
-      dockerfile: services/ml-prediction/Dockerfile.long-trade
+      context: ./services/ml-prediction
+      dockerfile: Dockerfile.long-trade
     profiles: ["jobs"]
+    cpus: 1.0
+    mem_limit: 768m
     environment:
       ML_DATABASE_URL: postgresql://ml:changeme@db:5432/ml
       ML_MARKET_TRADING_API_URL: http://market-trading:3001
@@ -181,11 +156,8 @@ services:
 
   frontend:
     build:
-      context: .
-      dockerfile: frontend/Dockerfile
-      # Build args, not `environment`: Vite bakes these into the bundle when
-      # the image is built, and the runtime stage only serves static files.
-      # These are browser-visible origins, so nothing secret belongs here.
+      context: ./frontend
+      # Vite compiles these public URLs into the frontend bundle.
       args:
         VITE_MARKET_TRADING_API_URL: ${VITE_MARKET_TRADING_API_URL:-http://localhost:3001}
         VITE_IDENTITY_AUTH_API_URL: ${VITE_IDENTITY_AUTH_API_URL:-http://localhost:3002}
@@ -197,12 +169,9 @@ services:
 
   data-ingestion:
     build:
-      context: .
-      dockerfile: pipeline/data-ingestion/Dockerfile
+      context: ./pipeline/data-ingestion
     profiles: ["pipeline"]
     environment:
-      # Legacy/local seed-compatible profile. Recurring EOD collection runs in
-      # cse-dataset and reaches this stack only through the ingestion API.
       DATA_INGESTION_MARKET_DATA_DATABASE_URL: postgresql://market_data:changeme@db:5432/market_data
       CSE_DATASET_ARTIFACT: ${CSE_DATASET_ARTIFACT:-}
     depends_on:

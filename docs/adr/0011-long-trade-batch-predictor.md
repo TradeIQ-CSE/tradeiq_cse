@@ -99,8 +99,9 @@ OHLCV API) and retraining as model 1.1 is the first follow-up.
   API serves these rows yet; exposing them is separate work.
 - The job's CPU time lands on the shared 2 GiB t3.small. It uses one core
   (`n_jobs=1`, BLAS capped), holds one stock at a time (~215 MB peak) and runs
-  under a 768 MB cgroup limit. It is scheduled after the CSE EOD delivery
-  (proposed 19:30 Asia/Colombo, weekdays).
+  under a 768 MB cgroup limit in local Compose. The production job is enabled
+  separately in server-owned configuration after the CSE EOD delivery
+  (proposed 19:30 Asia/Colombo, weekdays; rollout tracked in issue #190).
 - Upgrading XGBoost, the features or the grid changes the model. Re-run the
   parity check and bump `MODEL_VERSION`, so stored predictions stay
   attributable.

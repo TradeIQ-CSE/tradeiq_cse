@@ -293,7 +293,7 @@ export const BacktestWizardProvider: React.FC<{ children: React.ReactNode }> = (
         const apiFields = backtestApiValidationFields(err.body.fields, err.body.details);
         setSubmitFieldErrors(apiFields.length > 0 ? apiFields : null);
 
-        // DATE_IN_DATA_GAP (docs/plans/data-gap-handling.md §2) carries its
+        // DATE_IN_DATA_GAP (docs/api/data-coverage.md §2) carries its
         // gap bounds under `details`, not `fields` — the calendar and
         // client-side validation are meant to catch this first, so seeing it
         // here at all means coverage changed between load and submit.

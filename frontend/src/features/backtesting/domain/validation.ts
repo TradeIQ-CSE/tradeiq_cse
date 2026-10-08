@@ -15,7 +15,7 @@ const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
  * still waiting on coverage to load — keeps validating exactly as before;
  * a caller that has it loaded also catches a start/end date a typed edit or
  * a restored draft put inside a `missing_data` gap, with the same message
- * text the API itself would reject it with (docs/plans/data-gap-handling.md
+ * text the API itself would reject it with (docs/api/data-coverage.md
  * §5).
  */
 export function validateBacktestConfig(
@@ -117,7 +117,7 @@ export function validateBacktestConfig(
         });
       }
 
-      // Data-gap validation (docs/plans/data-gap-handling.md §5): the same
+      // Data-gap validation (docs/api/data-coverage.md §5): the same
       // rule the API applies before its own DATE_IN_DATA_GAP rejection,
       // mirrored via `backtestDateGap`'s weekend roll (start forward, end
       // backward), so a typed or restored draft can't slip a gap date past

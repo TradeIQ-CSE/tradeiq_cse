@@ -1,3 +1,17 @@
-node_modules
-dist
-.env
+# Only application build inputs enter this context.
+**
+!package.json
+!pnpm-lock.yaml
+!nest-cli.json
+!tsconfig*.json
+!src/
+!src/**
+**/__pycache__
+**/*.pyc
+**/*.spec.ts
+**/*.test.ts
+**/*.spec.tsx
+**/*.test.tsx
+**/__tests__
+**/test
+**/tests

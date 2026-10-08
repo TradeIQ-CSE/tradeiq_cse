@@ -1,4 +1,4 @@
-// Shared chart-side rendering for a data gap (docs/plans/data-gap-handling.md
+// Shared chart-side rendering for a data gap (docs/api/data-coverage.md
 // §4): the grey ReferenceArea band, its label, and the tooltip/screen-reader
 // text both CandlestickChart and IndexLineChart need. Kept separate from
 // lib/data-gaps.ts, which stays pure/framework-agnostic — everything here is
@@ -53,7 +53,7 @@ export function gapRowText(gap: DataGap, locale: string, labels: GapLabels): str
 
 /** A band needs roughly this many pixels before its label fits without
  * spilling past the band's own edges; narrower bands rely on the tooltip
- * instead (docs/plans/data-gap-handling.md §4). */
+ * instead (docs/api/data-coverage.md §4). */
 const MIN_LABEL_WIDTH = 90;
 
 interface LabelViewBox {

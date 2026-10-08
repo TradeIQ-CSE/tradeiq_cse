@@ -200,7 +200,7 @@ export class DeveloperKeysService {
       return rows[0]?.key_hash ?? null;
     });
 
-    // ApiKeyGuard's cache is checked before Postgres (docs/plans/developer-api.md
+    // ApiKeyGuard's cache is checked before Postgres (docs/adr/0010-public-developer-api.md
     // "Request path"), so a revoked key that stayed cached would keep
     // authenticating on this instance until the 60 s TTL expired — this must
     // be refused immediately (PR 4's brief).
@@ -321,7 +321,7 @@ export class DeveloperKeysService {
         created_at: toTimestamp(rows[0].created_at),
       };
     } catch (err) {
-      // Backstop for the partial unique index (docs/plans/developer-api.md
+      // Backstop for the partial unique index (docs/adr/0010-public-developer-api.md
       // "Build" step 5): a race that slips past the advisory lock — a lock
       // acquired against a stale connection, a bug in the lock key — must
       // still answer 409, not a raw 500. Any other unique violation (a

@@ -1,0 +1,12 @@
+{
+  "name": "@tradeiq/frontend-server",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Static frontend server used by the Docker runtime",
+  "dependencies": {
+    "serve": "14.2.6"
+  },
+  "overrides": {
+    "compression": "1.8.2"
+  }
+}

@@ -37,7 +37,7 @@ interface CandlestickChartProps {
    * monthly one per week/month entirely inside a gap. Defaults to "daily",
    * which is a no-op when `gaps` is empty either way. */
   timeframe?: GapTimeframe;
-  /** Coverage gaps to render as slots (docs/plans/data-gap-handling.md §3–4).
+  /** Coverage gaps to render as slots (docs/api/data-coverage.md §3–4).
    * Omit or pass an empty array for a chart with no known gaps — the chart
    * renders exactly as it did before this prop existed. */
   gaps?: readonly DataGap[];

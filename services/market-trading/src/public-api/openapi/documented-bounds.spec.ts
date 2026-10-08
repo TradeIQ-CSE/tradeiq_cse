@@ -6,7 +6,7 @@ import { PublicListIndicesQueryDto } from '../dto/public-list-indices-query.dto'
 import { PublicIndexValuesQueryDto } from '../dto/public-index-values-query.dto';
 import { PublicEodQueryDto } from '../dto/public-eod-query.dto';
 
-// docs/plans/developer-api.md "Tests" — every documented query parameter's
+// docs/adr/0010-public-developer-api.md "Tests" — every documented query parameter's
 // bounds (@ApiPropertyOptional on the DTO) must match what the DTO's own
 // class-validator decorators actually enforce (pagination-bounds.spec.ts),
 // so the hosted docs can never quietly drift from the real validation rule.

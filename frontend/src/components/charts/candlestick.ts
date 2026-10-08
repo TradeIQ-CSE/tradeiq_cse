@@ -8,7 +8,7 @@ import { DataGap } from '../../lib/data-gaps';
 export interface CandleDatum {
   open: number | null;
   /**
-   * `null` only for a gap slot (docs/plans/data-gap-handling.md §4): a
+   * `null` only for a gap slot (docs/api/data-coverage.md §4): a
    * placeholder bar with no real session behind it. A real bar's high/low/
    * close always come from the API, which never omits them.
    */
@@ -223,7 +223,7 @@ export function windowDomain(
  * The bars `windowDomain` should price the axis from: the visible window's
  * own real bars, or — when the whole window landed on a gap — the nearest
  * real bar just outside it on each side, so the axis never collapses to
- * `windowDomain`'s [0, 1] fallback (docs/plans/data-gap-handling.md §4).
+ * `windowDomain`'s [0, 1] fallback (docs/api/data-coverage.md §4).
  */
 export function domainBars(
   all: readonly ChartDatum[],

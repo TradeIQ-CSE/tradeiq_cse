@@ -5,7 +5,7 @@ Owns the `ml` Postgres database. Two deployables are built from this directory:
 | | Image | Runs | Entry point |
 |---|---|---|---|
 | Health API | `ml-prediction` (`Dockerfile`) | always (`docker compose up`) | `uvicorn app.main:app` |
-| Long-trade job | `ml-long-trade` (`Dockerfile.long-trade`) | once a day, then exits | `python -m app.long_trade.main` |
+| Long-trade job | `ml-long-trade` (`Dockerfile.long-trade`) | on demand; daily schedule requires operator setup | `python -m app.long_trade.main` |
 
 The API currently serves `/health` only. The rest of this README covers the
 job. Why it exists and why it looks the way it does:
@@ -66,11 +66,12 @@ counts. That and the other data gaps are covered in the ADR.
 Locally with uv, against the compose database and market-trading
 (`docker compose up -d db market-trading ml-prediction-migrate`):
 
+On macOS, XGBoost also requires the OpenMP runtime (`brew install libomp`).
+The Docker batch image includes its Linux runtime dependencies.
+
 ```sh
-cd services/ml-prediction
-export ML_DATABASE_URL=postgresql://ml:changeme@localhost:5432/ml
-export ML_MARKET_TRADING_API_URL=http://localhost:3001
-ML_LONG_TRADE_SYMBOLS=COMB.N0000 uv run --group long-trade python -m app.long_trade.main
+# From the repository root, after copying .env.example to .env:
+ML_LONG_TRADE_SYMBOLS=COMB.N0000 ./scripts/run.sh ml-prediction --group long-trade python -m app.long_trade.main
 ```
 
 In Docker (the `jobs` profile keeps it out of a plain `docker compose up`):
@@ -79,6 +80,16 @@ In Docker (the `jobs` profile keeps it out of a plain `docker compose up`):
 docker compose build ml-long-trade-job
 ML_LONG_TRADE_SYMBOLS=COMB.N0000,JKH.N0000 docker compose --profile jobs run --rm ml-long-trade-job
 ```
+
+Both Dockerfiles use `services/ml-prediction` as their build context. The batch
+image installs the locked `long-trade` dependency group and runs as a non-root
+user. The API image keeps its existing lightweight dependencies. Local Compose
+builds the job from source and limits it to one CPU and 768 MiB of memory.
+
+GitHub Actions publishes the batch image in `job_images.ml-long-trade` within the
+same completed release as the application images. The production scheduler and
+Compose service are server-owned; activation remains a separate operator step
+under issue #190. See [Deployment](../../docs/ops/deployment.md#scheduled-ml-training).
 
 The bundled seed sample holds about 7 sessions, so every stock is skipped
 (and the job exits 1). Load the 2017–2025 release first; see

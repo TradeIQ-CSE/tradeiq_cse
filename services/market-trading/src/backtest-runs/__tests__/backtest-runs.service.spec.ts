@@ -317,7 +317,7 @@ describe('BacktestRunsService - Unit Tests', () => {
     });
   });
 
-  describe('Data-gap validation (docs/plans/data-gap-handling.md §2)', () => {
+  describe('Data-gap validation (docs/api/data-coverage.md §2)', () => {
     const missingDataGap = {
       from: '2025-01-02',
       to: '2025-06-13',

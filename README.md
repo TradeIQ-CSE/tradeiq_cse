@@ -1,229 +1,195 @@
 # TradeIQ CSE
 
-CSE (Colombo Stock Exchange) strategy backtesting, paper-trading, and portfolio-analytics platform.
+TradeIQ helps users explore Colombo Stock Exchange data, test trading rules on
+historical prices and practise trades with virtual money. The application includes
+market charts, authentication, backtesting, portfolios, paper orders and a public
+read-only developer API. Market data is end-of-day; paper orders do not reach an exchange.
 
-> **Status:** functional prototype. The stack includes public market-data APIs,
-> authentication, paper-trading portfolios and orders, backtesting workflows,
-> migrations, and deterministic sample data. Some planned analytics, ML, and
-> operational features remain incomplete.
+## Repository layout
 
-## Layout
-
-```
-.
-├── frontend/                React (Vite + TS) SPA — investor-facing client. Routing stub only.
-│                            A separate admin UI may be added later as its own app.
-├── services/
-│   ├── market-trading/      NestJS. Market data, OHLCV, execution quotes, public API, backtesting.
-│   │                        Owns the `market_data` Postgres database.
-│   ├── identity-auth/       NestJS. Auth, users, portfolios, orders, fills, lots, cash.
-│   │                        Owns the `auth` Postgres database.
-│   └── ml-prediction/       Python. FastAPI health API plus the scheduled long-trade predictor
-│                            (a one-shot batch job, ADR 0011). Owns the `ml` Postgres database.
-├── pipeline/
-│   └── data-ingestion/      Python. Scheduled (not resident) job: fetches, normalises, and
-│                            validates CSE end-of-day data. Run on demand, not always-on.
-├── docker/
-│   └── db/init.sql          Creates one database + dedicated user per service inside the
-│                            single shared Postgres instance (first boot only).
-├── docs/
-│   ├── api/                 API contracts: market data, paper trading + structured errors.
-│   └── adr/                 Architecture Decision Records.
-├── docker-compose.yml       Brings up the shared Postgres instance, the 3 services, and the frontend.
-└── .github/workflows/       CI: install, lint, typecheck, build, test on every PR.
+```text
+frontend/                     React, Vite and TypeScript application
+services/market-trading/       Market data, backtesting, paper trading and developer API
+services/identity-auth/        Accounts, authentication and sessions
+services/ml-prediction/        ML API scaffold and database migrations
+pipeline/data-ingestion/      Historical dataset release importer
+scripts/                      Local startup, checks and integration smoke tests
+docker/db/                    Local database bootstrap
+config/nginx/                 Shared HTTP routing, cache and rate-limit rules
+.github/workflows/            CI checks and image publishing
+docs/api/                     API and behaviour contracts
+docs/adr/                     Architecture decisions
+docs/ops/                     Deployment instructions
+docker-compose.yml            Local assembled application
+.env.example                  Single configuration example
 ```
 
-### Architecture rules (locked)
+Each JavaScript application has its own `package.json`, `pnpm-lock.yaml` and
+`node_modules`. Each Python application has its own `pyproject.toml`, `uv.lock`
+and virtual environment. No dependency installation is needed at the repository root.
 
-- Three deployable API microservices (`market-trading`, `identity-auth`, `ml-prediction`) plus two
-  scheduled jobs (`data-ingestion`, and `ml-prediction`'s long-trade predictor).
-- **Each service owns its own database exclusively.** All databases live in a single shared
-  Postgres instance (see `docker/db/init.sql`), but there is no cross-service database
-  access — services only ever talk to each other over REST.
-- **Each service owns its own environment.** Every service has its own `.env.example`;
-  one service's secrets are never visible to another.
-- The only ML in the system is the long-trade predictor in `ml-prediction` (ADR 0011). No LLM/AI-text
-  features anywhere else.
+Production Compose, secrets, TLS settings and deployment helpers are owned by
+the server under `/opt/tradeiq`. They are not part of this application checkout.
+The VM runs published images without a source checkout or local builds.
 
-## Prerequisites
+## Requirements
 
-- [Node.js 20 LTS](https://nodejs.org/)
-- [pnpm](https://pnpm.io/) (`corepack enable` will pick up the version pinned in `package.json`)
-- [uv](https://docs.astral.sh/uv/) for the Python services (`ml-prediction`, `data-ingestion`)
-- [Docker](https://www.docker.com/) + Docker Compose
+- Node.js 20 (the local version is recorded in `.node-version`). With fnm: `fnm use`.
+- pnpm 9.15.0: `corepack enable && corepack prepare pnpm@9.15.0 --activate`.
+- uv and Python 3.11 or 3.12 for Python services.
+- Docker with Compose 2.24.4 or later.
 
-## Running everything locally
+## Local development with hot reload
+
+From this directory:
 
 ```sh
-cp .env.example .env   # compose-level values only; .env is gitignored
-docker compose up
+cp .env.example .env
+./scripts/install.sh
+./scripts/dev.sh
 ```
 
-This starts:
+`install.sh` installs each application's locked dependencies. `dev.sh` starts
+PostgreSQL and Redis, waits for them to become ready, then launches Vite and the
+two Nest services in watch mode. The frontend is at `http://localhost:5173`;
+market-trading is at port 3001 and identity-auth at port 3002.
 
-- `db` — a single Postgres instance hosting one database per service
-  (`market_data`, `auth`, `ml`), created by `docker/db/init.sql` on first boot
-- `market-trading`, `identity-auth` — the Nest API services. Each applies its
-  own TypeORM migrations at startup (`migrationsRun: true`) before accepting
-  traffic, so the schema is always up to date on a fresh `up`. `identity-auth`
-  is pointed at `market-trading` via `MARKET_TRADING_URL`, the only route by
-  which it reads market data — it never connects to `market_data` itself
-- `ml-prediction-migrate` — one-shot job applying the Alembic migrations;
-  `ml-prediction` starts only after it completes
-- `market-data-seed` — one-shot job that imports a cse-dataset release into
-  `market_data` once `market-trading` is healthy (i.e. its startup migrations
-  have finished). With no release configured it loads a small bundled sample;
-  note the sample lands a few seconds after `market-trading` starts serving.
-  The import is idempotent — see [`pipeline/data-ingestion/README.md`](./pipeline/data-ingestion/README.md)
-  for how to load the full 2017–2025 release
-- `ml-prediction` — the ML service's API (`/health` only for now)
-- `frontend` — the React SPA
-
-The `data-ingestion` job itself is **not** part of the default `up` — it's a
-one-off/scheduled job, run with:
+Ctrl+C stops the development watchers. PostgreSQL and Redis remain available,
+and their saved data is retained. To stop these containers:
 
 ```sh
-docker compose run --rm data-ingestion
+docker compose stop db redis
 ```
 
-Nor is the long-trade predictor (`ml-long-trade-job`), which trains its models,
-stores the day's predictions in `ml` and exits. It sits under the `jobs`
-profile, needs real price history (the bundled sample is too short) and is
-described in [`services/ml-prediction/README.md`](./services/ml-prediction/README.md):
+An empty database needs historical data before market charts and backtests can
+show results. After the market API starts and applies its migrations, import the
+bundled sample or the release configured in `CSE_DATASET_ARTIFACT`:
 
 ```sh
-ML_LONG_TRADE_SYMBOLS=COMB.N0000 docker compose --profile jobs run --rm ml-long-trade-job
+./scripts/run.sh data-ingestion python -m data_ingestion.release_import
 ```
 
-### Docker Compose smoke test
+The importer preserves a larger existing dataset when the bundled sample is
+selected. [Importer documentation](pipeline/data-ingestion/README.md) explains
+release validation and replacement rules.
 
-Run the production-shaped images together against a fresh, disposable database
-and exercise the public market APIs plus the authenticated paper-trading path:
+## Individual application commands
+
+JavaScript commands can run directly inside their application directory:
 
 ```sh
-pnpm smoke:compose
+cd frontend
+pnpm run dev
 ```
 
-The command uses a separate `tradeiq-smoke-*` Compose project, smoke-specific
-image tags, and alternate host ports, so a normal local TradeIQ stack can stay
-running. It checks both one-shot migration/seed jobs, service health, frontend
-assets, CORS, auth cookie rotation, portfolio idempotency, a real order call
-from `identity-auth` to `market-trading`, and the resulting positions and
-summary. Containers, networks, smoke-specific images, and the smoke database
-volume are removed when the command finishes.
-
-The default published ports are 55432 (Postgres), 53001 (market-trading),
-53002 (identity-auth), 58001 (ML), and 55173 (frontend). Override a port when
-needed, for example:
+Nest startup and migration commands load only their own settings from the root
+`.env`. The frontend loads root public `VITE_` settings. For Python commands or
+a consistent root entry point, use the service-aware launcher:
 
 ```sh
-SMOKE_MARKET_PORT=54001 pnpm smoke:compose
+./scripts/run.sh market-trading migration:run
+./scripts/run.sh identity-auth test:e2e --runInBand
+./scripts/run.sh ml-prediction alembic upgrade head
+./scripts/run.sh ml-prediction uvicorn app.main:app --reload --port 8001
+./scripts/run.sh ml-prediction --group long-trade python -m app.long_trade.main
+./scripts/run.sh data-ingestion python -m data_ingestion.release_import --artifact /path/to/release.zip
 ```
 
-Failure logs are written below the operating system's temporary directory in
-`tradeiq-smoke-logs/<project-name>`. To keep a failed local stack available for
-inspection, opt in explicitly:
+`run.sh` forwards arguments and the command's exit status. It gives the selected
+service its configuration without exporting other services' credentials.
+
+## Run the assembled application in Docker
 
 ```sh
-SMOKE_KEEP_STACK=1 pnpm smoke:compose
+cp .env.example .env  # when the local file does not exist yet
+docker compose up --detach --build
 ```
 
-When keeping a stack, use the project name printed by the command to remove
-only that stack after inspection:
+Compose builds our applications from their own directories; PostgreSQL and Redis
+use upstream images. This serves a compiled frontend. For source hot reload, use
+`./scripts/dev.sh` as described above. Database migrations and the sample/release
+import run on startup. Use `docker compose stop` to stop containers while retaining data.
+
+Each build context has its own `.dockerignore`. Backend images contain compiled
+code and production dependencies; Python images contain the installed application
+and runtime dependencies from `uv.lock`. The ML image also includes Alembic
+migration files. Build tools, local environment files and tests stay outside the
+runtime images. The frontend contains the static bundle and its small server,
+whose dependencies are locked in `frontend/server/package-lock.json`.
+
+To build one image independently:
 
 ```sh
-SMOKE_PROJECT_NAME=tradeiq-smoke-local-12345
-docker compose --project-name "$SMOKE_PROJECT_NAME" \
-  --file docker-compose.yml --file docker-compose.smoke.yml \
-  down --volumes --remove-orphans
+docker build -t tradeiq-market-local ./services/market-trading
 ```
 
-## API contracts
+The image-publishing workflow uses the same service directories. The server
+selects all application image digests from one completed GitHub release.
 
-- [Market-data endpoint catalogue](./docs/api/endpoint-catalogue-v0.md)
-- [Paper-trading v1 contract](./docs/api/paper-trading-v1.md)
-- [Public developer API v1](./docs/api/public-api-v1.md)
-- [Structured error envelope](./docs/api/error-envelope.md)
-- [Architecture decisions](./docs/adr/)
-
-## Local (non-Docker) development
-
-Install JS/TS dependencies once at the repo root:
+## Checks
 
 ```sh
-pnpm install
+./scripts/build.sh
+./scripts/test.sh
+./scripts/check.sh
+bash scripts/compose-smoke.sh
+bash scripts/public-api-proxy-test.sh
+bash scripts/auth-session-proxy-test.sh
 ```
 
-Then, from the repo root, workspace scripts fan out to every package:
+`check.sh` runs local tool regressions, JavaScript lint/type/build/unit checks,
+the generated API-reference check, and Python lint/unit tests. Database-backed
+integration tests run separately against disposable fixtures in CI and the
+Compose smoke test.
+
+The Compose smoke test uses a separate `tradeiq-smoke-*` project, database volume
+and ports: 55432, 53001, 53002, 58001 and 55173. It checks migrations, imports,
+authentication, cookie rotation, markets and paper orders, then removes only its
+own stack. Existing local and production data are not used. To change a port:
 
 ```sh
-pnpm dev         # run all services/apps in dev mode (parallel)
-pnpm build       # build all workspaces
-pnpm lint        # lint all workspaces
-pnpm typecheck   # typecheck all workspaces
-pnpm test        # run tests in all workspaces
+SMOKE_MARKET_PORT=54001 bash scripts/compose-smoke.sh
 ```
 
-Note: `pnpm test` runs unit tests only. `pnpm test:e2e` in a Nest service boots
-the full application — including the database connection and startup
-migrations — so it needs a reachable Postgres (e.g. `docker compose up db`)
-and the service's `.env` in place.
+Failure logs are under the system temporary directory in
+`tradeiq-smoke-logs/<project-name>`. `SMOKE_KEEP_STACK=1` retains the disposable
+stack for inspection; the command prints its project name.
 
-For the Python services, from each service directory:
+## Configuration and migrations
 
-```sh
-cd services/ml-prediction   # or pipeline/data-ingestion
-uv sync
-uv run ruff check .
-uv run pytest
-```
+The root [`.env.example`](.env.example) is the single tracked example. Local
+`.env` and existing server `.env.production` files remain untracked. Exported
+variables override the local file. Services running with `NODE_ENV=production`
+use injected settings and do not load the local file.
 
-## Databases & migrations
+Native database URLs use localhost; Compose supplies container-network URLs.
+When changing local ports, update the native connection URLs, browser origins
+and public frontend URLs together. Only `VITE_` settings enter the browser bundle.
+The example RSA pair is for local development and is rejected in production.
+Existing deployment signing and email-encryption keys must remain unchanged.
 
-Each service owns its schema via migrations. The same migrations run in CI
-against a fresh database.
+Nest services apply their own pending TypeORM migrations at startup. The ML
+schema uses the separate Alembic migration job. Database schema changes are new
+migration files, rather than edits to an applied migration.
 
-- `market-trading` / `identity-auth`: TypeORM migrations in
-  `services/<service>/src/db/migrations/`, applied automatically at app startup
-  (`migrationsRun: true` — the app migrates its own database before serving
-  traffic, in Docker and locally). The TypeORM CLI
-  (`migration:create` / `migration:run` / `migration:revert`, config in
-  `services/<service>/src/db/data-source.ts`) remains for authoring and manual
-  runs.
-- `ml-prediction`: Alembic migrations, config in `services/ml-prediction/alembic.ini`,
-  applied by the one-shot `ml-prediction-migrate` compose job.
+## API and delivery documentation
 
-## Environment variables
+- [Market endpoint catalogue](docs/api/endpoint-catalogue-v0.md)
+- [Backtesting strategies](docs/api/backtesting-strategies.md)
+- [Data coverage](docs/api/data-coverage.md)
+- [Paper trading](docs/api/paper-trading-v1.md)
+- [Public developer API](docs/api/public-api-v1.md)
+- [Reference maintenance](docs/api/reference-maintenance.md)
+- [Architecture decisions](docs/adr/)
+- [Current deployment](docs/ops/deployment.md)
 
-**Each service owns its own environment.** Every service/app has its own `.env.example`
-next to its code — copy it to `.env` (gitignored) inside that service's directory when
-running outside Docker:
-
-- [`services/market-trading/.env.example`](./services/market-trading/.env.example)
-- [`services/identity-auth/.env.example`](./services/identity-auth/.env.example)
-- [`services/ml-prediction/.env.example`](./services/ml-prediction/.env.example)
-- [`pipeline/data-ingestion/.env.example`](./pipeline/data-ingestion/.env.example)
-- [`frontend/.env.example`](./frontend/.env.example)
-
-The root [`.env.example`](./.env.example) is read **by docker-compose only** and holds just
-what compose needs to wire containers together (Postgres superuser, published ports). Compose
-injects only the variables each service needs, so one service's secrets are never visible to
-another. Nothing is hardcoded — every connection string, port, and secret is read from the
-environment.
-
-Inside the Nest services, env access goes through `@nestjs/config` only:
-`src/config/` holds namespaced `registerAs` factories (`app`, `database`, plus
-`auth` and `marketTrading` in identity-auth) and `env.validation.ts`, which fails fast at boot if a
-required variable is missing or malformed. Application code never reads
-`process.env` directly — inject `ConfigService` and use the namespaced keys
-(e.g. `config.getOrThrow('database.url')`). When adding a new variable, update
-the service's `.env.example`, `src/config/env.validation.ts`, and the matching
-`registerAs` factory together.
-
-## Branching & commits
-
-- Branch naming: `username/tiq-N-short-title`
-- Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/)
+CI installs and checks applications independently. On pushes to `dev`, publishing
+first runs the complete CI workflow, then builds the five application images and
+the separate ML batch image. Their digests are recorded in a completed GitHub
+release. See [Image releases](docs/ops/releases.md)
+for failure handling and rollback records. The VM timer checks completed release
+metadata and deploys the recorded image digests without fetching source code. Recurring data
+collection runs in the separate `cse-dataset` repository and delivers through the ingestion API.
 
 ### Supported backtesting period
 

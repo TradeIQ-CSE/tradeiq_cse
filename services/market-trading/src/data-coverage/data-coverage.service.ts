@@ -17,7 +17,7 @@ export interface DataCoverageResult {
   };
 }
 
-// docs/plans/data-gap-handling.md §1. Ten minutes is short enough that a
+// docs/api/data-coverage.md §1. Ten minutes is short enough that a
 // backfill loaded outside the API (seed loader, direct import) shows up on
 // its own without a restart, and long enough that the coverage endpoint and
 // the per-request backtest check (§2) do not re-scan ~2,100 dates on every

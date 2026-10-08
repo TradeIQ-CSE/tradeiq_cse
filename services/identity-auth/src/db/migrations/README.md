@@ -11,9 +11,9 @@ Migrations run **automatically at service startup** (`migrationsRun: true` in
 The TypeORM CLI remains available for authoring and manual runs:
 
 ```sh
-pnpm --filter @tradeiq/identity-auth run migration:create src/db/migrations/<Name>
-pnpm --filter @tradeiq/identity-auth run migration:run
-pnpm --filter @tradeiq/identity-auth run migration:revert
+./scripts/run.sh identity-auth migration:create src/db/migrations/<Name>
+./scripts/run.sh identity-auth migration:run
+./scripts/run.sh identity-auth migration:revert
 ```
 
 CLI config: `src/db/data-source.ts` (loads the service `.env` via dotenv).

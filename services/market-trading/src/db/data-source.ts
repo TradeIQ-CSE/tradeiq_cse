@@ -1,9 +1,8 @@
-import 'dotenv/config';
 import 'reflect-metadata';
-import * as dotenv from 'dotenv';
+import { loadLocalEnvironment } from '../config/local-environment';
 import { DataSource } from 'typeorm';
 
-dotenv.config();
+loadLocalEnvironment();
 
 export default new DataSource({
   type: 'postgres',

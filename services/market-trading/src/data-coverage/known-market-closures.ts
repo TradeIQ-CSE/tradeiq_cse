@@ -1,5 +1,5 @@
 // Curated CSE-wide closures long enough to otherwise register as a
-// `missing_data` gap (docs/plans/data-gap-handling.md "What counts as a
+// `missing_data` gap (docs/api/data-coverage.md "What counts as a
 // gap"). A gap in the data alone cannot tell a closure from an outage, so
 // these are hand-verified rather than inferred. Extend this list only for a
 // closure confirmed against a CSE circular or equivalent source — an
