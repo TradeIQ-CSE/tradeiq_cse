@@ -1,5 +1,18 @@
-.venv
-__pycache__
-*.pyc
-.pytest_cache
-.ruff_cache
+# Only application build inputs enter this context.
+**
+!pyproject.toml
+!uv.lock
+!app/
+!app/**
+!alembic.ini
+!alembic/
+!alembic/**
+**/__pycache__
+**/*.pyc
+**/*.spec.ts
+**/*.test.ts
+**/*.spec.tsx
+**/*.test.tsx
+**/__tests__
+**/test
+**/tests

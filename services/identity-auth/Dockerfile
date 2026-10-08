@@ -1,25 +1,24 @@
-FROM node:20-slim AS base
-WORKDIR /app
-RUN corepack enable \
-    && corepack prepare pnpm@9.15.0 --activate
-
-FROM base AS deps
-# argon2 falls back to node-gyp when a prebuilt binary is unavailable.
+FROM node:20-slim AS build
+WORKDIR /app/services/identity-auth
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+# Argon2 can compile its native addon when no prebuilt binary is available.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends python3 make g++ \
     && rm -rf /var/lib/apt/lists/*
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
-COPY services/identity-auth/package.json ./services/identity-auth/package.json
-RUN pnpm install --frozen-lockfile --filter @tradeiq/identity-auth...
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY nest-cli.json tsconfig*.json ./
+COPY src ./src
+RUN pnpm run build \
+    && test -f dist/main.js \
+    && rm -f dist/tsconfig.build.tsbuildinfo \
+    && pnpm prune --prod
 
-FROM base AS build
-COPY --from=deps /app /app
-COPY services/identity-auth ./services/identity-auth
-RUN pnpm --filter @tradeiq/identity-auth run build
-
-FROM base AS runtime
+FROM node:20-slim AS runtime
 ENV NODE_ENV=production
-COPY --from=build /app /app
 WORKDIR /app/services/identity-auth
+COPY --from=build /app/services/identity-auth/package.json ./
+COPY --from=build /app/services/identity-auth/node_modules ./node_modules
+COPY --from=build /app/services/identity-auth/dist ./dist
 EXPOSE 3002
 CMD ["node", "dist/main.js"]

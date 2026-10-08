@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_call:
   pull_request:
   push:
     branches: [main]
@@ -12,28 +13,36 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        workspace:
-          - "@tradeiq/market-trading"
-          - "@tradeiq/identity-auth"
-          - "@tradeiq/frontend"
+        include:
+          - workspace: "@tradeiq/market-trading"
+            directory: services/market-trading
+          - workspace: "@tradeiq/identity-auth"
+            directory: services/identity-auth
+          - workspace: "@tradeiq/frontend"
+            directory: frontend
     steps:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
 
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: pnpm
+          cache-dependency-path: ${{ matrix.directory }}/pnpm-lock.yaml
 
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir ${{ matrix.directory }} install --frozen-lockfile
 
       - name: Public API edge smoke regression tests
         if: matrix.workspace == '@tradeiq/market-trading'
         run: |
           node --test scripts/public-api-smoke.test.mjs
-          bash scripts/deploy-nginx-refresh.test.sh
-          pnpm test:public-api-proxy
+          bash scripts/public-api-proxy-test.sh
+          node --test scripts/local-tools.test.mjs
+          node --test scripts/release-manifest.test.mjs
+          bash scripts/publish-release.test.sh
 
       - name: Auth session cookie proxy regression
         if: matrix.workspace == '@tradeiq/identity-auth'
@@ -41,12 +50,12 @@ jobs:
 
       - name: Check bundled public API reference
         if: matrix.workspace == '@tradeiq/market-trading'
-        run: pnpm api:reference:check
+        run: pnpm --dir services/market-trading run api:reference:check
 
-      - run: pnpm --filter ${{ matrix.workspace }} run lint
-      - run: pnpm --filter ${{ matrix.workspace }} run typecheck
-      - run: pnpm --filter ${{ matrix.workspace }} run build
-      - run: pnpm --filter ${{ matrix.workspace }} run test
+      - run: pnpm --dir ${{ matrix.directory }} run lint
+      - run: pnpm --dir ${{ matrix.directory }} run typecheck
+      - run: pnpm --dir ${{ matrix.directory }} run build
+      - run: pnpm --dir ${{ matrix.directory }} run test
 
   python:
     name: python (${{ matrix.service }})
@@ -122,13 +131,20 @@ jobs:
           psql "postgresql://postgres:changeme@localhost:5432/postgres" -v ON_ERROR_STOP=1 -f docker/db/init.sql
 
       - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
 
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: pnpm
+          cache-dependency-path: |
+            services/market-trading/pnpm-lock.yaml
+            services/identity-auth/pnpm-lock.yaml
 
-      - run: pnpm install --frozen-lockfile
+      - run: |
+          pnpm --dir services/market-trading install --frozen-lockfile
+          pnpm --dir services/identity-auth install --frozen-lockfile
 
       - name: TypeORM migrations (market-trading)
         working-directory: services/market-trading
@@ -213,13 +229,16 @@ jobs:
           psql "postgresql://postgres:changeme@localhost:5432/postgres" -v ON_ERROR_STOP=1 -f docker/db/init.sql
 
       - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
 
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: pnpm
+          cache-dependency-path: services/market-trading/pnpm-lock.yaml
 
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir services/market-trading install --frozen-lockfile
 
       - name: TypeORM migrations (market-trading)
         working-directory: services/market-trading
@@ -286,8 +305,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: pnpm/action-setup@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -295,7 +312,7 @@ jobs:
       - name: Run isolated Compose smoke test
         env:
           SMOKE_LOG_DIR: ${{ runner.temp }}/tradeiq-compose-smoke
-        run: pnpm smoke:compose
+        run: bash scripts/compose-smoke.sh
 
       - name: Clean up smoke project
         if: always()

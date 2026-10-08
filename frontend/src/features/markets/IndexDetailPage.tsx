@@ -38,7 +38,7 @@ function IndexDetailView({ code }: { code: string }) {
   const locale = localeFor(i18n.resolvedLanguage ?? i18n.language);
   const indicesQuery = useIndices();
   // Never gates the chart: it renders with no gaps while this is loading or
-  // if it errors, per docs/plans/data-gap-handling.md §3.
+  // if it errors, per docs/api/data-coverage.md §3.
   const coverageQuery = useDataCoverage();
   const indexGaps = useMemo(
     () => coverageQuery.data?.indices.gaps ?? [],

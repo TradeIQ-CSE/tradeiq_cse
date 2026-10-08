@@ -12,9 +12,9 @@ Docker.
 The TypeORM CLI remains available for authoring and manual runs:
 
 ```sh
-pnpm --filter @tradeiq/market-trading run migration:create src/db/migrations/<Name>
-pnpm --filter @tradeiq/market-trading run migration:run
-pnpm --filter @tradeiq/market-trading run migration:revert
+./scripts/run.sh market-trading migration:create src/db/migrations/<Name>
+./scripts/run.sh market-trading migration:run
+./scripts/run.sh market-trading migration:revert
 ```
 
 CLI config: `src/db/data-source.ts` (loads the service `.env` via dotenv).

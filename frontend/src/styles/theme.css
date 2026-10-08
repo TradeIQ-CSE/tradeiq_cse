@@ -373,7 +373,7 @@
   --color-chart-up:   var(--color-gain);
   --color-chart-down: var(--color-loss);
 
-  /* Data-gap band (docs/plans/data-gap-handling.md §4): the same neutral
+  /* Data-gap band (docs/api/data-coverage.md §4): the same neutral
    * grey family as --color-chart-track below (a background region standing
    * in for "nothing was drawn here"), not a status colour. `market_closed`
    * reuses this same token at a lower fillOpacity rather than a second

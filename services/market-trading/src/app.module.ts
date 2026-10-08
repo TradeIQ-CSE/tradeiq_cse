@@ -10,6 +10,7 @@ import ingestionConfig from './config/ingestion.config';
 import publicApiConfig from './config/public-api.config';
 import redisConfig from './config/redis.config';
 import { validate } from './config/env.validation';
+import { loadLocalEnvironment } from './config/local-environment';
 import { DataCoverageModule } from './data-coverage/data-coverage.module';
 import { DeveloperApiModule } from './developer-api/developer-api.module';
 import { HealthModule } from './health/health.module';
@@ -26,11 +27,14 @@ import { EodIngestionModule } from './eod-ingestion/eod-ingestion.module';
 import { WatchlistModule } from './watchlist/watchlist.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 
+loadLocalEnvironment();
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
+      ignoreEnvFile: true,
       load: [
         appConfig,
         backtestingConfig,

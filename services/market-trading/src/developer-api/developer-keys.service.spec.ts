@@ -168,7 +168,7 @@ describe('DeveloperKeysService', () => {
       expect(lock).toBeLessThan(check);
     });
 
-    // Backstop for the partial unique index (docs/plans/developer-api.md):
+    // Backstop for the partial unique index (docs/adr/0010-public-developer-api.md):
     // a race that slips past the advisory lock still answers 409, not 500.
     it('maps a unique-constraint violation on the active-user index to API_KEY_EXISTS', async () => {
       txQuery.mockImplementation((sql: string) => {

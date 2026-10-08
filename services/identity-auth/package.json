@@ -2,7 +2,7 @@
   "name": "@tradeiq/identity-auth",
   "version": "0.0.0",
   "private": true,
-  "description": "Auth, users, portfolios, orders, fills, lots, cash",
+  "description": "Authentication, accounts and sessions",
   "scripts": {
     "build": "nest build",
     "dev": "nest start --watch",
@@ -29,7 +29,8 @@
     "pg": "^8.13.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "typeorm": "^0.3.20"
+    "typeorm": "^0.3.20",
+    "dotenv": "^16.4.5"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.24",
@@ -42,7 +43,6 @@
     "@types/supertest": "^6.0.2",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
-    "dotenv": "^16.4.5",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
@@ -72,5 +72,15 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
+  },
+  "engines": {
+    "node": ">=20 <21",
+    "pnpm": ">=9 <10"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "pnpm": {
+    "overrides": {
+      "multer": "2.4.0"
+    }
   }
 }

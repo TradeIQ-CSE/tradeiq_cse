@@ -33,10 +33,10 @@ docker run --detach --name "$proxy_project-nginx" --network "$proxy_project" \
   --publish "127.0.0.1:$proxy_port:443" \
   --mount "type=bind,src=$fixture_dir,dst=/fixtures,readonly" \
   --mount "type=bind,src=$fixture_dir/server.conf,dst=/etc/nginx/conf.d/default.conf,readonly" \
-  --mount "type=bind,src=$repo_root/deploy/nginx/common.conf,dst=/etc/nginx/common.conf,readonly" \
-  --mount "type=bind,src=$repo_root/deploy/nginx/cache.conf,dst=/etc/nginx/conf.d/cache.conf,readonly" \
-  --mount "type=bind,src=$repo_root/deploy/nginx/rate-limit.conf,dst=/etc/nginx/conf.d/rate-limit.conf,readonly" \
-  --mount "type=bind,src=$repo_root/deploy/nginx/proxy_params,dst=/etc/nginx/proxy_params,readonly" \
+  --mount "type=bind,src=$repo_root/config/nginx/common.conf,dst=/etc/nginx/common.conf,readonly" \
+  --mount "type=bind,src=$repo_root/config/nginx/cache.conf,dst=/etc/nginx/conf.d/cache.conf,readonly" \
+  --mount "type=bind,src=$repo_root/config/nginx/rate-limit.conf,dst=/etc/nginx/conf.d/rate-limit.conf,readonly" \
+  --mount "type=bind,src=$repo_root/config/nginx/proxy_params,dst=/etc/nginx/proxy_params,readonly" \
   nginx:1.29-alpine >/dev/null
 docker exec "$proxy_project-nginx" nginx -t
 base="https://localhost:$proxy_port"

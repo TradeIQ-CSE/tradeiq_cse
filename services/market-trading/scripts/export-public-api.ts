@@ -11,7 +11,7 @@ async function main() {
   if (process.argv.includes('--check')) {
     if ((await readFile(destination, 'utf8')) !== document) {
       throw new Error(
-        'Bundled API reference is stale. Run pnpm api:reference:generate.',
+        'Bundled API reference is stale. Run pnpm --dir services/market-trading run api:reference:generate.',
       );
     }
     console.log('Bundled API reference matches the public controllers.');

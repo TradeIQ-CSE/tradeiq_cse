@@ -107,7 +107,7 @@ which can differ from the price `as_of` (see §9).
 ### 2.5 Rate limiting
 
 Requests are rate-limited per client IP by the nginx edge
-(`deploy/nginx/rate-limit.conf`), not inside the services: nginx sees every
+(`config/nginx/rate-limit.conf`), not inside the services: nginx sees every
 replica's traffic, so the limit holds however many are running. Over-limit
 requests receive `429` with the standard error envelope — code `RATE_LIMITED`,
 a `trace_id` — and a `Retry-After: 60` header. There is no `reset_at` field.
@@ -579,7 +579,7 @@ for.
 Date coverage and detected gaps for prices and indices, so charts can draw a
 grey band instead of stretching a line across missing sessions, and so the
 backtest period picker can keep start/end dates out of an undetected outage.
-See [`docs/plans/data-gap-handling.md`](../plans/data-gap-handling.md) for the
+See [`docs/api/data-coverage.md`](data-coverage.md) for the
 full design.
 
 ### 200 — example

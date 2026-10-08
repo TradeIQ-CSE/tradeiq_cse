@@ -1,4 +1,4 @@
-// docs/plans/developer-api.md "Hour window helper" — shared by this PR's
+// docs/adr/0010-public-developer-api.md "Hour window helper" — shared by this PR's
 // usage view and PR 4's rate limiter, so the two can never disagree about
 // which UTC clock hour a request falls in or when it resets. ADR 0010: a
 // fixed clock-hour window, not a sliding one, is what makes a single

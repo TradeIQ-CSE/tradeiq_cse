@@ -1,4 +1,4 @@
-// Pure helpers for the data-gap plan (docs/plans/data-gap-handling.md §3).
+// Pure helpers for the data-gap plan (docs/api/data-coverage.md §3).
 // Framework-agnostic on purpose: charts (components/charts) and pages
 // (features/markets) both consume these, and neither should have to reach
 // into the other to draw a grey band or skip a missing-data date.

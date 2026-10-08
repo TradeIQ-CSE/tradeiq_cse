@@ -1,8 +1,8 @@
 # data-ingestion
 
-Scheduled (not resident) Python job: fetches, normalises, and validates CSE
-end-of-day data. Also provides the **release importer**, which runs as the
-`market-data-seed` one-shot on `docker compose up`.
+Historical release importer, run as the `market-data-seed` one-shot on
+`docker compose up`. Recurring end-of-day collection and delivery run in the
+separate cse-dataset repository.
 
 ## Release importer (`python -m data_ingestion.release_import`)
 
@@ -12,15 +12,18 @@ contract v1 (`docs/contracts/dataset-artifact-v1.md` there). The current one,
 `dataset-2025-12-31.2`, covers 2017-01-02 to 2025-12-31.
 
 ```sh
+# Run these commands from the platform repository root.
+# The launcher selects this job's settings from the root .env.
+
 # the bundled sample
-uv run python -m data_ingestion.release_import
+./scripts/run.sh data-ingestion python -m data_ingestion.release_import
 
 # the published 2017-2025 release
-uv run python -m data_ingestion.release_import --artifact \
+./scripts/run.sh data-ingestion python -m data_ingestion.release_import --artifact \
   https://github.com/TradeIQ-CSE/cse-dataset/releases/download/dataset-2025-12-31.2/cse-dataset-2025-12-31.2.zip
 
 # a local zip, or the same files unpacked into a directory
-uv run python -m data_ingestion.release_import --artifact ~/Downloads/cse-dataset-2025-12-31.2.zip
+./scripts/run.sh data-ingestion python -m data_ingestion.release_import --artifact ~/Downloads/cse-dataset-2025-12-31.2.zip
 
 # through compose
 CSE_DATASET_ARTIFACT=https://github.com/.../cse-dataset-2025-12-31.2.zip docker compose up market-data-seed

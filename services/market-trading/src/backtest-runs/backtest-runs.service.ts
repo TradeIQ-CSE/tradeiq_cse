@@ -219,7 +219,7 @@ export class BacktestRunsService {
     // 3.5 Data-gap validation. A start or end date that falls inside a
     // `missing_data` gap must not silently start (or end) the
     // simulation on the first bar the price lookup happens to find
-    // (docs/plans/data-gap-handling.md §2). A range that only crosses a gap
+    // (docs/api/data-coverage.md §2). A range that only crosses a gap
     // is accepted unchanged, and `market_closed` gaps (real market history,
     // like a weekend) never reject either end.
     // Gap bounds are always weekdays, so a weekend start is first moved

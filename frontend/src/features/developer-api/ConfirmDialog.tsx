@@ -17,7 +17,7 @@ interface ConfirmDialogProps {
 /**
  * The one confirmation dialog for Regenerate and Revoke. Controlled directly
  * (isOpen/onOpenChange), matching the pattern already used for the mobile nav
- * drawer (AppShell.tsx) and DesignSystemPreview's own confirm example: a
+ * drawer (AppShell.tsx): a
  * plain BoardUI Button doesn't wire up as a DialogTrigger's clonable child,
  * so ModalOverlay is driven from the caller's own open state instead.
  */

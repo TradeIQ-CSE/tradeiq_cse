@@ -90,7 +90,7 @@ interface GapStraddle {
 /** The gaps of both kinds this equity curve crosses, each paired with the
  * two real observations either side of it — matching the price charts,
  * which band a `market_closed` closure as well as a `missing_data` gap
- * (docs/plans/data-gap-handling.md §6). The curve only ever has a point on
+ * (docs/api/data-coverage.md §6). The curve only ever has a point on
  * a day the engine actually priced, so a crossed gap always shows up as
  * exactly one adjacent pair whose dates skip over it. */
 function findGapStraddles(
