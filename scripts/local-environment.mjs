@@ -29,7 +29,10 @@ export const services = {
   'ml-prediction': {
     directory: 'services/ml-prediction',
     command: 'uv',
-    keys: ['ML_DATABASE_URL', 'ML_PREDICTION_PORT'],
+    keys: ['ML_DATABASE_URL', 'ML_PREDICTION_PORT', 'ML_MARKET_TRADING_API_URL',
+      'ML_LONG_TRADE_SYMBOLS', 'ML_LONG_TRADE_MIN_HISTORY_BARS',
+      'ML_LONG_TRADE_TRAIN_LOOKBACK_DAYS', 'ML_LONG_TRADE_GRID', 'ML_LONG_TRADE_N_JOBS',
+      'ML_LONG_TRADE_HTTP_TIMEOUT_SECONDS', 'ML_LONG_TRADE_LOG_LEVEL'],
   },
   'data-ingestion': {
     directory: 'pipeline/data-ingestion',

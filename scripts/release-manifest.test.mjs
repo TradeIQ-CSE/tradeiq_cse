@@ -5,11 +5,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { createImageRecord, createReleaseManifest, RELEASE_SERVICES } from './release-manifest.mjs';
+import { createImageRecord, createReleaseManifest, RELEASE_SERVICES, RELEASE_JOBS, RELEASE_IMAGES } from './release-manifest.mjs';
 
 const commit = 'a'.repeat(40);
 const repository = 'TradeIQ-CSE/tradeiq_cse';
-const records = RELEASE_SERVICES.map((service, index) => createImageRecord({
+const records = RELEASE_IMAGES.map((service, index) => createImageRecord({
   repository, commit, service, digest: `sha256:${String(index).repeat(64)}`,
 }));
 const options = {
@@ -21,8 +21,11 @@ const script = fileURLToPath(new URL('./release-manifest.mjs', import.meta.url))
 test('complete release has matching SHA tags and immutable digest references in stable service order', () => {
   const result = createReleaseManifest({ ...options, records: [...records].reverse() });
   assert.deepEqual(Object.keys(result.images), RELEASE_SERVICES);
+  assert.deepEqual(Object.keys(result.job_images), RELEASE_JOBS);
+  assert.equal(Object.keys(result.images).length, 5);
   for (const record of records) {
-    assert.deepEqual(result.images[record.service], {
+    const collection = RELEASE_JOBS.includes(record.service) ? result.job_images : result.images;
+    assert.deepEqual(collection[record.service], {
       tag: `${record.image}:${commit}`, digest: record.digest,
       reference: `${record.image}@${record.digest}`,
     });
@@ -40,7 +43,7 @@ for (const [name, mutate] of [
   ['wrong image path', (value) => value.records[0].image = 'ghcr.io/another/repo/frontend'],
   ['missing digest', (value) => delete value.records[0].digest],
   ['malformed digest', (value) => value.records[0].digest = 'sha256:not-a-digest'],
-  ['unknown service', (value) => value.records[0].service = 'ml-long-trade'],
+  ['unknown service', (value) => value.records[0].service = 'unknown-worker'],
   ['invalid SHA', (value) => value.commit = 'dev'],
   ['unsupported channel', (value) => value.channel = 'feature/branch'],
   ['missing run ID', (value) => delete value.runId],
@@ -71,6 +74,7 @@ test('CLI assembles real image records and does not replace output for an incomp
     assert.equal(result.status, 0, result.stderr.toString());
     const manifest = JSON.parse(await readFile(output, 'utf8'));
     assert.deepEqual(manifest.images, createReleaseManifest(options).images);
+    assert.deepEqual(manifest.job_images, createReleaseManifest(options).job_images);
     await rm(join(directory, `${records[0].service}.json`));
     await writeFile(output, 'previous completed release');
     const failed = spawnSync(process.execPath, [script, 'release', directory, output], { env });

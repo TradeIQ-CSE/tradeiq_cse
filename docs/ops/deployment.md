@@ -40,8 +40,8 @@ an empty database or certificate store.
 
 ## Automatic deployment
 
-GitHub Actions runs CI and builds all five application images before publishing
-one completed release manifest. See [Image releases](releases.md).
+GitHub Actions runs CI and builds the five application images plus the ML batch
+image before publishing one completed release manifest. See [Image releases](releases.md).
 
 The systemd timer reads completed release metadata and GHCR images. It neither
 fetches source code nor builds images. Each update validates the manifest and
@@ -125,8 +125,51 @@ Record and verify a fresh backup before any database or certificate changes.
 Daily market delivery remains in the separate `cse-dataset` workflow using
 `TRADEIQ_INGESTION_API_URL` and `TRADEIQ_INGESTION_TOKEN`. The optional seed importer
 uses the image recorded in the same release and the `seed` profile. The ML batch
-schedule remains deferred to issue #190 alongside PR #187.
+schedule is enabled separately through the server-owned configuration described below.
 
 The frontend's API origin is compiled into its image. A domain change requires
 updating `PUBLIC_ORIGIN` in the publishing workflow and rebuilding; changing a VM
 environment value alone does not change the browser bundle.
+
+## Scheduled ML training
+
+The `ml-long-trade` image runs the model owner's batch command, writes results to
+the ML database and exits. The health API remains a separate, lightweight image.
+Normal application startup and deployment do not launch training.
+
+During rollout, add the job configuration to the server-owned `compose.yaml` and
+protected operator backups. Its `ml-long-trade-job` service must belong to the
+`jobs` profile, use the existing Docker network, and receive only ML settings:
+the database connection, internal market API URL and optional batch configuration.
+Configure one CPU, a 768 MiB memory limit and no restart policy.
+
+Before enabling the timer, complete the rollout checks in issue #190:
+
+- Select a completed release containing `job_images.ml-long-trade`. Validate the
+  selected manifest and checksum, and pull that image by its recorded digest.
+- Apply the ML migrations using the selected API image. Preserve existing database
+  data and credentials.
+- Confirm the intended market-data delivery has completed. Agree the schedule and
+  freshness policy with the ML owner; the proposed time is 19:30 Asia/Colombo on
+  weekdays. A clock time alone does not establish that ingestion succeeded.
+- Prevent overlapping jobs and application deployments, record the selected
+  release in the job logs, and retain journald output after the container exits.
+- Run one limited batch and inspect its exit code, saved run status and predictions,
+  CPU/memory usage and application health before enabling daily execution.
+
+The scheduler reads the batch image from the currently selected release and uses
+`--no-deps` after checking service health. It does not start or replace application
+containers. If a rollback selects a release without a batch image, training remains
+disabled until an appropriate release is selected again.
+
+Operator commands after the separately verified server update:
+
+```sh
+sudo systemctl start tradeiq-ml-long-trade.service
+journalctl -u tradeiq-ml-long-trade.service -n 100 --no-pager
+systemctl list-timers tradeiq-ml-long-trade.timer
+sudo systemctl stop tradeiq-ml-long-trade.timer
+```
+
+The timer is not installed or enabled by this application PR. Merging publishes
+the batch image for a later operator rollout; it preserves normal deployment.

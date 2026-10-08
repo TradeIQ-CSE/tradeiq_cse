@@ -43,6 +43,9 @@ jobs:
             context: frontend
           - service: data-ingestion
             context: pipeline/data-ingestion
+          - service: ml-long-trade
+            context: services/ml-prediction
+            dockerfile: Dockerfile.long-trade
     steps:
       - uses: actions/checkout@v4
         with:
@@ -71,7 +74,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
-          file: ${{ matrix.context }}/Dockerfile
+          file: ${{ matrix.context }}/${{ matrix.dockerfile || 'Dockerfile' }}
           push: true
           # Unique candidates cannot replace a previously completed commit tag.
           tags: ${{ steps.image.outputs.name }}:${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}

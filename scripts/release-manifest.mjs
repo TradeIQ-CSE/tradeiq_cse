@@ -6,6 +6,8 @@ import { pathToFileURL } from 'node:url';
 export const RELEASE_SERVICES = [
   'market-trading', 'identity-auth', 'ml-prediction', 'frontend', 'data-ingestion',
 ];
+export const RELEASE_JOBS = ['ml-long-trade'];
+export const RELEASE_IMAGES = [...RELEASE_SERVICES, ...RELEASE_JOBS];
 
 function requireMatch(value, pattern, name) {
   if (typeof value !== 'string' || !pattern.test(value)) {
@@ -16,7 +18,7 @@ function requireMatch(value, pattern, name) {
 
 function imageName(repository, service) {
   requireMatch(repository, /^[\w-]+\/[\w.-]+$/, 'repository');
-  if (!RELEASE_SERVICES.includes(service)) throw new Error(`Unknown service: ${service}`);
+  if (!RELEASE_IMAGES.includes(service)) throw new Error(`Unknown service: ${service}`);
   return `ghcr.io/${repository.toLowerCase()}/${service}`;
 }
 
@@ -39,8 +41,8 @@ export function createReleaseManifest({
     throw new Error('Public origin must be an HTTPS origin without a path');
   }
   if (!Number.isFinite(Date.parse(createdAt))) throw new Error('Invalid creation date');
-  if (!Array.isArray(records) || records.length !== RELEASE_SERVICES.length) {
-    throw new Error('Release requires exactly five image records');
+  if (!Array.isArray(records) || records.length !== RELEASE_IMAGES.length) {
+    throw new Error('Release requires all five application images and the ML batch image');
   }
 
   const images = {};
@@ -56,7 +58,7 @@ export function createReleaseManifest({
       reference: `${record.image}@${record.digest}`,
     };
   }
-  for (const service of RELEASE_SERVICES) {
+  for (const service of RELEASE_IMAGES) {
     if (!images[service]) throw new Error(`Missing service: ${service}`);
   }
 
@@ -73,6 +75,9 @@ export function createReleaseManifest({
       url: `https://github.com/${repository}/actions/runs/${runId}`,
     },
     images: Object.fromEntries(RELEASE_SERVICES.map((service) => [service, images[service]])),
+    // Keep the application image set compatible with the existing EC2 consumer.
+    // The separately enabled scheduler reads batch images from this same release.
+    job_images: Object.fromEntries(RELEASE_JOBS.map((service) => [service, images[service]])),
   };
 }
 

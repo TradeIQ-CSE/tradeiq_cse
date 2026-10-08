@@ -19,6 +19,9 @@ MARKET_INGESTION_TOKEN=ingestion-test-value
 POSTGRES_PASSWORD=database-test-value
 REDIS_URL=redis://localhost:6379
 ML_DATABASE_URL=postgresql://ml@example/ml
+ML_MARKET_TRADING_API_URL=http://localhost:3001
+ML_LONG_TRADE_SYMBOLS=COMB.N0000
+ML_LONG_TRADE_GRID='{"take_profit_pct":[0.01],"stop_loss_pct":[0.005],"horizon_bars":[24],"test_days":[30]}'
 VITE_MARKET_TRADING_API_URL="http://localhost:3001" # public
 CSE_DATASET_ARTIFACT='/tmp/release with spaces.zip'
 `);
@@ -32,6 +35,7 @@ test('local commands receive only their service settings, including inherited ov
         PATH: '/tool/path', AUTH_JWT_PRIVATE_KEY: 'shell-private',
         POSTGRES_PASSWORD: 'shell-password', MARKET_INGESTION_TOKEN: 'shell-token',
         VITE_MARKET_TRADING_API_URL: 'https://example.test/api/market',
+        ML_LONG_TRADE_N_JOBS: '1',
       }, file);
       assert.equal(result.PATH, '/tool/path');
       assert.equal(result.POSTGRES_PASSWORD, undefined);
@@ -41,6 +45,14 @@ test('local commands receive only their service settings, including inherited ov
         name === 'market-trading' ? 'shell-token' : undefined);
       assert.equal(result.VITE_MARKET_TRADING_API_URL,
         name === 'frontend' ? 'https://example.test/api/market' : undefined);
+      assert.equal(result.ML_MARKET_TRADING_API_URL,
+        name === 'ml-prediction' ? 'http://localhost:3001' : undefined);
+      assert.equal(result.ML_LONG_TRADE_SYMBOLS,
+        name === 'ml-prediction' ? 'COMB.N0000' : undefined);
+      assert.equal(result.ML_LONG_TRADE_N_JOBS,
+        name === 'ml-prediction' ? '1' : undefined);
+      if (name === 'ml-prediction') assert.equal(JSON.parse(result.ML_LONG_TRADE_GRID).horizon_bars[0], 24);
+      else assert.equal(result.ML_LONG_TRADE_GRID, undefined);
     }
     assert.equal(serviceEnvironment('data-ingestion', {}, file).CSE_DATASET_ARTIFACT,
       '/tmp/release with spaces.zip');

@@ -48,7 +48,7 @@ import { createReleaseManifest } from './scripts/release-manifest.mjs';
 const manifest = JSON.parse(readFileSync(process.argv[2], 'utf8'));
 const repository = process.env.GITHUB_REPOSITORY;
 const commit = process.env.GITHUB_SHA;
-const records = Object.entries(manifest.images ?? {}).map(([service, image]) => ({
+const records = [...Object.entries(manifest.images ?? {}), ...Object.entries(manifest.job_images ?? {})].map(([service, image]) => ({
   repository: manifest.repository, commit: manifest.commit, service,
   image: image.reference?.split('@')[0], digest: image.digest,
 }));
@@ -58,7 +58,9 @@ const validated = createReleaseManifest({
   publicOrigin: manifest.public_origin, createdAt: manifest.created_at,
 });
 if (!isDeepStrictEqual(validated, manifest)) throw new Error('Manifest metadata or image references differ from the validated release');
-for (const image of Object.values(validated.images)) console.log(`${image.tag} ${image.reference}`);
+for (const image of [...Object.values(validated.images), ...Object.values(validated.job_images)]) {
+  console.log(`${image.tag} ${image.reference}`);
+}
 JS
 
 # Create the lightweight tag explicitly; a draft release may not create it yet.
@@ -76,7 +78,7 @@ node -e 'const tag=JSON.parse(require("node:fs").readFileSync(process.argv[1]));
 # Upload everything while the release is a draft. Only the final edit makes it deployable.
 if [[ ! -s "$work_dir/existing.json" ]]; then
   gh release create "$release_tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-    --title "dev ${GITHUB_SHA:0:12}" --notes "CI passed; all five image digests are recorded in release.json." \
+    --title "dev ${GITHUB_SHA:0:12}" --notes "CI passed; all application and batch image digests are recorded in release.json." \
     --draft --prerelease --latest=false
 fi
 cp "$manifest" "$work_dir/release.json"

@@ -7,16 +7,15 @@ cancelled checks prevent publishing.
 
 ## Publication sequence
 
-1. Build and push five candidate images: market-trading, identity-auth,
-   ml-prediction, frontend and data-ingestion. Each candidate tag includes the
-   commit SHA, workflow run ID and attempt. The separate ML batch job is deferred
-   to issue #190 alongside PR #187.
+1. Build and push six candidate images: market-trading, identity-auth,
+   ml-prediction, frontend, data-ingestion and the separate ml-long-trade batch
+   image. Each candidate tag includes the commit SHA, workflow run ID and attempt.
 2. Collect the registry digest from every successful build. A missing image,
    duplicate service, mismatched commit/repository or invalid digest prevents
    assembling a release.
 3. Create a draft GitHub release named `release-dev-<full-commit-sha>`, pointing at
    that exact source commit. Upload `release.json` and `release.json.sha256`.
-4. Promote all five digest references to their commit-SHA tags. No image is
+4. Promote all six digest references to their commit-SHA tags. No image is
    rebuilt during promotion; branch tags are not used for deployment.
 5. Publish the draft only after uploads and promotion succeed and the commit is
    still the head of `dev`. Dev releases are prereleases and do not replace the
@@ -25,6 +24,13 @@ cancelled checks prevent publishing.
 `release.json` records the source commit, workflow run, frontend public origin,
 and each image's SHA tag, registry digest and `image@sha256:...` reference. Digest
 references are the authoritative runtime inputs; tags are convenient names.
+
+The five existing application images remain under `images`. The batch image is
+recorded under `job_images.ml-long-trade`, with the same tag, digest and reference
+fields. Both sets are required before a release can be published. Keeping the
+application set unchanged lets the existing EC2 release consumer accept these
+manifests without an immediate server configuration update. Publishing a batch
+image does not enable scheduled training.
 
 ## Failures and reruns
 
@@ -62,6 +68,11 @@ Operators can select and pin an earlier completed release using
 `bin/deploy.sh --resume` returns to automatic updates. Preserve completed release
 assets and their GHCR image versions for as long as they are needed for rollback.
 See [Deployment](deployment.md) for server paths and operational checks.
+
+The separately enabled ML scheduler must read its batch digest from the manifest
+for `.state/current-release`, not from a branch tag or the latest release in
+isolation. An older or bootstrap selection without `job_images` keeps training
+disabled. This preserves application rollback and release provenance.
 
 ## Local verification
 

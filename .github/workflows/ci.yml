@@ -76,15 +76,21 @@ jobs:
 
       - name: Install dependencies
         working-directory: ${{ matrix.service }}
-        run: uv sync --all-groups
+        run: uv sync --frozen --all-groups
 
       - name: Lint (ruff)
         working-directory: ${{ matrix.service }}
-        run: uv run ruff check .
+        run: uv run --frozen --all-groups ruff check .
 
       - name: Test
         working-directory: ${{ matrix.service }}
-        run: uv run pytest
+        run: uv run --frozen --all-groups pytest
+
+      - name: Build and check the ML batch runtime
+        if: matrix.service == 'services/ml-prediction'
+        run: |
+          docker build --tag tradeiq-ml-batch-ci --file services/ml-prediction/Dockerfile.long-trade services/ml-prediction
+          docker run --rm --network none tradeiq-ml-batch-ci python -c 'import os; import app.long_trade.main; assert os.getuid() == 10001'
 
   migrations:
     name: migrations apply cleanly
@@ -166,8 +172,17 @@ jobs:
       - name: Alembic migrations (ml-prediction)
         working-directory: services/ml-prediction
         run: |
-          uv sync --all-groups
-          uv run alembic upgrade head
+          uv sync --frozen --all-groups
+          uv run --frozen --all-groups alembic upgrade head
+
+      # Upsert idempotency of the long-trade predictions against real Postgres.
+      # Required here, so a missing database fails rather than skips.
+      - name: Long-trade repository tests against the database
+        working-directory: services/ml-prediction
+        env:
+          ML_TEST_DATABASE_URL: ${{ env.ML_DATABASE_URL }}
+          ML_REQUIRE_DB_TESTS: "1"
+        run: uv run --frozen --all-groups pytest tests/test_long_trade_repository.py
 
       - name: Assert 28 tables across the three schemas
         run: |

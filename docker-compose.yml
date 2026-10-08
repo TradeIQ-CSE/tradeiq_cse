@@ -123,6 +123,37 @@ services:
       ml-prediction-migrate:
         condition: service_completed_successfully
 
+  # The scheduled long-trade predictor (ADR 0011): trains its models, writes
+  # today's predictions to the ml database and exits. A one-shot job, not a
+  # service, so the "jobs" profile keeps it out of a plain `docker compose up`:
+  #   docker compose --profile jobs run --rm ml-long-trade-job
+  # Prices come from market-trading over the private network, never from the
+  # market_data database.
+  ml-long-trade-job:
+    build:
+      context: ./services/ml-prediction
+      dockerfile: Dockerfile.long-trade
+    profiles: ["jobs"]
+    cpus: 1.0
+    mem_limit: 768m
+    environment:
+      ML_DATABASE_URL: postgresql://ml:changeme@db:5432/ml
+      ML_MARKET_TRADING_API_URL: http://market-trading:3001
+      # Optional; empty means the default (services/ml-prediction/README.md).
+      ML_LONG_TRADE_SYMBOLS: ${ML_LONG_TRADE_SYMBOLS:-}
+      ML_LONG_TRADE_MIN_HISTORY_BARS: ${ML_LONG_TRADE_MIN_HISTORY_BARS:-}
+      ML_LONG_TRADE_TRAIN_LOOKBACK_DAYS: ${ML_LONG_TRADE_TRAIN_LOOKBACK_DAYS:-}
+      ML_LONG_TRADE_GRID: ${ML_LONG_TRADE_GRID:-}
+      ML_LONG_TRADE_N_JOBS: ${ML_LONG_TRADE_N_JOBS:-}
+      ML_LONG_TRADE_HTTP_TIMEOUT_SECONDS: ${ML_LONG_TRADE_HTTP_TIMEOUT_SECONDS:-}
+      ML_LONG_TRADE_LOG_LEVEL: ${ML_LONG_TRADE_LOG_LEVEL:-}
+    depends_on:
+      ml-prediction-migrate:
+        condition: service_completed_successfully
+      market-trading:
+        condition: service_healthy
+    restart: "no"
+
   frontend:
     build:
       context: ./frontend

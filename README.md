@@ -91,6 +91,7 @@ a consistent root entry point, use the service-aware launcher:
 ./scripts/run.sh identity-auth test:e2e --runInBand
 ./scripts/run.sh ml-prediction alembic upgrade head
 ./scripts/run.sh ml-prediction uvicorn app.main:app --reload --port 8001
+./scripts/run.sh ml-prediction --group long-trade python -m app.long_trade.main
 ./scripts/run.sh data-ingestion python -m data_ingestion.release_import --artifact /path/to/release.zip
 ```
 
@@ -183,8 +184,9 @@ migration files, rather than edits to an applied migration.
 - [Current deployment](docs/ops/deployment.md)
 
 CI installs and checks applications independently. On pushes to `dev`, publishing
-first runs the complete CI workflow, then builds all five images and records their
-digests in a completed GitHub release. See [Image releases](docs/ops/releases.md)
+first runs the complete CI workflow, then builds the five application images and
+the separate ML batch image. Their digests are recorded in a completed GitHub
+release. See [Image releases](docs/ops/releases.md)
 for failure handling and rollback records. The VM timer checks completed release
 metadata and deploys the recorded image digests without fetching source code. Recurring data
 collection runs in the separate `cse-dataset` repository and delivers through the ingestion API.

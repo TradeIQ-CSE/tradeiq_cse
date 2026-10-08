@@ -14,9 +14,9 @@ export RELEASE_FIXTURE="$fixture"
 
 node --input-type=module - "$fixture/release.json" <<'JS'
 import { writeFileSync } from 'node:fs';
-import { createImageRecord, createReleaseManifest, RELEASE_SERVICES } from './scripts/release-manifest.mjs';
+import { createImageRecord, createReleaseManifest, RELEASE_IMAGES } from './scripts/release-manifest.mjs';
 const repository = process.env.GITHUB_REPOSITORY, commit = process.env.GITHUB_SHA;
-const records = RELEASE_SERVICES.map((service, index) => createImageRecord({ repository, commit, service, digest: `sha256:${String(index).repeat(64)}` }));
+const records = RELEASE_IMAGES.map((service, index) => createImageRecord({ repository, commit, service, digest: `sha256:${String(index).repeat(64)}` }));
 writeFileSync(process.argv[2], JSON.stringify(createReleaseManifest({ records, repository, commit, channel: 'dev', runId: '123', runAttempt: '1', publicOrigin: 'https://tradeiqcse.tech', createdAt: '2026-10-07T12:00:00.000Z' })));
 JS
 
@@ -86,7 +86,8 @@ run_case() {
 for scenario in success existing_tag draft; do
   run_case "$scenario" 0
   [[ -f "$fixture/published" ]]
-  [[ $(grep -c '^docker ' "$fixture/commands") == 5 ]]
+  [[ $(grep -c '^docker ' "$fixture/commands") == 6 ]]
+  grep -q -- '/ml-long-trade:' "$fixture/commands"
   ! grep -q -- ':dev ' "$fixture/commands"
   [[ $(grep '^docker ' "$fixture/commands" | grep -cE -- '--tag [^ ]+ --tag') == 0 ]]
   grep -q -- '--prefer-index=false' "$fixture/commands"
@@ -94,7 +95,7 @@ for scenario in success existing_tag draft; do
   tail -1 "$fixture/commands" | grep -q -- 'release edit .*--draft=false'
   cmp "$fixture/release.json" "$fixture/uploaded.json"
   [[ "$(cut -d ' ' -f1 "$fixture/uploaded.sha256")" == "$(shasum -a 256 "$fixture/release.json" | cut -d ' ' -f1)" ]]
-  echo "PASS: $scenario uploads complete manifest/checksum, promotes five images, then publishes"
+  echo "PASS: $scenario uploads complete manifest/checksum, promotes six images, then publishes"
 done
 
 run_case completed 0
@@ -109,13 +110,15 @@ for scenario in api_failure invalid_response duplicate_releases stale tag_mismat
 done
 
 cp "$fixture/release.json" "$fixture/valid.json"
-for mutation in incomplete wrong_commit altered_reference unsupported_schema; do
+for mutation in incomplete missing_batch altered_batch wrong_commit altered_reference unsupported_schema; do
   cp "$fixture/valid.json" "$fixture/release.json"
   node - "$fixture/release.json" "$mutation" <<'JS'
 const fs = require('node:fs');
 const value = JSON.parse(fs.readFileSync(process.argv[2]));
 switch (process.argv[3]) {
   case 'incomplete': delete value.images.frontend; break;
+  case 'missing_batch': delete value.job_images; break;
+  case 'altered_batch': value.job_images['ml-long-trade'].reference = 'ghcr.io/untrusted/job@sha256:'+'f'.repeat(64); break;
   case 'wrong_commit': value.commit = 'b'.repeat(40); break;
   case 'altered_reference': value.images.frontend.reference = value.images.frontend.reference.replace(/sha256:.*/, 'sha256:'+'f'.repeat(64)); break;
   case 'unsupported_schema': value.schema_version = 2; break;
