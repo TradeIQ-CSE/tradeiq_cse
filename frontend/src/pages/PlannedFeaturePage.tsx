@@ -9,10 +9,9 @@ import {
 } from '../components/application/layout/application-layout';
 import { Button } from '../components/base/buttons/button';
 
-export type PlannedFeatureKey = 'aiInsights' | 'reports';
+export type PlannedFeatureKey = 'reports';
 
 const alternatives: Record<PlannedFeatureKey, string> = {
-  aiInsights: '/backtests/new',
   reports: '/orders',
 };
 

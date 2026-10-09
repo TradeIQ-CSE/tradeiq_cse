@@ -23,6 +23,8 @@ import {
 // (`{ data, meta }`), a failure body is `{ error: { code, message, trace_id } }`
 // because `getEnvelope` throws `new ApiError(body.error)`.
 export const handlers = [
+  http.get('*/predictions/configurations', () => HttpResponse.json({ data: { configurations: [], default_config_key: null } })),
+  http.get('*/predictions/status', () => HttpResponse.json({ data: { latest_run: null, latest_completed_run: null } })),
   http.get('*/api/v1/backtests/policy', () => HttpResponse.json({ maxDate: '2025-12-31' })),
   // docs/api/watchlist-v1.md. Stateless: a test that needs a populated or
   // changing list overrides these with server.use(...).

@@ -16,7 +16,7 @@ describe('Sidebar profile', () => {
     });
 
     expect(screen.getByText('Ama Perera')).toBeInTheDocument();
-    expect(screen.queryByText(t('nav.items.aiInsights'))).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: t('nav.items.aiInsights') })).toHaveAttribute('href', '/ai-insights');
     expect(screen.queryByText(t('nav.items.reports'))).not.toBeInTheDocument();
   });
 

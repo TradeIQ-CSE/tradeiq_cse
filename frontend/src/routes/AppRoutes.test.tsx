@@ -34,13 +34,19 @@ describe('AppRoutes', () => {
     ).toBeInTheDocument();
   });
 
-  it('retains an honest direct route for a planned capability', async () => {
+  it('renders the saved ML results page on direct loading', async () => {
     renderWithProviders(<AppRoutes />, { initialEntries: ['/ai-insights'] });
 
     expect(
-      await screen.findByRole('heading', { name: t('plannedFeatures.aiInsights.title') }),
+      await screen.findByRole('heading', { name: t('aiInsights.title') }),
     ).toBeInTheDocument();
-    expect(screen.getByText(t('plannedFeatures.comingSoon'))).toBeInTheDocument();
+    expect(screen.queryByText(t('plannedFeatures.comingSoon'))).not.toBeInTheDocument();
+  });
+
+  it('requires sign-in for saved ML results', async () => {
+    renderWithProviders(<AppRoutes />, { initialEntries: ['/ai-insights?symbol=COMB.N0000'], auth: { status: 'anonymous' } });
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: t('aiInsights.title') })).not.toBeInTheDocument();
   });
 
   it('renders the restricted administration overview for an admin', async () => {

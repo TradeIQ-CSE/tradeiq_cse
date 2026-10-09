@@ -9,7 +9,7 @@ export const services = {
   frontend: {
     directory: 'frontend',
     command: 'pnpm',
-    keys: ['FRONTEND_PORT', 'VITE_MARKET_TRADING_API_URL', 'VITE_IDENTITY_AUTH_API_URL'],
+    keys: ['FRONTEND_PORT', 'VITE_MARKET_TRADING_API_URL', 'VITE_IDENTITY_AUTH_API_URL', 'VITE_ML_PREDICTION_API_URL'],
   },
   'market-trading': {
     directory: 'services/market-trading',

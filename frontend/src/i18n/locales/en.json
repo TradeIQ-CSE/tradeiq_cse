@@ -203,13 +203,6 @@
   },
   "plannedFeatures": {
     "comingSoon": "Coming soon",
-    "aiInsights": {
-      "eyebrow": "AI insights",
-      "title": "Plain-language notes on companies",
-      "description": "Short explanations of what's moving and why",
-      "meanwhile": "For now, you can test your own ideas on past prices",
-      "alternative": "Test an idea"
-    },
     "reports": {
       "eyebrow": "Reports",
       "title": "Summaries of your practice",
@@ -1337,6 +1330,73 @@
       "security": "Security not found",
       "index": "Index not found",
       "rateLimit": "Rate-limit error"
+    }
+  },
+  "aiInsights": {
+    "title": "Explore a trading setup",
+    "description": "Choose a company and see the model’s estimate from saved closing-price data.",
+    "company": "Company",
+    "viewCompany": "View company",
+    "refresh": "Refresh results",
+    "retry": "Try again",
+    "tradingDays_one": "{{count}} trading day",
+    "tradingDays_other": "{{count}} trading days",
+    "setup": {
+      "title": "Trading setup",
+      "summary": "Profit target {{target}} · Loss threshold {{loss}} · {{count}} trading days",
+      "target": "Profit target",
+      "loss": "Loss threshold",
+      "horizon": "Trading period",
+      "change": "Change setup",
+      "close": "Close setup",
+      "horizonHelpLabel": "More about the trading period",
+      "horizonHelp": "The period counts trading days with daily price data, not calendar days. Weekends, market holidays and days without data do not add to the count.",
+      "availableOnly": "These are saved model setups. Changing a choice loads an existing result; it does not run a new test."
+    },
+    "result": {
+      "title": "Model estimate",
+      "helpLabel": "More about the model estimate",
+      "help": "This is the model’s estimated probability of reaching the profit target before the loss threshold within the trading period. It is not measured accuracy or a guaranteed outcome.",
+      "dataThrough": "Data through {{date}}",
+      "signal": "Model signal detected",
+      "noSignal": "No model signal detected",
+      "question": "From the closing price on {{date}}, the model estimates the chance of reaching a {{target}} gain before a {{loss}} fall, within {{count}} trading days.",
+      "signalMeaning": "This setup meets the model’s condition for a long trade. It does not place an order.",
+      "noSignalMeaning": "This setup does not meet the model’s condition for a long trade. This does not mean you should sell or that the price will fall.",
+      "olderTitle": "This result uses older prices",
+      "older": "Company prices are available through {{date}}. The estimate above still uses its own displayed data date.",
+      "caution": "The estimate can be wrong. It is not a guaranteed return or a buy or sell instruction.",
+      "details": "More detail",
+      "generated": "Result generated (Sri Lanka time)",
+      "version": "Model version",
+      "reference": "The setup starts from the closing price on the data date shown above. Its trading period also starts from that date, rather than the time you open this page."
+    },
+    "updating": {
+      "title": "Results are being updated",
+      "description": "Available results remain visible with their own dates. Some setups may be unavailable until the update finishes."
+    },
+    "updateFailed": {
+      "title": "The latest update did not finish",
+      "description": "Earlier available results can still be viewed. Check the data date beside each estimate."
+    },
+    "states": {
+      "loading": "Loading saved results",
+      "choose": "Choose a company to see its estimate",
+      "chooseDescription": "Search by company name or symbol, then choose a result from the list.",
+      "invalidCompany": "Choose a listed company",
+      "companyError": "We couldn’t load this company",
+      "catalogError": "We couldn’t load the available setups",
+      "catalogRefreshError": "The setup list could not be refreshed. The previously loaded setups are still shown.",
+      "statusError": "Update status is unavailable. Any company result below still shows its own data date.",
+      "companyRefreshError": "The company details could not be refreshed, so we cannot confirm whether newer prices are available.",
+      "resultRefreshError": "The result could not be refreshed. The previously loaded estimate is still shown with its data date.",
+      "noBatch": "No completed results yet",
+      "noBatchDescription": "Saved model results will appear here after an update completes.",
+      "noPrediction": "No saved result for this setup",
+      "noPredictionDescription": "There is no available estimate for this company and setup. Try another setup or company.",
+      "resultError": "We couldn’t load this estimate",
+      "resultErrorDescription": "Please try again. The result may be temporarily unavailable.",
+      "refreshing": "Refreshing saved results…"
     }
   }
 }

@@ -65,6 +65,7 @@ const Dashboard = lazy(() => import('../pages/investor/Dashboard'));
 const Watchlist = lazy(() => import('../pages/investor/Watchlist'));
 const ApiKey = lazy(() => import('../pages/investor/ApiKey'));
 const Analytics = lazy(() => import('../pages/investor/Analytics'));
+const AiInsightsPage = lazy(() => import('../features/ai-insights/AiInsightsPage').then((module) => ({ default: module.AiInsightsPage })));
 const AdminHome = lazy(() => import('../pages/admin/AdminHome'));
 const PlannedFeaturePage = lazy(() => import('../pages/PlannedFeaturePage'));
 const BacktestWizard = lazy(() =>
@@ -174,7 +175,7 @@ export function AppRoutes() {
           <Route path="/orders" element={<Orders />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/paper-trading" element={<PaperTrading />} />
-          <Route path="/ai-insights" element={<PlannedFeaturePage feature="aiInsights" />} />
+          <Route path="/ai-insights" element={<AiInsightsPage />} />
           <Route path="/reports" element={<PlannedFeaturePage feature="reports" />} />
           <Route
             path="/admin"

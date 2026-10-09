@@ -71,7 +71,6 @@ export const NAV_ROUTES: NavRoute[] = [
     path: '/ai-insights',
     icon: RiSparkling2Line,
     group: 'research',
-    planned: true,
   },
   {
     key: 'reports',

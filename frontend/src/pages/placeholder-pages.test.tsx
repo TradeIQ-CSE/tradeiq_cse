@@ -23,15 +23,15 @@ describe('Stage 6 capability pages', () => {
     ).toBeDisabled();
   });
 
-  it('offers a working alternative instead of invented AI results', () => {
-    renderWithProviders(<PlannedFeaturePage feature="aiInsights" />);
+  it('offers a working alternative for reports', () => {
+    renderWithProviders(<PlannedFeaturePage feature="reports" />);
 
     expect(
-      screen.getByRole('heading', { name: t('plannedFeatures.aiInsights.title') }),
+      screen.getByRole('heading', { name: t('plannedFeatures.reports.title') }),
     ).toBeInTheDocument();
     expect(screen.getByText(t('plannedFeatures.comingSoon'))).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: t('plannedFeatures.aiInsights.alternative') }),
+      screen.getByRole('button', { name: t('plannedFeatures.reports.alternative') }),
     ).toBeEnabled();
   });
 });

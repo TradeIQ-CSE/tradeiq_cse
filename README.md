@@ -54,6 +54,18 @@ PostgreSQL and Redis, waits for them to become ready, then launches Vite and the
 two Nest services in watch mode. The frontend is at `http://localhost:5173`;
 market-trading is at port 3001 and identity-auth at port 3002.
 
+For AI Insights, start the read-only ML API in another terminal:
+
+```sh
+./scripts/run.sh ml-prediction alembic upgrade head
+./scripts/run.sh ml-prediction uvicorn app.main:app --reload --port 8001
+```
+
+`VITE_ML_PREDICTION_API_URL` selects its browser-visible address (port 8001
+locally). AI Insights reads results from completed batches; an empty local ML
+database shows an availability message until a batch has completed. Page visits
+and the Refresh button only fetch saved results.
+
 Ctrl+C stops the development watchers. PostgreSQL and Redis remain available,
 and their saved data is retained. To stop these containers:
 
