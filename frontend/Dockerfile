@@ -6,8 +6,10 @@ RUN pnpm install --frozen-lockfile
 # Browser-visible API origins are compiled into the static bundle.
 ARG VITE_MARKET_TRADING_API_URL=http://localhost:3001
 ARG VITE_IDENTITY_AUTH_API_URL=http://localhost:3002
+ARG VITE_ML_PREDICTION_API_URL=http://localhost:8001
 ENV VITE_MARKET_TRADING_API_URL=$VITE_MARKET_TRADING_API_URL \
-    VITE_IDENTITY_AUTH_API_URL=$VITE_IDENTITY_AUTH_API_URL
+    VITE_IDENTITY_AUTH_API_URL=$VITE_IDENTITY_AUTH_API_URL \
+    VITE_ML_PREDICTION_API_URL=$VITE_ML_PREDICTION_API_URL
 COPY index.html tsconfig*.json vite.config.ts ./
 COPY src ./src
 COPY public ./public

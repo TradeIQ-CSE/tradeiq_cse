@@ -164,6 +164,7 @@ services:
       args:
         VITE_MARKET_TRADING_API_URL: ${VITE_MARKET_TRADING_API_URL:-http://localhost:3001}
         VITE_IDENTITY_AUTH_API_URL: ${VITE_IDENTITY_AUTH_API_URL:-http://localhost:3002}
+        VITE_ML_PREDICTION_API_URL: ${VITE_ML_PREDICTION_API_URL:-http://localhost:8001}
     ports:
       - "${FRONTEND_PORT:-5173}:5173"
     depends_on:

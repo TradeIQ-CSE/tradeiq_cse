@@ -4,6 +4,7 @@ interface ImportMetaEnv {
   readonly VITE_PUBLIC_API_BASE_URL?: string;
   readonly VITE_MARKET_TRADING_API_URL: string;
   readonly VITE_IDENTITY_AUTH_API_URL: string;
+  readonly VITE_ML_PREDICTION_API_URL?: string;
 }
 
 interface ImportMeta {

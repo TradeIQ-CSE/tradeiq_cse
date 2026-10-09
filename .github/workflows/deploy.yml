@@ -81,6 +81,7 @@ jobs:
           build-args: |
             VITE_MARKET_TRADING_API_URL=${{ env.PUBLIC_ORIGIN }}/api/market
             VITE_IDENTITY_AUTH_API_URL=${{ env.PUBLIC_ORIGIN }}/api/auth
+            VITE_ML_PREDICTION_API_URL=${{ env.PUBLIC_ORIGIN }}/api/ml
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
