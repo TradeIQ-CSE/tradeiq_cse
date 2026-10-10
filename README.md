@@ -2,8 +2,11 @@
 
 TradeIQ helps users explore Colombo Stock Exchange data, test trading rules on
 historical prices and practise trades with virtual money. The application includes
-market charts, authentication, backtesting, portfolios, paper orders and a public
-read-only developer API. Market data is end-of-day; paper orders do not reach an exchange.
+market charts, authentication, backtesting, portfolios, paper orders, AI Insights
+from saved ML predictions and a public read-only developer API. Market data is
+end-of-day; paper orders do not reach an exchange.
+
+[Open TradeIQ](https://tradeiqcse.tech)
 
 ## Repository layout
 
@@ -65,6 +68,12 @@ For AI Insights, start the read-only ML API in another terminal:
 locally). AI Insights reads results from completed batches; an empty local ML
 database shows an availability message until a batch has completed. Page visits
 and the Refresh button only fetch saved results.
+
+The prediction batch runs separately from the API. It needs historical prices
+beyond the bundled sample to train models and save results. See the
+[ML service guide](services/ml-prediction/README.md) for running a batch and its
+data requirements. Running the batch directly on macOS also requires the OpenMP
+runtime (`brew install libomp`).
 
 Ctrl+C stops the development watchers. PostgreSQL and Redis remain available,
 and their saved data is retained. To stop these containers:
@@ -191,6 +200,8 @@ migration files, rather than edits to an applied migration.
 - [Data coverage](docs/api/data-coverage.md)
 - [Paper trading](docs/api/paper-trading-v1.md)
 - [Public developer API](docs/api/public-api-v1.md)
+- [ML prediction API](docs/api/ml-predictions-v1.md)
+- [ML service and batch job](services/ml-prediction/README.md)
 - [Reference maintenance](docs/api/reference-maintenance.md)
 - [Architecture decisions](docs/adr/)
 - [Current deployment](docs/ops/deployment.md)
